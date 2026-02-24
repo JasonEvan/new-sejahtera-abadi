@@ -10,7 +10,7 @@ export default function DashboardLayout({
       <AppSidebar />
       <main className="w-full min-h-screen">
         <Topbar />
-        {children}
+        <section className="container mx-auto px-4 py-3">{children}</section>
       </main>
     </SidebarProvider>
   );
