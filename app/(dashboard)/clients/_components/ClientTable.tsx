@@ -3,17 +3,18 @@
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { columns } from "./columns";
+import { useColumns } from "./columns";
 import { useGetClients } from "@/modules/client/client.queries";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { dialogs } from "@/lib/dialogs";
-import AddClientForm from "./AddClientForm";
+import ClientForm from "./ClientForm";
 import { addClientKey } from "@/modules/client/client.keys";
 
 export default function ClientTable() {
   const { data: clients, isLoading, isError, error } = useGetClients();
+  const columns = useColumns();
 
   useEffect(() => {
     if (isError) {
@@ -30,7 +31,7 @@ export default function ClientTable() {
       type: "form",
       formId: "add-client-form",
       mutationKey: addClientKey(),
-      children: <AddClientForm />,
+      children: <ClientForm />,
     });
   }
 

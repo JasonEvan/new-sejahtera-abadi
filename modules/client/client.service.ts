@@ -9,4 +9,8 @@ export const clientService = {
   addClient(data: InsertClient) {
     return clientRepository.addClient(data);
   },
+
+  updateClient(id: number, data: InsertClient) {
+    return clientRepository.updateClient(id, data);
+  },
 };

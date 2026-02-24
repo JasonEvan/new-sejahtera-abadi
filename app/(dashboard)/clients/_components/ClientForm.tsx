@@ -1,28 +1,44 @@
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useAddClientMutation } from "@/modules/client/client.mutations";
+import {
+  useAddClientMutation,
+  useEditClientMutation,
+} from "@/modules/client/client.mutations";
+import { Client } from "@/modules/client/client.types";
 import { addClientValidation } from "@/modules/client/client.validation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import z from "zod";
 
-type AddClientFormField = z.infer<typeof addClientValidation>;
+type ClientFormField = z.infer<typeof addClientValidation>;
 
-export default function AddClientForm() {
+export default function ClientForm({ client }: { client?: Client }) {
   const addClientMutation = useAddClientMutation();
+  const editClientMutation = useEditClientMutation();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<AddClientFormField>({
+  } = useForm<ClientFormField>({
+    defaultValues: {
+      name: client?.name || "",
+      city: client?.city || "",
+      address: client?.address || "",
+      phone: client?.phone || "",
+      mobile_phone: client?.mobile_phone || "",
+    },
     mode: "onBlur",
     reValidateMode: "onChange",
     resolver: zodResolver(addClientValidation),
   });
 
-  const onSubmit = (data: AddClientFormField) => {
-    addClientMutation.mutate(data);
+  const onSubmit = (data: ClientFormField) => {
+    if (client) {
+      editClientMutation.mutate({ id: client.id, data });
+    } else {
+      addClientMutation.mutate(data);
+    }
   };
 
   return (

@@ -10,3 +10,14 @@ export async function addClient(data: InsertClient) {
   const response = await api.post<{ message: string }>("/clients", data);
   return response.data;
 }
+
+export async function editClient({
+  id,
+  data,
+}: {
+  id: number;
+  data: InsertClient;
+}) {
+  const response = await api.put<{ message: string }>(`/clients/${id}`, data);
+  return response.data;
+}
