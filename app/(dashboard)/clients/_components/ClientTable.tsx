@@ -8,6 +8,9 @@ import { useGetClients } from "@/modules/client/client.queries";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { dialogs } from "@/lib/dialogs";
+import AddClientForm from "./AddClientForm";
+import { addClientKey } from "@/modules/client/client.keys";
 
 export default function ClientTable() {
   const { data: clients, isLoading, isError, error } = useGetClients();
@@ -20,9 +23,20 @@ export default function ClientTable() {
     }
   }, [error, isError]);
 
+  function handleAddClient() {
+    dialogs.open({
+      title: "Tambah Client",
+      description: "Masukkan informasi client baru",
+      type: "form",
+      formId: "add-client-form",
+      mutationKey: addClientKey(),
+      children: <AddClientForm />,
+    });
+  }
+
   return (
     <div className="flex flex-col">
-      <Button className="ml-auto mb-2">
+      <Button className="ml-auto mb-2 cursor-pointer" onClick={handleAddClient}>
         <Plus /> Tambah
       </Button>
       {isLoading && !isError ? (
