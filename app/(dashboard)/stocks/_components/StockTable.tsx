@@ -8,6 +8,8 @@ import { useGetStocks } from "@/modules/stock/stock.queries";
 import { Spinner } from "@/components/ui/spinner";
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { dialogs } from "@/lib/dialogs";
+import StockForm from "./StockForm";
 
 export default function StockTable() {
   const { data: stocks, isLoading, isError, error } = useGetStocks();
@@ -20,9 +22,19 @@ export default function StockTable() {
     }
   }, [isError, error]);
 
+  function handleAddStock() {
+    dialogs.open({
+      title: "Tambah Stock",
+      description: "Masukkan informasi stock baru",
+      type: "form",
+      formId: "add-stock-form",
+      children: <StockForm />,
+    });
+  }
+
   return (
     <div className="flex flex-col">
-      <Button className="ml-auto mb-2 cursor-pointer">
+      <Button className="ml-auto mb-2 cursor-pointer" onClick={handleAddStock}>
         <Plus /> Tambah
       </Button>
       {isLoading && !isError ? (

@@ -1,6 +1,7 @@
 import { stocks } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import { asc } from "drizzle-orm";
+import { InsertStock } from "./stock.types";
 
 export const stockRepository = {
   getAllStocks() {
@@ -15,5 +16,12 @@ export const stockRepository = {
       })
       .from(stocks)
       .orderBy(asc(stocks.name));
+  },
+
+  addStock(data: InsertStock) {
+    return db.insert(stocks).values({
+      ...data,
+      ending_stock: data.initial_stock,
+    });
   },
 };
