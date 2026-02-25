@@ -13,4 +13,8 @@ export const clientService = {
   updateClient(id: number, data: InsertClient) {
     return clientRepository.updateClient(id, data);
   },
+
+  deleteClient(id: number) {
+    return clientRepository.deleteClient(id);
+  },
 };

@@ -5,13 +5,17 @@ import { dialogs } from "@/lib/dialogs";
 import { Client } from "@/modules/client/client.types";
 import { createColumnHelper } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import ClientForm from "./ClientForm";
 import { editClientKey } from "@/modules/client/client.keys";
+import { alertDialogs } from "@/lib/alert-dialogs";
+import { useDeleteClientMutation } from "@/modules/client/client.mutations";
 
 const columnHelper = createColumnHelper<Client>();
 
 export const useColumns = () => {
+  const deleteClientMutation = useDeleteClientMutation();
+
   function handleEditClient(client: Client) {
     dialogs.open({
       title: "Edit Client",
@@ -22,6 +26,20 @@ export const useColumns = () => {
       children: <ClientForm client={client} />,
     });
   }
+
+  const handleDeleteClient = useCallback(
+    (id: number) => {
+      alertDialogs.open({
+        title: "Hapus Client",
+        description: "Apakah Anda yakin ingin menghapus client ini?",
+        onConfirm: () => {
+          alertDialogs.close();
+          deleteClientMutation.mutate(id);
+        },
+      });
+    },
+    [deleteClientMutation],
+  );
 
   const columns = useMemo(
     () => [
@@ -57,14 +75,19 @@ export const useColumns = () => {
             >
               <Pencil />
             </Button>
-            <Button variant="ghost" size="icon" className="text-destructive">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-destructive"
+              onClick={() => handleDeleteClient(row.original.id)}
+            >
               <Trash2 />
             </Button>
           </div>
         ),
       }),
     ],
-    [],
+    [handleDeleteClient],
   );
 
   return columns;

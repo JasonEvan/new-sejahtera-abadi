@@ -21,3 +21,8 @@ export async function editClient({
   const response = await api.put<{ message: string }>(`/clients/${id}`, data);
   return response.data;
 }
+
+export async function deleteClient(id: number) {
+  const response = await api.delete<{ message: string }>(`/clients/${id}`);
+  return response.data;
+}

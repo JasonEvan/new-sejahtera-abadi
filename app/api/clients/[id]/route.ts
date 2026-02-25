@@ -26,3 +26,22 @@ export const PUT = withErrorHandler(
     );
   },
 );
+
+export const DELETE = withErrorHandler(
+  async (
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+  ) => {
+    const clientId = (await params).id;
+    if (isNaN(Number(clientId))) {
+      throw new AppError("Invalid client ID", 400);
+    }
+
+    await clientService.deleteClient(Number(clientId));
+
+    return NextResponse.json(
+      { message: "Client berhasil dihapus" },
+      { status: 200 },
+    );
+  },
+);

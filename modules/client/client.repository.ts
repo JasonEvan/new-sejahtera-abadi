@@ -25,4 +25,8 @@ export const clientRepository = {
   updateClient(id: number, data: InsertClient) {
     return db.update(clients).set(data).where(eq(clients.id, id));
   },
+
+  deleteClient(id: number) {
+    return db.delete(clients).where(eq(clients.id, id));
+  },
 };
