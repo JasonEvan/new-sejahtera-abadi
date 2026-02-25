@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addStock } from "./stock.api";
+import { addStock, updateStock } from "./stock.api";
 import { toast } from "sonner";
 import { dialogs } from "@/lib/dialogs";
-import { getStocksKey } from "./stock.keys";
+import { getStocksKey, updateStockKey } from "./stock.keys";
 
 export const useAddStockMutation = () => {
   const queryClient = useQueryClient();
@@ -11,6 +11,21 @@ export const useAddStockMutation = () => {
     onSuccess: (data) => {
       dialogs.close();
       toast.success(data.message || "Stock berhasil ditambahkan", {
+        position: "bottom-right",
+      });
+      queryClient.invalidateQueries({ queryKey: getStocksKey() });
+    },
+  });
+};
+
+export const useEditStockMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: updateStockKey(),
+    mutationFn: updateStock,
+    onSuccess: (data) => {
+      dialogs.close();
+      toast.success(data.message || "Stock berhasil diperbarui", {
         position: "bottom-right",
       });
       queryClient.invalidateQueries({ queryKey: getStocksKey() });

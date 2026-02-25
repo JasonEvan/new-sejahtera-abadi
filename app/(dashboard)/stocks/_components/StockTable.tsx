@@ -3,7 +3,7 @@
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { columns } from "./columns";
+import { useColumns } from "./columns";
 import { useGetStocks } from "@/modules/stock/stock.queries";
 import { Spinner } from "@/components/ui/spinner";
 import { useEffect } from "react";
@@ -13,6 +13,7 @@ import StockForm from "./StockForm";
 
 export default function StockTable() {
   const { data: stocks, isLoading, isError, error } = useGetStocks();
+  const columns = useColumns();
 
   useEffect(() => {
     if (isError) {

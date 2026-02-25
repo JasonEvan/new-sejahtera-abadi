@@ -10,3 +10,14 @@ export async function addStock(data: InsertStock) {
   const response = await api.post<{ message: string }>("/stocks", data);
   return response.data;
 }
+
+export async function updateStock({
+  id,
+  data,
+}: {
+  id: number;
+  data: InsertStock;
+}) {
+  const response = await api.put<{ message: string }>(`/stocks/${id}`, data);
+  return response.data;
+}

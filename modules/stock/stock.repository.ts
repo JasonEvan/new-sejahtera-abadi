@@ -1,6 +1,6 @@
 import { stocks } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { InsertStock } from "./stock.types";
 
 export const stockRepository = {
@@ -13,6 +13,7 @@ export const stockRepository = {
         selling_price: stocks.selling_price,
         unit: stocks.unit,
         capital_cost: stocks.capital_cost,
+        initial_stock: stocks.initial_stock,
       })
       .from(stocks)
       .orderBy(asc(stocks.name));
@@ -23,5 +24,9 @@ export const stockRepository = {
       ...data,
       ending_stock: data.initial_stock,
     });
+  },
+
+  updateStock(id: number, data: InsertStock) {
+    return db.update(stocks).set(data).where(eq(stocks.id, id));
   },
 };

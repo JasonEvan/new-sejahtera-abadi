@@ -9,4 +9,8 @@ export const stockService = {
   addStock(data: InsertStock) {
     return stockRepository.addStock(data);
   },
+
+  updateStock(id: number, data: InsertStock) {
+    return stockRepository.updateStock(id, data);
+  },
 };

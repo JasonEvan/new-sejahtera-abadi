@@ -2,29 +2,43 @@
 
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useAddStockMutation } from "@/modules/stock/stock.mutations";
+import {
+  useAddStockMutation,
+  useEditStockMutation,
+} from "@/modules/stock/stock.mutations";
+import { InsertStock, Stock } from "@/modules/stock/stock.types";
 import { addStockValidation } from "@/modules/stock/stock.validation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import z from "zod";
 
-type StockFormField = z.infer<typeof addStockValidation>;
-
-export default function StockForm() {
+export default function StockForm({ stock }: { stock?: Stock }) {
   const addStockMutation = useAddStockMutation();
+  const editStockMutation = useEditStockMutation();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<StockFormField>({
+  } = useForm<InsertStock>({
+    defaultValues: {
+      name: stock?.name || "",
+      unit: stock?.unit || "",
+      initial_stock: stock?.initial_stock ?? undefined,
+      capital_cost: stock?.capital_cost ?? undefined,
+      product_price: stock?.product_price ?? undefined,
+      selling_price: stock?.selling_price ?? undefined,
+    },
     mode: "onBlur",
     reValidateMode: "onChange",
     resolver: zodResolver(addStockValidation),
   });
 
-  const onSubmit = (data: StockFormField) => {
-    addStockMutation.mutate(data);
+  const onSubmit = (data: InsertStock) => {
+    if (stock) {
+      editStockMutation.mutate({ id: stock.id, data });
+    } else {
+      addStockMutation.mutate(data);
+    }
   };
 
   return (
