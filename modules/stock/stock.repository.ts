@@ -29,4 +29,8 @@ export const stockRepository = {
   updateStock(id: number, data: InsertStock) {
     return db.update(stocks).set(data).where(eq(stocks.id, id));
   },
+
+  deleteStock(id: number) {
+    return db.delete(stocks).where(eq(stocks.id, id));
+  },
 };

@@ -3,13 +3,17 @@ import { dialogs } from "@/lib/dialogs";
 import { Stock } from "@/modules/stock/stock.types";
 import { createColumnHelper } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import StockForm from "./StockForm";
 import { updateStockKey } from "@/modules/stock/stock.keys";
+import { alertDialogs } from "@/lib/alert-dialogs";
+import { useDeleteStockMutation } from "@/modules/stock/stock.mutations";
 
 const columnHelper = createColumnHelper<Stock>();
 
 export const useColumns = () => {
+  const deleteStockMutation = useDeleteStockMutation();
+
   function handleEditStock(stock: Stock) {
     dialogs.open({
       title: "Edit Stock",
@@ -20,6 +24,20 @@ export const useColumns = () => {
       children: <StockForm stock={stock} />,
     });
   }
+
+  const handleDeleteStock = useCallback(
+    (id: number) => {
+      alertDialogs.open({
+        title: "Hapus Stock",
+        description: "Apakah Anda yakin ingin menghapus stock ini?",
+        onConfirm: () => {
+          alertDialogs.close();
+          deleteStockMutation.mutate(id);
+        },
+      });
+    },
+    [deleteStockMutation],
+  );
 
   const columns = useMemo(
     () => [
@@ -74,7 +92,7 @@ export const useColumns = () => {
               variant="ghost"
               size="icon"
               className="text-destructive"
-              onClick={() => {}}
+              onClick={() => handleDeleteStock(row.original.id)}
             >
               <Trash2 />
             </Button>
@@ -82,7 +100,7 @@ export const useColumns = () => {
         ),
       }),
     ],
-    [],
+    [handleDeleteStock],
   );
 
   return columns;

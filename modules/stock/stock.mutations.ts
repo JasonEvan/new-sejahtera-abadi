@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addStock, updateStock } from "./stock.api";
+import { addStock, deleteStock, updateStock } from "./stock.api";
 import { toast } from "sonner";
 import { dialogs } from "@/lib/dialogs";
 import { addStockKey, getStocksKey, updateStockKey } from "./stock.keys";
@@ -27,6 +27,19 @@ export const useEditStockMutation = () => {
     onSuccess: (data) => {
       dialogs.close();
       toast.success(data.message || "Stock berhasil diperbarui", {
+        position: "bottom-right",
+      });
+      queryClient.invalidateQueries({ queryKey: getStocksKey() });
+    },
+  });
+};
+
+export const useDeleteStockMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteStock,
+    onSuccess: (data) => {
+      toast.success(data.message || "Stock berhasil dihapus", {
         position: "bottom-right",
       });
       queryClient.invalidateQueries({ queryKey: getStocksKey() });

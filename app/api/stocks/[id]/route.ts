@@ -22,3 +22,18 @@ export const PUT = withErrorHandler(
     return NextResponse.json({ message: "Stock berhasil diperbarui" });
   },
 );
+
+export const DELETE = withErrorHandler(
+  async (
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+  ) => {
+    const stockId = (await params).id;
+    if (isNaN(Number(stockId))) {
+      throw new AppError("ID stock tidak valid", 400);
+    }
+
+    await stockService.deleteStock(Number(stockId));
+    return NextResponse.json({ message: "Stock berhasil dihapus" });
+  },
+);

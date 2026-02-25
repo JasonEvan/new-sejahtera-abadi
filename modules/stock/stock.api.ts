@@ -21,3 +21,8 @@ export async function updateStock({
   const response = await api.put<{ message: string }>(`/stocks/${id}`, data);
   return response.data;
 }
+
+export async function deleteStock(id: number) {
+  const response = await api.delete<{ message: string }>(`/stocks/${id}`);
+  return response.data;
+}
