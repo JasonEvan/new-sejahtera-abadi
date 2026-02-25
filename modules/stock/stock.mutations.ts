@@ -2,11 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { addStock, updateStock } from "./stock.api";
 import { toast } from "sonner";
 import { dialogs } from "@/lib/dialogs";
-import { getStocksKey, updateStockKey } from "./stock.keys";
+import { addStockKey, getStocksKey, updateStockKey } from "./stock.keys";
 
 export const useAddStockMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: addStockKey(),
     mutationFn: addStock,
     onSuccess: (data) => {
       dialogs.close();

@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { dialogs } from "@/lib/dialogs";
 import StockForm from "./StockForm";
+import { addStockKey } from "@/modules/stock/stock.keys";
 
 export default function StockTable() {
   const { data: stocks, isLoading, isError, error } = useGetStocks();
@@ -29,6 +30,7 @@ export default function StockTable() {
       description: "Masukkan informasi stock baru",
       type: "form",
       formId: "add-stock-form",
+      mutationKey: addStockKey(),
       children: <StockForm />,
     });
   }
