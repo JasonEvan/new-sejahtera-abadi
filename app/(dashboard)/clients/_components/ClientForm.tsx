@@ -4,13 +4,10 @@ import {
   useAddClientMutation,
   useEditClientMutation,
 } from "@/modules/client/client.mutations";
-import { Client } from "@/modules/client/client.types";
+import { Client, InsertClient } from "@/modules/client/client.types";
 import { addClientValidation } from "@/modules/client/client.validation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import z from "zod";
-
-type ClientFormField = z.infer<typeof addClientValidation>;
 
 export default function ClientForm({ client }: { client?: Client }) {
   const addClientMutation = useAddClientMutation();
@@ -20,20 +17,20 @@ export default function ClientForm({ client }: { client?: Client }) {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<ClientFormField>({
+  } = useForm<InsertClient>({
     defaultValues: {
       name: client?.name || "",
-      city: client?.city || "",
-      address: client?.address || "",
-      phone: client?.phone || "",
-      mobile_phone: client?.mobile_phone || "",
+      city: client?.city ?? undefined,
+      address: client?.address ?? undefined,
+      phone: client?.phone ?? undefined,
+      mobile_phone: client?.mobile_phone ?? undefined,
     },
     mode: "onBlur",
     reValidateMode: "onChange",
     resolver: zodResolver(addClientValidation),
   });
 
-  const onSubmit = (data: ClientFormField) => {
+  const onSubmit = (data: InsertClient) => {
     if (client) {
       editClientMutation.mutate({ id: client.id, data });
     } else {
