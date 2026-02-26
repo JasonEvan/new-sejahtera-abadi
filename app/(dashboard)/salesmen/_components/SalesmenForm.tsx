@@ -1,26 +1,63 @@
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useAddSalespersonMutation } from "@/modules/salesperson/salesperson.mutations";
-import { InsertSalesperson } from "@/modules/salesperson/salesperson.types";
-import { addSalespersonValidation } from "@/modules/salesperson/salesperson.validation";
+import {
+  useAddSalespersonMutation,
+  useEditSalespersonMutation,
+} from "@/modules/salesperson/salesperson.mutations";
+import {
+  EditSalesperson,
+  InsertSalesperson,
+  Salesperson,
+} from "@/modules/salesperson/salesperson.types";
+import {
+  addSalespersonValidation,
+  editSalespersonValidation,
+} from "@/modules/salesperson/salesperson.validation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-export default function SalesmenForm() {
+type BaseSalespersonForm = Omit<InsertSalesperson, "front_number">;
+
+type SalespersonFormField = BaseSalespersonForm & {
+  front_number?: number;
+  invoice_number?: number;
+};
+
+export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
+  const isEdit = !!salesman;
+
   const addSalespersonMutation = useAddSalespersonMutation();
+  const editSalespersonMutation = useEditSalespersonMutation();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<InsertSalesperson>({
+  } = useForm<SalespersonFormField>({
+    defaultValues: {
+      name: salesman?.name || "",
+      front_number: salesman?.front_number ?? undefined,
+      invoice_number: salesman?.invoice_number ?? undefined,
+      phone_number: salesman?.phone_number ?? undefined,
+      sales_code: salesman?.sales_code || "",
+    },
     mode: "onBlur",
     reValidateMode: "onChange",
-    resolver: zodResolver(addSalespersonValidation),
+    resolver: zodResolver(
+      isEdit ? editSalespersonValidation : addSalespersonValidation,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ) as any,
   });
 
-  const onSubmit = (data: InsertSalesperson) => {
-    addSalespersonMutation.mutate(data);
+  const onSubmit = (data: SalespersonFormField) => {
+    if (isEdit) {
+      editSalespersonMutation.mutate({
+        id: salesman.id,
+        data: data as EditSalesperson,
+      });
+    } else {
+      addSalespersonMutation.mutate(data as InsertSalesperson);
+    }
   };
 
   return (
@@ -35,16 +72,29 @@ export default function SalesmenForm() {
           <Input {...register("name")} placeholder="John Doe" />
           {errors.name && <FieldError>{errors.name.message}</FieldError>}
         </Field>
-        <Field>
-          <FieldLabel>Nomor Depan</FieldLabel>
-          <Input
-            type="number"
-            {...register("front_number", { valueAsNumber: true })}
-          />
-          {errors.front_number && (
-            <FieldError>{errors.front_number.message}</FieldError>
-          )}
-        </Field>
+        {isEdit ? (
+          <Field>
+            <FieldLabel>Nomor Nota</FieldLabel>
+            <Input
+              type="number"
+              {...register("invoice_number", { valueAsNumber: true })}
+            />
+            {errors.invoice_number && (
+              <FieldError>{errors.invoice_number.message}</FieldError>
+            )}
+          </Field>
+        ) : (
+          <Field>
+            <FieldLabel>Nomor Depan</FieldLabel>
+            <Input
+              type="number"
+              {...register("front_number", { valueAsNumber: true })}
+            />
+            {errors.front_number && (
+              <FieldError>{errors.front_number.message}</FieldError>
+            )}
+          </Field>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-x-2">
         <Field>

@@ -7,7 +7,7 @@ import { useGetSalespersons } from "@/modules/salesperson/salesperson.queries";
 import { Plus } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { columns } from "./columns";
+import { useColumns } from "./columns";
 import { dialogs } from "@/lib/dialogs";
 import SalesmenForm from "./SalesmenForm";
 import { addSalespersonKey } from "@/modules/salesperson/salesperson.keys";
@@ -19,6 +19,7 @@ export default function SalesmenTable() {
     isError,
     error,
   } = useGetSalespersons();
+  const columns = useColumns();
 
   useEffect(() => {
     if (isError) {

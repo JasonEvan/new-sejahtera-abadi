@@ -1,7 +1,7 @@
 import { salespersons } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { asc } from "drizzle-orm";
-import { InsertSalesperson } from "./salesperson.types";
+import { asc, eq } from "drizzle-orm";
+import { EditSalesperson, InsertSalesperson } from "./salesperson.types";
 
 export const salespersonRepository = {
   getSalespersons() {
@@ -10,5 +10,9 @@ export const salespersonRepository = {
 
   addSalesperson(data: InsertSalesperson) {
     return db.insert(salespersons).values({ ...data, invoice_number: 0 });
+  },
+
+  updateSalesperson(id: number, data: EditSalesperson) {
+    return db.update(salespersons).set(data).where(eq(salespersons.id, id));
   },
 };
