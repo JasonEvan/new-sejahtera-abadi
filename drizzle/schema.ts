@@ -3,6 +3,7 @@ import {
   pgTable,
   serial,
   timestamp,
+  unique,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -14,26 +15,30 @@ export const users = pgTable("users", {
 });
 
 // --- Clients Table ---
-export const clients = pgTable("clients", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  city: varchar("city", { length: 50 }).notNull().default(""),
-  phone: varchar("phone", { length: 20 }),
-  mobile_phone: varchar("mobile_phone", { length: 20 }),
-  address: varchar("address", { length: 100 }),
-  initial_payable_balance: integer("initial_payable_balance")
-    .default(0)
-    .notNull(),
-  initial_receivable_balance: integer("initial_receivable_balance")
-    .default(0)
-    .notNull(),
-  ending_payable_balance: integer("ending_payable_balance")
-    .default(0)
-    .notNull(),
-  ending_receivable_balance: integer("ending_receivable_balance")
-    .default(0)
-    .notNull(),
-});
+export const clients = pgTable(
+  "clients",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name", { length: 100 }).notNull(),
+    city: varchar("city", { length: 50 }).notNull().default(""),
+    phone: varchar("phone", { length: 20 }),
+    mobile_phone: varchar("mobile_phone", { length: 20 }),
+    address: varchar("address", { length: 100 }),
+    initial_payable_balance: integer("initial_payable_balance")
+      .default(0)
+      .notNull(),
+    initial_receivable_balance: integer("initial_receivable_balance")
+      .default(0)
+      .notNull(),
+    ending_payable_balance: integer("ending_payable_balance")
+      .default(0)
+      .notNull(),
+    ending_receivable_balance: integer("ending_receivable_balance")
+      .default(0)
+      .notNull(),
+  },
+  (table) => [unique("unique_name_city").on(table.name, table.city)],
+);
 
 // --- Stocks Table ---
 export const stocks = pgTable("stocks", {

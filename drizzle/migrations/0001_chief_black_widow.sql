@@ -1,0 +1,1 @@
+ALTER TABLE "clients" ADD CONSTRAINT "unique_name_city" UNIQUE("name","city");
