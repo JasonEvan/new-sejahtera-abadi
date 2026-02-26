@@ -53,7 +53,12 @@ export default function SalesmenTable() {
           <Spinner />
         </div>
       ) : (
-        <DataTable columns={columns} data={salespersons || []} />
+        <DataTable
+          columns={columns}
+          data={salespersons || []}
+          withFiltering
+          searchKey="name"
+        />
       )}
     </div>
   );

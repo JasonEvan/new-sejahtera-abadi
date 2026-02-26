@@ -45,7 +45,12 @@ export default function ClientTable() {
           <Spinner />
         </div>
       ) : (
-        <DataTable columns={columns} data={clients || []} />
+        <DataTable
+          columns={columns}
+          data={clients || []}
+          withFiltering
+          searchKey="name"
+        />
       )}
     </div>
   );

@@ -45,7 +45,12 @@ export default function StockTable() {
           <Spinner />
         </div>
       ) : (
-        <DataTable columns={columns} data={stocks || []} />
+        <DataTable
+          columns={columns}
+          data={stocks || []}
+          withFiltering
+          searchKey="name"
+        />
       )}
     </div>
   );
