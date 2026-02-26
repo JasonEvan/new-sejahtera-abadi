@@ -28,3 +28,8 @@ export async function editSalesperson({
   );
   return response.data;
 }
+
+export async function deleteSalesperson(id: number) {
+  const response = await api.delete<{ message: string }>(`/salespersons/${id}`);
+  return response.data;
+}

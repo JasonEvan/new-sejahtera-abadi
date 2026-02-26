@@ -25,3 +25,18 @@ export const PUT = withErrorHandler(
     return NextResponse.json({ message: "Salesman berhasil diperbarui" });
   },
 );
+
+export const DELETE = withErrorHandler(
+  async (
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+  ) => {
+    const salespersonId = (await params).id;
+    if (isNaN(Number(salespersonId))) {
+      throw new AppError("ID salesman tidak valid", 400);
+    }
+
+    await salespersonService.deleteSalesperson(Number(salespersonId));
+    return NextResponse.json({ message: "Salesman berhasil dihapus" });
+  },
+);

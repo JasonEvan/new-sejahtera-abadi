@@ -3,13 +3,17 @@ import { dialogs } from "@/lib/dialogs";
 import { Salesperson } from "@/modules/salesperson/salesperson.types";
 import { createColumnHelper } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import SalesmenForm from "./SalesmenForm";
 import { editSalespersonKey } from "@/modules/salesperson/salesperson.keys";
+import { useDeleteSalespersonMutation } from "@/modules/salesperson/salesperson.mutations";
+import { alertDialogs } from "@/lib/alert-dialogs";
 
 const columnHelper = createColumnHelper<Salesperson>();
 
 export const useColumns = () => {
+  const deleteSalespersonMutation = useDeleteSalespersonMutation();
+
   function handleSalesmanEdit(data: Salesperson) {
     dialogs.open({
       title: "Edit Salesman",
@@ -20,6 +24,20 @@ export const useColumns = () => {
       children: <SalesmenForm salesman={data} />,
     });
   }
+
+  const handleDelete = useCallback(
+    (id: number) => {
+      alertDialogs.open({
+        title: "Hapus Salesman",
+        description: "Apakah Anda yakin ingin menghapus salesman ini?",
+        onConfirm: () => {
+          alertDialogs.close();
+          deleteSalespersonMutation.mutate(id);
+        },
+      });
+    },
+    [deleteSalespersonMutation],
+  );
 
   const columns = useMemo(
     () => [
@@ -56,7 +74,7 @@ export const useColumns = () => {
               variant="ghost"
               size="icon"
               className="text-destructive"
-              onClick={() => {}}
+              onClick={() => handleDelete(row.original.id)}
             >
               <Trash2 />
             </Button>
@@ -64,7 +82,7 @@ export const useColumns = () => {
         ),
       }),
     ],
-    [],
+    [handleDelete],
   );
 
   return columns;

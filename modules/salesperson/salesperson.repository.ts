@@ -15,4 +15,8 @@ export const salespersonRepository = {
   updateSalesperson(id: number, data: EditSalesperson) {
     return db.update(salespersons).set(data).where(eq(salespersons.id, id));
   },
+
+  deleteSalesperson(id: number) {
+    return db.delete(salespersons).where(eq(salespersons.id, id));
+  },
 };

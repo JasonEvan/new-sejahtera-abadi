@@ -13,4 +13,8 @@ export const salespersonService = {
   updateSalesperson(id: number, data: EditSalesperson) {
     return salespersonRepository.updateSalesperson(id, data);
   },
+
+  deleteSalesperson(id: number) {
+    return salespersonRepository.deleteSalesperson(id);
+  },
 };

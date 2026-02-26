@@ -1,5 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addSalesperson, editSalesperson } from "./salesperson.api";
+import {
+  addSalesperson,
+  deleteSalesperson,
+  editSalesperson,
+} from "./salesperson.api";
 import { toast } from "sonner";
 import { dialogs } from "@/lib/dialogs";
 import {
@@ -31,6 +35,19 @@ export const useEditSalespersonMutation = () => {
     onSuccess: (data) => {
       dialogs.close();
       toast.success(data.message || "Salesman berhasil diperbarui", {
+        position: "bottom-right",
+      });
+      queryClient.invalidateQueries({ queryKey: getSalespersonsKey() });
+    },
+  });
+};
+
+export const useDeleteSalespersonMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteSalesperson,
+    onSuccess: (data) => {
+      toast.success(data.message || "Salesman berhasil dihapus", {
         position: "bottom-right",
       });
       queryClient.invalidateQueries({ queryKey: getSalespersonsKey() });
