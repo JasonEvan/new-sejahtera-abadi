@@ -48,6 +48,7 @@ export default function ClientTable() {
         <DataTable
           columns={columns}
           data={clients || []}
+          maxHeight="500px"
           withFiltering
           searchKey="name"
         />

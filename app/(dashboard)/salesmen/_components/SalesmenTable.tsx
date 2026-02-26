@@ -56,6 +56,7 @@ export default function SalesmenTable() {
         <DataTable
           columns={columns}
           data={salespersons || []}
+          maxHeight="500px"
           withFiltering
           searchKey="name"
         />

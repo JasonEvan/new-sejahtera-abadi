@@ -25,6 +25,9 @@ interface DataTableProps<TData> {
   columns: ColumnDef<TData, any>[];
   data: TData[];
 
+  // Optional prop for max height of the table container
+  maxHeight?: string;
+
   // Optional props for filtering
   withFiltering?: boolean;
   searchKey?: string;
@@ -33,6 +36,7 @@ interface DataTableProps<TData> {
 export function DataTable<TData>({
   columns,
   data,
+  maxHeight,
   withFiltering = false,
   searchKey,
 }: DataTableProps<TData>) {
@@ -67,14 +71,28 @@ export function DataTable<TData>({
         />
       )}
 
-      <div className="overflow-hidden rounded-md border">
+      <div
+        className={`rounded-md border ${maxHeight ? "[&>div]:max-h-(--table-max-height) [&>div]:overflow-y-auto" : "[&>div]:overflow-hidden"}`}
+        style={
+          maxHeight
+            ? ({ "--table-max-height": maxHeight } as React.CSSProperties)
+            : {}
+        }
+      >
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      className={
+                        maxHeight
+                          ? "sticky rounded-md top-0 bg-background z-20 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-px after:bg-border"
+                          : ""
+                      }
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(

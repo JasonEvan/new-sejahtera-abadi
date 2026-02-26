@@ -48,6 +48,7 @@ export default function StockTable() {
         <DataTable
           columns={columns}
           data={stocks || []}
+          maxHeight="500px"
           withFiltering
           searchKey="name"
         />
