@@ -1,8 +1,21 @@
 import { withErrorHandler } from "@/lib/withErrorHandler";
+import { validate } from "@/lib/zod";
 import { salespersonService } from "@/modules/salesperson/salesperson.service";
-import { NextResponse } from "next/server";
+import { addSalespersonValidation } from "@/modules/salesperson/salesperson.validation";
+import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withErrorHandler(async () => {
   const data = await salespersonService.getSalespersons();
   return NextResponse.json({ data });
+});
+
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const body = await request.json();
+  const validatedBody = validate(body, addSalespersonValidation);
+
+  await salespersonService.addSalesperson(validatedBody);
+  return NextResponse.json(
+    { message: "Berhasil menambahkan salesman" },
+    { status: 201 },
+  );
 });
