@@ -4,8 +4,10 @@ import { clientService } from "@/modules/client/client.service";
 import { addClientValidation } from "@/modules/client/client.validation";
 import { NextRequest, NextResponse } from "next/server";
 
-export const GET = withErrorHandler(async () => {
-  const data = await clientService.getClients();
+export const GET = withErrorHandler(async (request: NextRequest) => {
+  const nameOnly = request.nextUrl.searchParams.get("nameOnly") === "true";
+
+  const data = await clientService.getClients(nameOnly);
   return NextResponse.json({ data });
 });
 

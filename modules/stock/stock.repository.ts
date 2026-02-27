@@ -14,6 +14,7 @@ export const stockRepository = {
         unit: stocks.unit,
         capital_cost: stocks.capital_cost,
         initial_stock: stocks.initial_stock,
+        ending_stock: stocks.ending_stock,
       })
       .from(stocks)
       .orderBy(asc(stocks.name));

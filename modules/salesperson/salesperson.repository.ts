@@ -8,6 +8,18 @@ export const salespersonRepository = {
     return db.select().from(salespersons).orderBy(asc(salespersons.name));
   },
 
+  getSalespersonNames() {
+    return db
+      .select({
+        id: salespersons.id,
+        name: salespersons.name,
+        invoice_number: salespersons.invoice_number,
+        front_number: salespersons.front_number,
+      })
+      .from(salespersons)
+      .orderBy(asc(salespersons.name));
+  },
+
   addSalesperson(data: InsertSalesperson) {
     return db.insert(salespersons).values({ ...data, invoice_number: 0 });
   },

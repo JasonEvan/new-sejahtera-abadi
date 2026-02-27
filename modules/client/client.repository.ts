@@ -18,6 +18,17 @@ export const clientRepository = {
       .orderBy(asc(clients.name), asc(clients.city));
   },
 
+  getNames() {
+    return db
+      .select({
+        id: clients.id,
+        name: clients.name,
+        city: clients.city,
+      })
+      .from(clients)
+      .orderBy(asc(clients.name), asc(clients.city));
+  },
+
   addClient(data: InsertClient) {
     return db.insert(clients).values(data);
   },

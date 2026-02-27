@@ -4,8 +4,10 @@ import { salespersonService } from "@/modules/salesperson/salesperson.service";
 import { addSalespersonValidation } from "@/modules/salesperson/salesperson.validation";
 import { NextRequest, NextResponse } from "next/server";
 
-export const GET = withErrorHandler(async () => {
-  const data = await salespersonService.getSalespersons();
+export const GET = withErrorHandler(async (request: NextRequest) => {
+  const nameOnly = request.nextUrl.searchParams.get("nameOnly") === "true";
+
+  const data = await salespersonService.getSalespersons(nameOnly);
   return NextResponse.json({ data });
 });
 

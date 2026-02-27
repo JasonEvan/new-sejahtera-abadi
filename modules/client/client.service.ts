@@ -2,7 +2,11 @@ import { clientRepository } from "./client.repository";
 import { InsertClient } from "./client.types";
 
 export const clientService = {
-  getClients() {
+  getClients(nameOnly: boolean = false) {
+    if (nameOnly) {
+      return clientRepository.getNames();
+    }
+
     return clientRepository.getClients();
   },
 

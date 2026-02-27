@@ -10,6 +10,19 @@ export async function getSalespersons() {
   return response.data;
 }
 
+export async function getSalespersonNames() {
+  const params = {
+    nameOnly: "true",
+  };
+
+  const queryParams = new URLSearchParams(params);
+
+  const response = await api.get<{ data: Salesperson[] }>(
+    `/salespersons?${queryParams.toString()}`,
+  );
+  return response.data;
+}
+
 export async function addSalesperson(data: InsertSalesperson) {
   const response = await api.post<{ message: string }>("/salespersons", data);
   return response.data;

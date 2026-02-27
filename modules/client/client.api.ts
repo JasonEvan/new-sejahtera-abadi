@@ -6,6 +6,18 @@ export async function getClients() {
   return response.data;
 }
 
+export async function getClientNames() {
+  const params = {
+    nameOnly: "true",
+  };
+
+  const queryParams = new URLSearchParams(params);
+  const response = await api.get<{ data: Client[] }>(
+    `/clients?${queryParams.toString()}`,
+  );
+  return response.data;
+}
+
 export async function addClient(data: InsertClient) {
   const response = await api.post<{ message: string }>("/clients", data);
   return response.data;

@@ -2,7 +2,11 @@ import { salespersonRepository } from "./salesperson.repository";
 import { EditSalesperson, InsertSalesperson } from "./salesperson.types";
 
 export const salespersonService = {
-  getSalespersons() {
+  getSalespersons(nameOnly: boolean = false) {
+    if (nameOnly) {
+      return salespersonRepository.getSalespersonNames();
+    }
+
     return salespersonRepository.getSalespersons();
   },
 
