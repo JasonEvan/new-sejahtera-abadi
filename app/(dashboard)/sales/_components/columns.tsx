@@ -5,6 +5,8 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { Pencil, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import EditItemForm from "./EditItemForm";
+import { alertDialogs } from "@/lib/alert-dialogs";
+import { useSaleStore } from "@/stores/transactions/useSaleStore";
 
 const columnHelper = createColumnHelper<SaleTableRow>();
 
@@ -16,6 +18,17 @@ export const useColumns = () => {
       type: "form",
       formId: "edit-item-form",
       children: <EditItemForm data={data} />,
+    });
+  }
+
+  function handleStockDelete(id: string) {
+    alertDialogs.open({
+      title: "Hapus Item",
+      description: "Apakah Anda yakin ingin menghapus item ini dari keranjang?",
+      onConfirm: () => {
+        alertDialogs.close();
+        useSaleStore.getState().removeFromCart(id);
+      },
     });
   }
 
@@ -57,7 +70,7 @@ export const useColumns = () => {
               variant="ghost"
               size="icon"
               className="text-destructive"
-              onClick={() => {}}
+              onClick={() => handleStockDelete(row.original.id)}
             >
               <Trash2 />
             </Button>
