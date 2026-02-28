@@ -13,8 +13,8 @@ interface SaleStore {
 
   cart: SaleTableRow[];
   addToCart: (data: SaleTableRow) => void;
-  removeFromCart: (index: number) => void;
-  updateCart: (index: number, data: SaleTableRow) => void;
+  removeFromCart: (id: number) => void;
+  updateCart: (id: string, data: SaleTableRow) => void;
 
   meta: {
     invoice_value: number;
@@ -41,8 +41,12 @@ export const useSaleStore = create<SaleStore>()(
       addToCart: (data) => {
         set((state) => ({ cart: [...state.cart, data] }));
       },
-      removeFromCart: (index) => {},
-      updateCart: (index, data) => {},
+      removeFromCart: (id) => {},
+      updateCart: (id, data) => {
+        set((state) => ({
+          cart: state.cart.map((item) => (item.id === id ? data : item)),
+        }));
+      },
 
       meta: {
         invoice_value: 0,

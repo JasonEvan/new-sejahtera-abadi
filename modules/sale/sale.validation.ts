@@ -17,6 +17,7 @@ export const invoiceInformationValidation = z.object({
 export const createItemValidation = (
   stocks: { id: number; ending_stock: number }[],
   cart: SaleTableRow[],
+  editingRowId?: string,
 ) =>
   z
     .object({
@@ -38,6 +39,7 @@ export const createItemValidation = (
 
         const existingQuantity = cart
           .filter((item) => item.stock_id === data.stock_id)
+          .filter((item) => item.id !== editingRowId) // Exclude the item being edited
           .reduce((acc, curr) => acc + curr.quantity, 0);
 
         return data.quantity + existingQuantity <= selectedStock.ending_stock;
