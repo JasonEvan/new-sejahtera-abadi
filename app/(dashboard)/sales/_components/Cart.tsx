@@ -10,6 +10,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { useColumns } from "./columns";
+import { alertDialogs } from "@/lib/alert-dialogs";
+import { OctagonAlert } from "lucide-react";
 
 export default function Cart() {
   const { data: stocks } = useGetStockNames();
@@ -35,7 +37,30 @@ export default function Cart() {
 
   const { setFocus, reset, handleSubmit, setValue, control } = methods;
 
-  const onSubmit = (data: ItemValidation) => {
+  const onSubmit = async (data: ItemValidation) => {
+    if (data.selling_price < data.capital_cost) {
+      const isConfirmed = await new Promise<boolean>((resolve) => {
+        alertDialogs.open({
+          title: "Harga jual lebih rendah dari modal",
+          description:
+            "Apakah Anda yakin ingin melanjutkan? Pastikan untuk memeriksa kembali harga jual dan modal Anda.",
+          icon: OctagonAlert,
+          confirmText: "Lanjutkan",
+          onConfirm: () => {
+            alertDialogs.close();
+            resolve(true);
+          },
+          onCancel: () => {
+            resolve(false);
+          },
+        });
+      });
+
+      if (!isConfirmed) {
+        return;
+      }
+    }
+
     const name = stocks
       ?.find((s) => s.id === data.stock_id)
       ?.name.split(" || ")[0]

@@ -5,7 +5,9 @@ interface AlertDialogProps {
   title: string;
   description: string;
   icon?: typeof Trash2Icon;
+  confirmText?: string;
   onConfirm: () => void;
+  onCancel?: () => void;
 }
 
 interface AlertDialogStore {

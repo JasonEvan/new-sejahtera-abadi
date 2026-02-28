@@ -22,6 +22,14 @@ export default function AlertDialogProvider() {
 
   const Icons = props.icon || Trash2Icon;
 
+  const handleCancel = () => {
+    if (props.onCancel) {
+      props.onCancel();
+    }
+
+    alertDialogs.close();
+  };
+
   return (
     <AlertDialog open={isOpen}>
       <AlertDialogContent size="sm">
@@ -35,7 +43,7 @@ export default function AlertDialogProvider() {
         <AlertDialogFooter>
           <AlertDialogCancel
             variant="outline"
-            onClick={alertDialogs.close}
+            onClick={handleCancel}
             className="cursor-pointer"
           >
             Cancel
@@ -45,7 +53,7 @@ export default function AlertDialogProvider() {
             onClick={props.onConfirm}
             className="cursor-pointer"
           >
-            Delete
+            {props.confirmText || "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
