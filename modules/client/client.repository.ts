@@ -1,7 +1,8 @@
 import { clients } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import { InsertClient } from "./client.types";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
+import { Tx } from "@/lib/common-types";
 
 export const clientRepository = {
   getClients() {
@@ -39,5 +40,15 @@ export const clientRepository = {
 
   deleteClient(id: number) {
     return db.delete(clients).where(eq(clients.id, id));
+  },
+
+  incReceivableBalance(id: number, amount: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .update(clients)
+      .set({
+        ending_receivable_balance: sql`${clients.ending_receivable_balance} + ${amount}`,
+      })
+      .where(eq(clients.id, id));
   },
 };

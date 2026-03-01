@@ -1,7 +1,8 @@
 import { salespersons } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { EditSalesperson, InsertSalesperson } from "./salesperson.types";
+import { Tx } from "@/lib/common-types";
 
 export const salespersonRepository = {
   getSalespersons() {
@@ -30,5 +31,15 @@ export const salespersonRepository = {
 
   deleteSalesperson(id: number) {
     return db.delete(salespersons).where(eq(salespersons.id, id));
+  },
+
+  incInvoiceNumber(id: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .update(salespersons)
+      .set({
+        invoice_number: sql`${salespersons.invoice_number} + 1`,
+      })
+      .where(eq(salespersons.id, id));
   },
 };

@@ -1,5 +1,5 @@
 import z from "zod";
-import { createItemValidation } from "./sale.validation";
+import { backendSaleValidation, createItemValidation } from "./sale.validation";
 
 export type SaleTableRow = {
   id: string;
@@ -12,3 +12,5 @@ export type SaleTableRow = {
 };
 
 export type ItemValidation = z.infer<ReturnType<typeof createItemValidation>>;
+
+export type InsertSale = z.infer<typeof backendSaleValidation>;
