@@ -51,4 +51,14 @@ export const clientRepository = {
       })
       .where(eq(clients.id, id));
   },
+
+  incPayableBalance(id: number, amount: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .update(clients)
+      .set({
+        ending_payable_balance: sql`${clients.ending_payable_balance} + ${amount}`,
+      })
+      .where(eq(clients.id, id));
+  },
 };

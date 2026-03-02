@@ -79,4 +79,34 @@ export const stockRepository = {
       .set({ ending_stock: finalDecStockSql, qty_out: finalQtyOutSql })
       .where(inArray(stocks.id, ids));
   },
+
+  bulkIncrementStockAndIncrementQtyIn(
+    items: { id: number; quantity: number }[],
+    tx?: Tx,
+  ) {
+    if (items.length === 0) return;
+
+    const database = tx ?? db;
+
+    const ids = items.map((item) => item.id);
+
+    const incStockChunks = items.map(
+      (item) =>
+        sql`WHEN ${stocks.id} = ${item.id} THEN ${stocks.ending_stock} + ${item.quantity}`,
+    );
+
+    const finalIncStockSql = sql`CASE ${sql.join(incStockChunks, sql` `)} ELSE ${stocks.ending_stock} END`;
+
+    const qtyInChunks = items.map(
+      (item) =>
+        sql`WHEN ${stocks.id} = ${item.id} THEN ${stocks.qty_in} + ${item.quantity}`,
+    );
+
+    const finalQtyInSql = sql`CASE ${sql.join(qtyInChunks, sql` `)} ELSE ${stocks.qty_in} END`;
+
+    return database
+      .update(stocks)
+      .set({ ending_stock: finalIncStockSql, qty_in: finalQtyInSql })
+      .where(inArray(stocks.id, ids));
+  },
 };
