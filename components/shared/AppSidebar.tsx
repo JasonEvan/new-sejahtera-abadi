@@ -53,7 +53,7 @@ const sidebarItems = [
     title: "Pelunasan",
     icon: Wallet,
     children: [
-      { title: "Utang", url: "/payments" },
+      { title: "Utang", url: "/payables" },
       { title: "Piutang", url: "/receivables" },
     ],
   },
