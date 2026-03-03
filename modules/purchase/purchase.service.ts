@@ -25,6 +25,7 @@ export const purchaseService = {
       const mappedData = data.cart.map((item) => ({
         id: item.stock_id,
         quantity: item.quantity,
+        product_price: item.product_price,
       }));
 
       await stockRepository.bulkIncrementStockAndIncrementQtyIn(mappedData, tx);

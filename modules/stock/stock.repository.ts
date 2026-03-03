@@ -1,6 +1,6 @@
 import { stocks } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { asc, eq, inArray, SQL, sql } from "drizzle-orm";
 import { InsertStock } from "./stock.types";
 import { Tx } from "@/lib/common-types";
 
@@ -81,7 +81,7 @@ export const stockRepository = {
   },
 
   bulkIncrementStockAndIncrementQtyIn(
-    items: { id: number; quantity: number }[],
+    items: { id: number; quantity: number; product_price?: number }[],
     tx?: Tx,
   ) {
     if (items.length === 0) return;
@@ -104,9 +104,31 @@ export const stockRepository = {
 
     const finalQtyInSql = sql`CASE ${sql.join(qtyInChunks, sql` `)} ELSE ${stocks.qty_in} END`;
 
+    const updatePayload: {
+      ending_stock: SQL;
+      qty_in: SQL;
+      product_price?: SQL;
+    } = {
+      ending_stock: finalIncStockSql,
+      qty_in: finalQtyInSql,
+    };
+
+    const itemsWithPrice = items.filter(
+      (item) => item.product_price !== undefined,
+    );
+
+    if (itemsWithPrice.length > 0) {
+      const priceChunks = itemsWithPrice.map(
+        (item) =>
+          sql`WHEN ${stocks.id} = ${item.id} THEN ${item.product_price}`,
+      );
+
+      updatePayload.product_price = sql`CASE ${sql.join(priceChunks, sql` `)} ELSE ${stocks.product_price} END`;
+    }
+
     return database
       .update(stocks)
-      .set({ ending_stock: finalIncStockSql, qty_in: finalQtyInSql })
+      .set(updatePayload)
       .where(inArray(stocks.id, ids));
   },
 };
