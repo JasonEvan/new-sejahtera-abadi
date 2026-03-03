@@ -52,8 +52,8 @@ export default function InvoiceMeta() {
     const invoice_value = cart.reduce((acc, curr) => acc + curr.subtotal, 0);
     const total = invoice_value - (watchedDiscount * invoice_value) / 100;
 
-    setValue("invoice_value", invoice_value);
-    setValue("total", total);
+    setValue("invoice_value", invoice_value, { shouldValidate: true });
+    setValue("total", total, { shouldValidate: true });
   }, [cart, watchedDiscount, setValue]);
 
   return (

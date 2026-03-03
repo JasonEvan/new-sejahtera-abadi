@@ -90,8 +90,12 @@ export default function Cart() {
       const selected = stocks?.find((s) => s.id === watchedStockId);
 
       if (selected) {
-        setValue("capital_cost", selected.capital_cost);
-        setValue("selling_price", selected.selling_price || 0);
+        setValue("capital_cost", selected.capital_cost, {
+          shouldValidate: true,
+        });
+        setValue("selling_price", selected.selling_price || 0, {
+          shouldValidate: true,
+        });
       }
     }
   }, [watchedStockId, setValue, stocks]);
