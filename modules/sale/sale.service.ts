@@ -45,7 +45,7 @@ export const saleService = {
         throw new AppError("Failed to create sale order", 500);
       }
 
-      const insertSaleOrderLine = saleOrderLineRepository.insertSaleOrderLine(
+      await saleOrderLineRepository.insertSaleOrderLine(
         data,
         insertSaleOrders[0].id,
         tx,
@@ -55,26 +55,18 @@ export const saleService = {
         id: item.stock_id,
         quantity: item.quantity,
       }));
-      const decStockAndIncQtyOut =
-        stockRepository.bulkDecrementStockAndIncrementQtyOut(mappedData, tx);
-
-      const incInvoiceNumber = salespersonRepository.incInvoiceNumber(
-        data.salesman_id,
+      await stockRepository.bulkDecrementStockAndIncrementQtyOut(
+        mappedData,
         tx,
       );
 
-      const incReceivableBalance = clientRepository.incReceivableBalance(
+      await salespersonRepository.incInvoiceNumber(data.salesman_id, tx);
+
+      await clientRepository.incReceivableBalance(
         data.client_id,
         data.total,
         tx,
       );
-
-      await Promise.all([
-        insertSaleOrderLine,
-        decStockAndIncQtyOut,
-        incInvoiceNumber,
-        incReceivableBalance,
-      ]);
     });
   },
 };
