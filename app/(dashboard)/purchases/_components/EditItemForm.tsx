@@ -83,6 +83,7 @@ export default function EditItemForm({ data }: { data: PurchaseTableRow }) {
             name="stock_id"
             label="Nama Barang"
             items={stocks || []}
+            isInDialog
           />
           <InputField name="quantity" label="Jumlah" type="number" />
         </div>

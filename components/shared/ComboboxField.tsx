@@ -14,6 +14,7 @@ type ComboboxFieldProps = {
   label: string;
   placeholder?: string;
   disabled?: boolean;
+  isInDialog?: boolean;
   items: {
     id: number;
     name: string;
@@ -25,6 +26,7 @@ export default function ComboboxField({
   label,
   placeholder,
   disabled,
+  isInDialog,
   items,
 }: ComboboxFieldProps) {
   const { control } = useFormContext();
@@ -58,11 +60,19 @@ export default function ComboboxField({
                   field.ref(e);
                 }}
               />
-              <ComboboxContent>
+              <ComboboxContent
+                className={isInDialog ? "z-9999 max-h-50 overflow-auto" : ""}
+              >
                 <ComboboxEmpty>No Items Found</ComboboxEmpty>
                 <ComboboxList>
                   {(item) => (
-                    <ComboboxItem key={item.id} value={item.name}>
+                    <ComboboxItem
+                      key={item.id}
+                      value={item.name}
+                      className={
+                        isInDialog ? "cursor-pointer pointer-events-auto" : ""
+                      }
+                    >
                       {item.name}
                     </ComboboxItem>
                   )}
