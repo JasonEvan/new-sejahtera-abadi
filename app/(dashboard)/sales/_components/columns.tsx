@@ -39,19 +39,39 @@ export const useColumns = () => {
       }),
 
       columnHelper.accessor("selling_price", {
-        header: "Harga Jual",
+        header: () => <div className="text-right">Harga Jual</div>,
+        cell: (info) => (
+          <div className="text-right">
+            {info.getValue().toLocaleString("id-ID")}
+          </div>
+        ),
       }),
 
       columnHelper.accessor("capital_cost", {
-        header: "Modal",
+        header: () => <div className="text-right">Modal</div>,
+        cell: (info) => (
+          <div className="text-right">
+            {info.getValue().toLocaleString("id-ID")}
+          </div>
+        ),
       }),
 
       columnHelper.accessor("quantity", {
-        header: "Jumlah",
+        header: () => <div className="text-right">Jumlah</div>,
+        cell: (info) => (
+          <div className="text-right">
+            {info.getValue().toLocaleString("id-ID")}
+          </div>
+        ),
       }),
 
       columnHelper.accessor("subtotal", {
-        header: "Subtotal",
+        header: () => <div className="text-right">Subtotal</div>,
+        cell: (info) => (
+          <div className="text-right">
+            {info.getValue().toLocaleString("id-ID")}
+          </div>
+        ),
       }),
 
       columnHelper.display({
