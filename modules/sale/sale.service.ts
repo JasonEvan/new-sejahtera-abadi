@@ -69,4 +69,8 @@ export const saleService = {
       );
     });
   },
+
+  getOrdersMenu(clientId: number, isPaidOff: boolean) {
+    return saleOrderRepository.getOrdersMenu(clientId, isPaidOff);
+  },
 };

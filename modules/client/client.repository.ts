@@ -61,4 +61,24 @@ export const clientRepository = {
       })
       .where(eq(clients.id, id));
   },
+
+  decPayableBalance(id: number, amount: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .update(clients)
+      .set({
+        ending_payable_balance: sql`${clients.ending_payable_balance} - ${amount}`,
+      })
+      .where(eq(clients.id, id));
+  },
+
+  decReceivableBalance(id: number, amount: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .update(clients)
+      .set({
+        ending_receivable_balance: sql`${clients.ending_receivable_balance} - ${amount}`,
+      })
+      .where(eq(clients.id, id));
+  },
 };

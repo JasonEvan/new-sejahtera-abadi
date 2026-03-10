@@ -32,4 +32,8 @@ export const purchaseService = {
       await clientRepository.incPayableBalance(data.client_id, data.total, tx);
     });
   },
+
+  getOrdersMenu(clientId: number, isPaidOff: boolean) {
+    return purchaseOrderRepository.getOrdersMenu(clientId, isPaidOff);
+  },
 };

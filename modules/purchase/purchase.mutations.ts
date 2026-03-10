@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { usePurchaseStore } from "@/stores/transactions/usePurchaseStore";
 import { getClientsKey } from "../client/client.keys";
 import { getStocksKey } from "../stock/stock.keys";
+import { invalidateOrdersMenuKey } from "./purchase.keys";
 
 export const useCreatePurchaseMutation = () => {
   const queryClient = useQueryClient();
@@ -18,6 +19,7 @@ export const useCreatePurchaseMutation = () => {
 
       queryClient.invalidateQueries({ queryKey: getClientsKey() });
       queryClient.invalidateQueries({ queryKey: getStocksKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
     },
   });
 };

@@ -3,6 +3,7 @@ import {
   backendPurchaseValidation,
   createItemValidation,
 } from "./purchase.validation";
+import { purchase_orders } from "@/drizzle/schema";
 
 export type PurchaseTableRow = {
   id: string;
@@ -17,3 +18,5 @@ export type PurchaseTableRow = {
 export type ItemValidation = z.infer<typeof createItemValidation>;
 
 export type InsertPurchase = z.infer<typeof backendPurchaseValidation>;
+
+export type PurchaseOrder = typeof purchase_orders.$inferSelect;
