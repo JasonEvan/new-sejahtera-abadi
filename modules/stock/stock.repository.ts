@@ -1,6 +1,6 @@
 import { stocks } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { asc, eq, inArray, SQL, sql } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { InsertStock } from "./stock.types";
 import { Tx } from "@/lib/common-types";
 
@@ -58,26 +58,21 @@ export const stockRepository = {
 
     const database = tx ?? db;
 
-    const ids = items.map((item) => item.id);
-
-    const decStockChunks = items.map(
-      (item) =>
-        sql`WHEN ${stocks.id} = ${item.id} THEN ${stocks.ending_stock} - ${item.quantity}`,
+    const values = sql.join(
+      items.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      sql`, `,
     );
 
-    const finalDecStockSql = sql`CASE ${sql.join(decStockChunks, sql` `)} ELSE ${stocks.ending_stock} END`;
+    const query = sql`
+      UPDATE ${stocks} AS s
+      SET
+        ending_stock = s.ending_stock - v.quantity,
+        qty_out = s.qty_out + v.quantity
+      FROM (VALUES ${values}) AS v(id, quantity)
+      WHERE s.id = v.id
+    `;
 
-    const qtyOutChunks = items.map(
-      (item) =>
-        sql`WHEN ${stocks.id} = ${item.id} THEN ${stocks.qty_out} + ${item.quantity}`,
-    );
-
-    const finalQtyOutSql = sql`CASE ${sql.join(qtyOutChunks, sql` `)} ELSE ${stocks.qty_out} END`;
-
-    return database
-      .update(stocks)
-      .set({ ending_stock: finalDecStockSql, qty_out: finalQtyOutSql })
-      .where(inArray(stocks.id, ids));
+    return database.execute(query);
   },
 
   bulkIncrementStockAndIncrementQtyIn(
@@ -88,47 +83,27 @@ export const stockRepository = {
 
     const database = tx ?? db;
 
-    const ids = items.map((item) => item.id);
-
-    const incStockChunks = items.map(
-      (item) =>
-        sql`WHEN ${stocks.id} = ${item.id} THEN ${stocks.ending_stock} + ${item.quantity}`,
+    const values = sql.join(
+      items.map((item) => {
+        if (item.product_price !== undefined) {
+          return sql`(${item.id}::int, ${item.quantity}::int, ${item.product_price}::int)`;
+        } else {
+          return sql`(${item.id}::int, ${item.quantity}::int, NULL::int)`;
+        }
+      }),
+      sql`, `,
     );
 
-    const finalIncStockSql = sql`CASE ${sql.join(incStockChunks, sql` `)} ELSE ${stocks.ending_stock} END`;
+    const query = sql`
+      UPDATE ${stocks} AS s
+      SET
+        ending_stock = s.ending_stock + v.quantity,
+        qty_in = s.qty_in + v.quantity,
+        product_price = COALESCE(v.product_price, s.product_price)
+      FROM (VALUES ${values}) AS v(id, quantity, product_price)
+      WHERE s.id = v.id
+    `;
 
-    const qtyInChunks = items.map(
-      (item) =>
-        sql`WHEN ${stocks.id} = ${item.id} THEN ${stocks.qty_in} + ${item.quantity}`,
-    );
-
-    const finalQtyInSql = sql`CASE ${sql.join(qtyInChunks, sql` `)} ELSE ${stocks.qty_in} END`;
-
-    const updatePayload: {
-      ending_stock: SQL;
-      qty_in: SQL;
-      product_price?: SQL;
-    } = {
-      ending_stock: finalIncStockSql,
-      qty_in: finalQtyInSql,
-    };
-
-    const itemsWithPrice = items.filter(
-      (item) => item.product_price !== undefined,
-    );
-
-    if (itemsWithPrice.length > 0) {
-      const priceChunks = itemsWithPrice.map(
-        (item) =>
-          sql`WHEN ${stocks.id} = ${item.id} THEN ${item.product_price}`,
-      );
-
-      updatePayload.product_price = sql`CASE ${sql.join(priceChunks, sql` `)} ELSE ${stocks.product_price} END`;
-    }
-
-    return database
-      .update(stocks)
-      .set(updatePayload)
-      .where(inArray(stocks.id, ids));
+    return database.execute(query);
   },
 };
