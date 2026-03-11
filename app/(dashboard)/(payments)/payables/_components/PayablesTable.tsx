@@ -122,7 +122,7 @@ export default function PayablesTable() {
           </div>
         </form>
       </FormProvider>
-      <DataTable columns={columns} data={cart} />
+      <DataTable columns={columns} data={cart} maxHeight="500px" />
       <div className="flex justify-end">
         <Button
           className="cursor-pointer"
