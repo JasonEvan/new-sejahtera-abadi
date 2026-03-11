@@ -9,6 +9,7 @@ import { dialogs } from "@/lib/dialogs";
 import {
   addSalespersonKey,
   editSalespersonKey,
+  getSalespersonNamesKey,
   getSalespersonsKey,
 } from "./salesperson.keys";
 
@@ -23,6 +24,7 @@ export const useAddSalespersonMutation = () => {
         position: "bottom-right",
       });
       queryClient.invalidateQueries({ queryKey: getSalespersonsKey() });
+      queryClient.invalidateQueries({ queryKey: getSalespersonNamesKey() });
     },
   });
 };
@@ -38,6 +40,7 @@ export const useEditSalespersonMutation = () => {
         position: "bottom-right",
       });
       queryClient.invalidateQueries({ queryKey: getSalespersonsKey() });
+      queryClient.invalidateQueries({ queryKey: getSalespersonNamesKey() });
     },
   });
 };
@@ -51,6 +54,7 @@ export const useDeleteSalespersonMutation = () => {
         position: "bottom-right",
       });
       queryClient.invalidateQueries({ queryKey: getSalespersonsKey() });
+      queryClient.invalidateQueries({ queryKey: getSalespersonNamesKey() });
     },
   });
 };

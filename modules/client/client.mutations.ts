@@ -1,6 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { addClient, deleteClient, editClient } from "./client.api";
-import { addClientKey, editClientKey, getClientsKey } from "./client.keys";
+import {
+  addClientKey,
+  editClientKey,
+  getClientNamesKey,
+  getClientsKey,
+} from "./client.keys";
 import { toast } from "sonner";
 import { dialogs } from "@/lib/dialogs";
 
@@ -13,6 +18,7 @@ export const useAddClientMutation = () => {
       dialogs.close();
       toast.success(data.message, { position: "bottom-right" });
       queryClient.invalidateQueries({ queryKey: getClientsKey() });
+      queryClient.invalidateQueries({ queryKey: getClientNamesKey() });
     },
   });
 };
@@ -26,6 +32,7 @@ export const useEditClientMutation = () => {
       dialogs.close();
       toast.success(data.message, { position: "bottom-right" });
       queryClient.invalidateQueries({ queryKey: getClientsKey() });
+      queryClient.invalidateQueries({ queryKey: getClientNamesKey() });
     },
   });
 };
@@ -37,6 +44,7 @@ export const useDeleteClientMutation = () => {
     onSuccess: (data) => {
       toast.success(data.message, { position: "bottom-right" });
       queryClient.invalidateQueries({ queryKey: getClientsKey() });
+      queryClient.invalidateQueries({ queryKey: getClientNamesKey() });
     },
   });
 };
