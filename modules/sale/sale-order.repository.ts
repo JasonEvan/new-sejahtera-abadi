@@ -1,9 +1,9 @@
 import { Tx } from "@/lib/common-types";
 import { InsertSale } from "./sale.types";
-import { sales_orders } from "@/drizzle/schema";
+import { clients, sales_order_lines, sales_orders, stocks } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, like, ne, sql } from "drizzle-orm";
 
 export const saleOrderRepository = {
   insertSaleOrder(data: InsertSale, tx?: Tx) {
@@ -68,5 +68,51 @@ export const saleOrderRepository = {
     `;
 
     return database.execute(query);
+  },
+
+  getSalesInvoices(invoicePrefix: string) {
+    return db
+      .select({
+        invoice_number: sales_orders.invoice_number,
+        name: clients.name,
+        city: clients.city,
+        invoice_value: sales_orders.invoice_value,
+        balance_due: sales_orders.balance_due,
+      })
+      .from(sales_orders)
+      .innerJoin(clients, eq(sales_orders.client_id, clients.id))
+      .where(like(sales_orders.invoice_number, `${invoicePrefix}%`))
+      .orderBy(asc(sales_orders.invoice_number));
+  },
+
+  async getSalesInvoiceDetail(invoiceNumber: string) {
+    const [header] = await db
+      .select({
+        invoice_number: sales_orders.invoice_number,
+        invoice_date: sales_orders.invoice_date,
+        invoice_value: sales_orders.invoice_value,
+        client_name: clients.name,
+        client_city: clients.city,
+      })
+      .from(sales_orders)
+      .innerJoin(clients, eq(sales_orders.client_id, clients.id))
+      .where(eq(sales_orders.invoice_number, invoiceNumber));
+
+    if (!header) return { header: null, lines: [] as { name: string | null; qty: number; unit: string | null; price: number; total_price: number }[] };
+
+    const lines = await db
+      .select({
+        name: stocks.name,
+        qty: sales_order_lines.qty,
+        unit: stocks.unit,
+        price: sales_order_lines.price,
+        total_price: sales_order_lines.total_price,
+      })
+      .from(sales_order_lines)
+      .innerJoin(sales_orders, eq(sales_order_lines.sales_order_id, sales_orders.id))
+      .leftJoin(stocks, eq(sales_order_lines.stock_id, stocks.id))
+      .where(eq(sales_orders.invoice_number, invoiceNumber));
+
+    return { header, lines };
   },
 };

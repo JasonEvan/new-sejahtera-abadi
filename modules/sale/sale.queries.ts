@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { getOrdersMenuKey } from "./sale.keys";
-import { getOrdersMenu } from "./sale.api";
+import {
+  getOrdersMenuKey,
+  getSalesInvoiceDetailKey,
+  getSalesInvoicesKey,
+} from "./sale.keys";
+import {
+  getOrdersMenu,
+  getSalesInvoiceDetail,
+  getSalesInvoices,
+} from "./sale.api";
 
 export const useGetOrdersMenu = ({
   clientId,
@@ -18,5 +26,25 @@ export const useGetOrdersMenu = ({
         name: invoice.invoice_number,
         balance_due: invoice.balance_due,
       })),
+  });
+};
+
+export const useGetSalesInvoices = (
+  invoicePrefix: string,
+  enabled: boolean,
+) => {
+  return useQuery({
+    queryKey: getSalesInvoicesKey(invoicePrefix),
+    queryFn: () => getSalesInvoices(invoicePrefix),
+    select: (data) => data.data,
+    enabled,
+  });
+};
+
+export const useGetSalesInvoiceDetail = (invoiceNumber: string) => {
+  return useQuery({
+    queryKey: getSalesInvoiceDetailKey(invoiceNumber),
+    queryFn: () => getSalesInvoiceDetail(invoiceNumber),
+    select: (data) => data.data,
   });
 };

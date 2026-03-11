@@ -1,5 +1,6 @@
 import db from "@/lib/drizzle";
-import { InsertSale } from "./sale.types";
+import dayjs from "dayjs";
+import { InsertSale, SalesInvoiceDetailLine, SalesInvoiceHeader } from "./sale.types";
 import { saleOrderRepository } from "./sale-order.repository";
 import { saleOrderLineRepository } from "./sale-order-line.repository";
 import { stockRepository } from "../stock/stock.repository";
@@ -72,5 +73,48 @@ export const saleService = {
 
   getOrdersMenu(clientId: number, isPaidOff: boolean) {
     return saleOrderRepository.getOrdersMenu(clientId, isPaidOff);
+  },
+
+  getSalesInvoices(invoicePrefix: string) {
+    return saleOrderRepository.getSalesInvoices(invoicePrefix);
+  },
+
+  async getSalesInvoiceDetail(invoiceNumber: string) {
+    const { header, lines } = await saleOrderRepository.getSalesInvoiceDetail(invoiceNumber);
+
+    if (!header) throw new AppError("Invoice not found", 404);
+
+    let totalPrice = 0;
+
+    const formattedLines: SalesInvoiceDetailLine[] = [
+      ...lines.map((line) => {
+        totalPrice += line.total_price;
+        return {
+          name: line.name,
+          qty: line.qty,
+          unit: line.unit,
+          price: line.price,
+          total_price: line.total_price,
+        };
+      }),
+      {
+        name: "TOTAL",
+        qty: null,
+        unit: null,
+        price: null,
+        total_price: totalPrice,
+      },
+    ];
+
+    return {
+      header: {
+        invoice_number: header.invoice_number,
+        invoice_date: dayjs(header.invoice_date).format("DD/MM/YYYY"),
+        invoice_value: header.invoice_value,
+        client_name: header.client_name,
+        client_city: header.client_city,
+      } as SalesInvoiceHeader,
+      lines: formattedLines,
+    };
   },
 };

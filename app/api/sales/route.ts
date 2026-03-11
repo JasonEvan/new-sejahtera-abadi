@@ -6,6 +6,13 @@ import { backendSaleValidation } from "@/modules/sale/sale.validation";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
+  const invoicePrefix = request.nextUrl.searchParams.get("invoice_prefix");
+
+  if (invoicePrefix !== null) {
+    const data = await saleService.getSalesInvoices(invoicePrefix);
+    return NextResponse.json({ data });
+  }
+
   const clientId = request.nextUrl.searchParams.get("client_id");
   const isPaidOff = request.nextUrl.searchParams.get("is_paid_off") === "true";
   const forMenu = request.nextUrl.searchParams.get("for_menu") === "true";
