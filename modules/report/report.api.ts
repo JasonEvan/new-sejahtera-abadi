@@ -1,5 +1,11 @@
 import api from "@/lib/axios";
-import { AllPayablesTableRow, AllReceivablesTableRow, InventoryLedgerTableRow } from "./report.types";
+import {
+  AllPayablesTableRow,
+  AllReceivablesTableRow,
+  ClientPayablesTableRow,
+  ClientReceivablesTableRow,
+  InventoryLedgerTableRow,
+} from "./report.types";
 
 export async function getInventoryLedgers(stockId: number) {
   const response = await api.get<{ data: InventoryLedgerTableRow[] }>(
@@ -18,6 +24,20 @@ export async function getAllPayables() {
 export async function getAllReceivables() {
   const response = await api.get<{ data: AllReceivablesTableRow[] }>(
     "/sales-payments",
+  );
+  return response.data;
+}
+
+export async function getPayablesByClient(clientId: number) {
+  const response = await api.get<{ data: ClientPayablesTableRow[] }>(
+    `/reports/payables-per-client?client_id=${clientId}`,
+  );
+  return response.data;
+}
+
+export async function getReceivablesByClient(clientId: number) {
+  const response = await api.get<{ data: ClientReceivablesTableRow[] }>(
+    `/reports/receivables-per-client?client_id=${clientId}`,
   );
   return response.data;
 }

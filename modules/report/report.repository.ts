@@ -117,6 +117,37 @@ export const reportRepository = {
       );
   },
 
+  getPayablesByClient(clientId: number) {
+    return db
+      .select({
+        invoice_number: purchase_orders.invoice_number,
+        invoice_date: purchase_orders.invoice_date,
+        invoice_value: purchase_orders.invoice_value,
+        paid_amount:
+          sql<number>`COALESCE(SUM(${purchase_payments.paid_amount}), 0)`.mapWith(
+            Number,
+          ),
+        payment_date: max(purchase_payments.payment_date),
+        balance_due: purchase_orders.balance_due,
+      })
+      .from(purchase_orders)
+      .leftJoin(
+        purchase_payments,
+        eq(purchase_orders.id, purchase_payments.purchase_order_id),
+      )
+      .where(eq(purchase_orders.client_id, clientId))
+      .groupBy(
+        purchase_orders.invoice_number,
+        purchase_orders.invoice_date,
+        purchase_orders.invoice_value,
+        purchase_orders.balance_due,
+      )
+      .orderBy(
+        asc(purchase_orders.invoice_date),
+        asc(purchase_orders.invoice_number),
+      );
+  },
+
   getAllReceivables() {
     return db
       .select({
@@ -141,6 +172,37 @@ export const reportRepository = {
       .groupBy(
         clients.name,
         clients.city,
+        sales_orders.invoice_number,
+        sales_orders.invoice_date,
+        sales_orders.invoice_value,
+        sales_orders.balance_due,
+      )
+      .orderBy(
+        asc(sales_orders.invoice_date),
+        asc(sales_orders.invoice_number),
+      );
+  },
+
+  getReceivablesByClient(clientId: number) {
+    return db
+      .select({
+        invoice_number: sales_orders.invoice_number,
+        invoice_date: sales_orders.invoice_date,
+        invoice_value: sales_orders.invoice_value,
+        paid_amount:
+          sql<number>`COALESCE(SUM(${sales_payments.paid_amount}), 0)`.mapWith(
+            Number,
+          ),
+        payment_date: max(sales_payments.payment_date),
+        balance_due: sales_orders.balance_due,
+      })
+      .from(sales_orders)
+      .leftJoin(
+        sales_payments,
+        eq(sales_orders.id, sales_payments.sales_order_id),
+      )
+      .where(eq(sales_orders.client_id, clientId))
+      .groupBy(
         sales_orders.invoice_number,
         sales_orders.invoice_date,
         sales_orders.invoice_value,
