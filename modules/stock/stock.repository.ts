@@ -36,6 +36,13 @@ export const stockRepository = {
     return db.delete(stocks).where(eq(stocks.id, id));
   },
 
+  getStartingStock(stockId: number) {
+    return db
+      .select({ initial_stock: stocks.initial_stock })
+      .from(stocks)
+      .where(eq(stocks.id, stockId));
+  },
+
   getStocksForUpdate(ids: number[], tx: Tx) {
     if (ids.length === 0) return [];
 
