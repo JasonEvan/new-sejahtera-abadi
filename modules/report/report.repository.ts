@@ -7,6 +7,7 @@ import {
   purchase_returns,
   sales_order_lines,
   sales_orders,
+  sales_payments,
   sales_return_lines,
   sales_returns,
 } from "@/drizzle/schema";
@@ -113,6 +114,41 @@ export const reportRepository = {
       .orderBy(
         asc(purchase_orders.invoice_date),
         asc(purchase_orders.invoice_number),
+      );
+  },
+
+  getAllReceivables() {
+    return db
+      .select({
+        name: clients.name,
+        city: clients.city,
+        invoice_number: sales_orders.invoice_number,
+        invoice_date: sales_orders.invoice_date,
+        invoice_value: sales_orders.invoice_value,
+        paid_amount:
+          sql<number>`COALESCE(SUM(${sales_payments.paid_amount}), 0)`.mapWith(
+            Number,
+          ),
+        payment_date: max(sales_payments.payment_date),
+        balance_due: sales_orders.balance_due,
+      })
+      .from(sales_orders)
+      .innerJoin(clients, eq(sales_orders.client_id, clients.id))
+      .leftJoin(
+        sales_payments,
+        eq(sales_orders.id, sales_payments.sales_order_id),
+      )
+      .groupBy(
+        clients.name,
+        clients.city,
+        sales_orders.invoice_number,
+        sales_orders.invoice_date,
+        sales_orders.invoice_value,
+        sales_orders.balance_due,
+      )
+      .orderBy(
+        asc(sales_orders.invoice_date),
+        asc(sales_orders.invoice_number),
       );
   },
 };

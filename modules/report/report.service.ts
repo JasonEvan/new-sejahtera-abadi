@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { stockRepository } from "../stock/stock.repository";
 import { reportRepository } from "./report.repository";
-import { AllPayablesTableRow, InventoryLedgerTableRow } from "./report.types";
+import { AllPayablesTableRow, AllReceivablesTableRow, InventoryLedgerTableRow } from "./report.types";
 
 export const reportService = {
   async getInventoryLedgers(stockId: number) {
@@ -108,6 +108,47 @@ export const reportService = {
     let totalRemainingAmount = 0;
 
     const tableRows: AllPayablesTableRow[] = [
+      ...data.map((row) => {
+        totalInvoiceValue += row.invoice_value;
+        totalPaidAmount += row.paid_amount;
+        totalRemainingAmount += row.balance_due;
+
+        return {
+          name: row.name,
+          city: row.city,
+          invoice_number: row.invoice_number,
+          invoice_date: dayjs(row.invoice_date).format("DD/MM/YYYY"),
+          invoice_value: row.invoice_value,
+          paid_amount: row.paid_amount,
+          payment_date: row.payment_date
+            ? dayjs(row.payment_date).format("DD/MM/YYYY")
+            : null,
+          balance_due: row.balance_due,
+        };
+      }),
+      {
+        name: "",
+        city: "",
+        invoice_number: "TOTAL",
+        invoice_date: null,
+        invoice_value: totalInvoiceValue,
+        paid_amount: totalPaidAmount,
+        payment_date: null,
+        balance_due: totalRemainingAmount,
+      },
+    ];
+
+    return tableRows;
+  },
+
+  async getAllReceivables() {
+    const data = await reportRepository.getAllReceivables();
+
+    let totalInvoiceValue = 0;
+    let totalPaidAmount = 0;
+    let totalRemainingAmount = 0;
+
+    const tableRows: AllReceivablesTableRow[] = [
       ...data.map((row) => {
         totalInvoiceValue += row.invoice_value;
         totalPaidAmount += row.paid_amount;
