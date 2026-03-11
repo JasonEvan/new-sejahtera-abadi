@@ -9,3 +9,14 @@ export interface InventoryLedgerTableRow {
   qty_out: number | null;
   final_qty: number;
 }
+
+export interface AllPayablesTableRow {
+  name: string;
+  city: string;
+  invoice_number: string;
+  invoice_date: string | null;
+  invoice_value: number;
+  paid_amount: number;
+  payment_date: string | null;
+  balance_due: number;
+}

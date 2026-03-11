@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getInventoryLedgersKey } from "./report.keys";
-import { getInventoryLedgers } from "./report.api";
+import { getAllPayablesKey, getInventoryLedgersKey } from "./report.keys";
+import { getAllPayables, getInventoryLedgers } from "./report.api";
 
 export const useGetInventoryLedgers = (stockId: number, enabled: boolean) => {
   return useQuery({
@@ -8,5 +8,13 @@ export const useGetInventoryLedgers = (stockId: number, enabled: boolean) => {
     queryFn: () => getInventoryLedgers(stockId),
     select: (data) => data.data,
     enabled,
+  });
+};
+
+export const useGetAllPayables = () => {
+  return useQuery({
+    queryKey: getAllPayablesKey(),
+    queryFn: getAllPayables,
+    select: (data) => data.data,
   });
 };

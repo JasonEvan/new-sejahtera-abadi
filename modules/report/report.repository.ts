@@ -2,6 +2,7 @@ import {
   clients,
   purchase_order_lines,
   purchase_orders,
+  purchase_payments,
   purchase_return_lines,
   purchase_returns,
   sales_order_lines,
@@ -10,7 +11,7 @@ import {
   sales_returns,
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq, max, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 
 export const reportRepository = {
@@ -78,5 +79,40 @@ export const reportRepository = {
       asc(sql`invoice_date`),
       asc(sql`invoice_number`),
     );
+  },
+
+  getAllPayables() {
+    return db
+      .select({
+        name: clients.name,
+        city: clients.city,
+        invoice_number: purchase_orders.invoice_number,
+        invoice_date: purchase_orders.invoice_date,
+        invoice_value: purchase_orders.invoice_value,
+        paid_amount:
+          sql<number>`COALESCE(SUM(${purchase_payments.paid_amount}), 0)`.mapWith(
+            Number,
+          ),
+        payment_date: max(purchase_payments.payment_date),
+        balance_due: purchase_orders.balance_due,
+      })
+      .from(purchase_orders)
+      .innerJoin(clients, eq(purchase_orders.client_id, clients.id))
+      .leftJoin(
+        purchase_payments,
+        eq(purchase_orders.id, purchase_payments.purchase_order_id),
+      )
+      .groupBy(
+        clients.name,
+        clients.city,
+        purchase_orders.invoice_number,
+        purchase_orders.invoice_date,
+        purchase_orders.invoice_value,
+        purchase_orders.balance_due,
+      )
+      .orderBy(
+        asc(purchase_orders.invoice_date),
+        asc(purchase_orders.invoice_number),
+      );
   },
 };
