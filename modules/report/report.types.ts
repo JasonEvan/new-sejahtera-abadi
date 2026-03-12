@@ -49,3 +49,22 @@ export interface ClientReceivablesTableRow {
   payment_date: string | null;
   balance_due: number;
 }
+
+export interface ProfitQueryResult {
+  sales_name: string;
+  invoice_number: string;
+  invoice_date: Date | null;
+  client_name: string;
+  client_city: string | null;
+  invoice_value: number;
+  invoice_profit: number;
+}
+
+export interface ProfitTableRow {
+  invoice_number: string;
+  invoice_date: string;
+  client_name: string;
+  client_city: string | null;
+  invoice_value: number | null;
+  invoice_profit: number | null;
+}

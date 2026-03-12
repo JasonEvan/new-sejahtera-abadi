@@ -6,3 +6,5 @@ export const getPayablesByClientKey = (clientId: number) =>
   ["payables", clientId] as const;
 export const getReceivablesByClientKey = (clientId: number) =>
   ["receivables", clientId] as const;
+export const getProfitReportKey = (month: number, year: number) =>
+  ["profit-report", month, year] as const;

@@ -5,6 +5,7 @@ import {
   ClientPayablesTableRow,
   ClientReceivablesTableRow,
   InventoryLedgerTableRow,
+  ProfitTableRow,
 } from "./report.types";
 
 export async function getInventoryLedgers(stockId: number) {
@@ -38,6 +39,13 @@ export async function getPayablesByClient(clientId: number) {
 export async function getReceivablesByClient(clientId: number) {
   const response = await api.get<{ data: ClientReceivablesTableRow[] }>(
     `/reports/receivables-per-client?client_id=${clientId}`,
+  );
+  return response.data;
+}
+
+export async function getProfitReport(month: number, year: number) {
+  const response = await api.get<{ data: ProfitTableRow[] }>(
+    `/reports/profits?month=${month}&year=${year}`,
   );
   return response.data;
 }

@@ -10,6 +10,8 @@ import {
   sales_payments,
   sales_return_lines,
   sales_returns,
+  salespersons,
+  stocks,
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import { asc, eq, max, sql } from "drizzle-orm";
@@ -212,5 +214,47 @@ export const reportRepository = {
         asc(sales_orders.invoice_date),
         asc(sales_orders.invoice_number),
       );
+  },
+
+  getProfits(month: number, year: number) {
+    const query = sql`
+      WITH CostOfGoodsSold AS (
+      -- Menghitung total modal (COGS) dan mengambil nama sales per invoice
+      SELECT
+        sol.sales_order_id,
+        SUM(st.product_price * sol.qty) AS total_invoice_modal,
+        MAX(sp.name) AS sales_name 
+      FROM
+        ${sales_order_lines} sol
+      LEFT JOIN
+        ${stocks} st ON sol.stock_id = st.id
+      LEFT JOIN
+        ${salespersons} sp ON sol.salesperson_id = sp.id
+      GROUP BY
+        sol.sales_order_id
+    )
+    SELECT
+      cogs.sales_name,
+      so.invoice_number AS invoice_number,
+      so.invoice_date AS invoice_date,
+      c.name AS client_name,
+      c.city AS client_city,
+      so.invoice_value AS invoice_value,
+      (so.invoice_value - COALESCE(cogs.total_invoice_modal, 0)) AS invoice_profit
+    FROM
+      ${sales_orders} so
+    LEFT JOIN
+      CostOfGoodsSold cogs ON so.id = cogs.sales_order_id
+    LEFT JOIN
+      ${clients} c ON so.client_id = c.id
+    WHERE
+      EXTRACT(YEAR FROM so.invoice_date) = ${year} 
+      AND EXTRACT(MONTH FROM so.invoice_date) = ${month}
+      AND cogs.sales_name IS NOT NULL
+    ORDER BY
+      cogs.sales_name, so.invoice_date;
+    `;
+
+    return db.execute(query);
   },
 };

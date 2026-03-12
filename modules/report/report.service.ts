@@ -7,6 +7,8 @@ import {
   ClientPayablesTableRow,
   ClientReceivablesTableRow,
   InventoryLedgerTableRow,
+  ProfitQueryResult,
+  ProfitTableRow,
 } from "./report.types";
 
 export const reportService = {
@@ -258,6 +260,84 @@ export const reportService = {
         balance_due: totalRemainingAmount,
       },
     ];
+
+    return tableRows;
+  },
+
+  async getProfits(month: number, year: number) {
+    const queryResult = await reportRepository.getProfits(month, year);
+    const results = queryResult as unknown as ProfitQueryResult[];
+
+    // Grouped by sales_name
+    const formattedResults = results.reduce(
+      (acc, curr) => {
+        const key = curr.sales_name;
+        if (!acc[key]) {
+          acc[key] = [];
+        }
+
+        acc[key].push(curr);
+        return acc;
+      },
+      {} as Record<string, ProfitQueryResult[]>,
+    );
+
+    const tableRows: ProfitTableRow[] = [];
+    let grandTotalProfit = 0;
+    Object.keys(formattedResults).forEach((salesName) => {
+      tableRows.push({
+        invoice_number: salesName,
+        invoice_date: "",
+        client_name: "",
+        client_city: "",
+        invoice_value: null,
+        invoice_profit: null,
+      });
+
+      const salesData = formattedResults[salesName];
+      let totalInvoiceValue = 0;
+      let totalInvoiceProfit = 0;
+      salesData.forEach((data) => {
+        totalInvoiceValue += data.invoice_value;
+        totalInvoiceProfit += Number(data.invoice_profit);
+        tableRows.push({
+          invoice_number: data.invoice_number,
+          invoice_date: dayjs(data.invoice_date).format("DD/MM/YYYY"),
+          client_name: data.client_name,
+          client_city: data.client_city,
+          invoice_value: data.invoice_value,
+          invoice_profit: Number(data.invoice_profit),
+        });
+      });
+      grandTotalProfit += totalInvoiceProfit;
+
+      tableRows.push({
+        invoice_number: "TOTAL",
+        invoice_date: "",
+        client_name: "",
+        client_city: "",
+        invoice_value: totalInvoiceValue,
+        invoice_profit: totalInvoiceProfit,
+      });
+
+      tableRows.push({
+        invoice_number: "",
+        invoice_date: "",
+        client_name: "",
+        client_city: "",
+        invoice_value: null,
+        invoice_profit: null,
+      });
+    });
+
+    tableRows.push({
+      invoice_number: "",
+      invoice_date: "GRAND TOTAL",
+      client_name: "",
+      client_city: "",
+      invoice_value: null,
+      invoice_profit: grandTotalProfit,
+    });
 
     return tableRows;
   },
