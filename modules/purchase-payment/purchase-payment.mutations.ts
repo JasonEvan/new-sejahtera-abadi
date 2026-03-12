@@ -3,6 +3,7 @@ import { createPurchasePayment } from "./purchase-payment.api";
 import { toast } from "sonner";
 import { usePurchasePaymentStore } from "@/stores/payments/usePurchasePaymentStore";
 import { invalidateOrdersMenuKey } from "../purchase/purchase.keys";
+import { getAllPayablesKey } from "../report/report.keys";
 
 export const usePurchasePaymentMutation = () => {
   const queryClient = useQueryClient();
@@ -14,6 +15,7 @@ export const usePurchasePaymentMutation = () => {
       });
       usePurchasePaymentStore.getState().clear();
       queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
+      queryClient.invalidateQueries({ queryKey: getAllPayablesKey() });
     },
   });
 };

@@ -3,6 +3,7 @@ import { createSalesPayment } from "./sales-payment.api";
 import { toast } from "sonner";
 import { useSalesPaymentStore } from "@/stores/payments/useSalesPaymentStore";
 import { invalidateOrdersMenuKey } from "../sale/sale.keys";
+import { getAllReceivablesKey } from "../report/report.keys";
 
 export const useSalesPaymentMutation = () => {
   const queryClient = useQueryClient();
@@ -14,6 +15,7 @@ export const useSalesPaymentMutation = () => {
       });
       useSalesPaymentStore.getState().clear();
       queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
+      queryClient.invalidateQueries({ queryKey: getAllReceivablesKey() });
     },
   });
 };
