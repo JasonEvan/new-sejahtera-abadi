@@ -20,3 +20,27 @@ export type ItemValidation = z.infer<typeof createItemValidation>;
 export type InsertPurchase = z.infer<typeof backendPurchaseValidation>;
 
 export type PurchaseOrder = typeof purchase_orders.$inferSelect;
+
+export type PurchaseInvoiceRow = {
+  invoice_number: string;
+  name: string;
+  city: string;
+  invoice_value: number;
+  balance_due: number;
+};
+
+export type PurchaseInvoiceDetailLine = {
+  name: string | null;
+  qty: number | null;
+  unit: string | null;
+  price: number | null;
+  total_price: number;
+};
+
+export type PurchaseInvoiceHeader = {
+  invoice_number: string;
+  invoice_date: string;
+  invoice_value: number;
+  client_name: string;
+  client_city: string;
+};

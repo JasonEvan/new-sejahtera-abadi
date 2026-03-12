@@ -1,9 +1,9 @@
 import { Tx } from "@/lib/common-types";
 import { InsertPurchase } from "./purchase.types";
+import { clients, purchase_order_lines, purchase_orders, stocks } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { purchase_orders } from "@/drizzle/schema";
 import dayjs from "dayjs";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, like, ne, sql } from "drizzle-orm";
 
 export const purchaseOrderRepository = {
   insertPurchaseOrder(data: InsertPurchase, tx?: Tx) {
@@ -69,5 +69,51 @@ export const purchaseOrderRepository = {
     `;
 
     return database.execute(query);
+  },
+
+  getPurchaseInvoices(invoicePrefix: string) {
+    return db
+      .select({
+        invoice_number: purchase_orders.invoice_number,
+        name: clients.name,
+        city: clients.city,
+        invoice_value: purchase_orders.invoice_value,
+        balance_due: purchase_orders.balance_due,
+      })
+      .from(purchase_orders)
+      .innerJoin(clients, eq(purchase_orders.client_id, clients.id))
+      .where(like(purchase_orders.invoice_number, `${invoicePrefix}%`))
+      .orderBy(asc(purchase_orders.invoice_number));
+  },
+
+  async getPurchaseInvoiceDetail(invoiceNumber: string) {
+    const [header] = await db
+      .select({
+        invoice_number: purchase_orders.invoice_number,
+        invoice_date: purchase_orders.invoice_date,
+        invoice_value: purchase_orders.invoice_value,
+        client_name: clients.name,
+        client_city: clients.city,
+      })
+      .from(purchase_orders)
+      .innerJoin(clients, eq(purchase_orders.client_id, clients.id))
+      .where(eq(purchase_orders.invoice_number, invoiceNumber));
+
+    if (!header) return { header: null, lines: [] as { name: string | null; qty: number; unit: string | null; price: number; total_price: number }[] };
+
+    const lines = await db
+      .select({
+        name: stocks.name,
+        qty: purchase_order_lines.qty,
+        unit: stocks.unit,
+        price: purchase_order_lines.price,
+        total_price: purchase_order_lines.total_price,
+      })
+      .from(purchase_order_lines)
+      .innerJoin(purchase_orders, eq(purchase_order_lines.purchase_order_id, purchase_orders.id))
+      .leftJoin(stocks, eq(purchase_order_lines.stock_id, stocks.id))
+      .where(eq(purchase_orders.invoice_number, invoiceNumber));
+
+    return { header, lines };
   },
 };
