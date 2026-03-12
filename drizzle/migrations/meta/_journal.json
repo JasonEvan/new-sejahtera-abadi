@@ -15,6 +15,13 @@
       "when": 1772093653246,
       "tag": "0001_chief_black_widow",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773325016805,
+      "tag": "0002_slippery_ezekiel",
+      "breakpoints": true
     }
   ]
 }

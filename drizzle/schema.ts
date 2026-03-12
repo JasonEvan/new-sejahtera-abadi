@@ -128,10 +128,6 @@ export const sales_returns = pgTable("sales_returns", {
   client_id: integer("client_id")
     .notNull()
     .references(() => clients.id),
-  invoice_date: timestamp("invoice_date", {
-    mode: "date",
-    withTimezone: true,
-  }).notNull(),
   return_date: timestamp("return_date", { mode: "date", withTimezone: true }),
 });
 
@@ -212,10 +208,6 @@ export const purchase_returns = pgTable("purchase_returns", {
   client_id: integer("client_id")
     .notNull()
     .references(() => clients.id),
-  invoice_date: timestamp("invoice_date", {
-    mode: "date",
-    withTimezone: true,
-  }).notNull(),
   return_date: timestamp("return_date", { mode: "date", withTimezone: true }),
 });
 
