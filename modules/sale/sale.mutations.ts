@@ -9,6 +9,11 @@ import {
 import { getStocksKey } from "../stock/stock.keys";
 import { useSaleStore } from "@/stores/transactions/useSaleStore";
 import { invalidateOrdersMenuKey } from "./sale.keys";
+import {
+  getAllReceivablesKey,
+  invalidateInventoryLedgersKey,
+  invalidateProfitReportKey,
+} from "../report/report.keys";
 
 export const useCreateSaleMutation = () => {
   const queryClient = useQueryClient();
@@ -26,6 +31,11 @@ export const useCreateSaleMutation = () => {
       queryClient.invalidateQueries({ queryKey: getSalespersonNamesKey() });
       queryClient.invalidateQueries({ queryKey: getStocksKey() });
       queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
+      queryClient.invalidateQueries({
+        queryKey: invalidateInventoryLedgersKey(),
+      });
+      queryClient.invalidateQueries({ queryKey: getAllReceivablesKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateProfitReportKey() });
     },
   });
 };
