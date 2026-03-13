@@ -1,11 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getOrdersMenuKey,
+  getReturnEligibleOrdersKey,
+  getSaleReturnLinesKey,
   getSalesInvoiceDetailKey,
   getSalesInvoicesKey,
 } from "./sale.keys";
 import {
   getOrdersMenu,
+  getReturnEligibleOrders,
+  getSaleReturnLines,
   getSalesInvoiceDetail,
   getSalesInvoices,
 } from "./sale.api";
@@ -46,5 +50,33 @@ export const useGetSalesInvoiceDetail = (invoiceNumber: string) => {
     queryKey: getSalesInvoiceDetailKey(invoiceNumber),
     queryFn: () => getSalesInvoiceDetail(invoiceNumber),
     select: (data) => data.data,
+  });
+};
+
+export const useGetReturnEligibleOrders = (
+  clientId: number,
+  enabled: boolean,
+) => {
+  return useQuery({
+    queryKey: getReturnEligibleOrdersKey(clientId),
+    queryFn: () => getReturnEligibleOrders(clientId),
+    select: (data) =>
+      data.data.map((order) => ({
+        id: order.id,
+        name: order.invoice_number,
+      })),
+    enabled,
+  });
+};
+
+export const useGetSaleReturnLines = (
+  invoiceNumber: string,
+  enabled: boolean,
+) => {
+  return useQuery({
+    queryKey: getSaleReturnLinesKey(invoiceNumber),
+    queryFn: () => getSaleReturnLines(invoiceNumber),
+    select: (data) => data.data,
+    enabled,
   });
 };

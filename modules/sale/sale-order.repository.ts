@@ -1,9 +1,15 @@
 import { Tx } from "@/lib/common-types";
 import { InsertSale } from "./sale.types";
-import { clients, sales_order_lines, sales_orders, stocks } from "@/drizzle/schema";
+import {
+  clients,
+  sales_order_lines,
+  sales_orders,
+  stocks,
+} from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
 import { and, asc, eq, like, ne, sql } from "drizzle-orm";
+import { AppError } from "@/lib/errors";
 
 export const saleOrderRepository = {
   insertSaleOrder(data: InsertSale, tx?: Tx) {
@@ -98,7 +104,17 @@ export const saleOrderRepository = {
       .innerJoin(clients, eq(sales_orders.client_id, clients.id))
       .where(eq(sales_orders.invoice_number, invoiceNumber));
 
-    if (!header) return { header: null, lines: [] as { name: string | null; qty: number; unit: string | null; price: number; total_price: number }[] };
+    if (!header)
+      return {
+        header: null,
+        lines: [] as {
+          name: string | null;
+          qty: number;
+          unit: string | null;
+          price: number;
+          total_price: number;
+        }[],
+      };
 
     const lines = await db
       .select({
@@ -109,10 +125,102 @@ export const saleOrderRepository = {
         total_price: sales_order_lines.total_price,
       })
       .from(sales_order_lines)
-      .innerJoin(sales_orders, eq(sales_order_lines.sales_order_id, sales_orders.id))
+      .innerJoin(
+        sales_orders,
+        eq(sales_order_lines.sales_order_id, sales_orders.id),
+      )
       .leftJoin(stocks, eq(sales_order_lines.stock_id, stocks.id))
       .where(eq(sales_orders.invoice_number, invoiceNumber));
 
     return { header, lines };
+  },
+
+  getReturnEligibleOrders(clientId: number) {
+    return db
+      .select({
+        id: sales_orders.id,
+        invoice_number: sales_orders.invoice_number,
+      })
+      .from(sales_orders)
+      .where(
+        and(
+          eq(sales_orders.client_id, clientId),
+          eq(sales_orders.paid_amount, 0),
+        ),
+      );
+  },
+
+  async getSaleReturnLinesWithMeta(invoiceNumber: string) {
+    const [order] = await db
+      .select({
+        invoice_value: sales_orders.invoice_value,
+        invoice_discount: sales_orders.invoice_discount,
+      })
+      .from(sales_orders)
+      .where(eq(sales_orders.invoice_number, invoiceNumber));
+
+    if (!order) return null;
+
+    const lines = await db
+      .select({
+        id: sales_order_lines.id,
+        stock_id: sales_order_lines.stock_id,
+        name: stocks.name,
+        price: sales_order_lines.price,
+        qty: sales_order_lines.qty,
+      })
+      .from(sales_order_lines)
+      .innerJoin(
+        sales_orders,
+        eq(sales_order_lines.sales_order_id, sales_orders.id),
+      )
+      .leftJoin(stocks, eq(sales_order_lines.stock_id, stocks.id))
+      .where(eq(sales_orders.invoice_number, invoiceNumber));
+
+    const invoice_value = lines.reduce((acc, l) => acc + l.price * l.qty, 0);
+
+    return {
+      meta: {
+        invoice_value,
+        discount: order.invoice_discount,
+        total: order.invoice_value,
+      },
+      lines: lines.map((l) => ({
+        id: l.id,
+        stock_id: l.stock_id ?? 0,
+        name: l.name ?? "",
+        price: l.price,
+        qty: l.qty,
+      })),
+    };
+  },
+
+  async getDiscountById(salesOrderId: number, tx?: Tx): Promise<number> {
+    const database = tx ?? db;
+    const [order] = await database
+      .select({ invoice_discount: sales_orders.invoice_discount })
+      .from(sales_orders)
+      .where(eq(sales_orders.id, salesOrderId));
+    if (!order) throw new AppError(`Sales order ${salesOrderId} not found`, 404);
+    return order.invoice_discount;
+  },
+
+  async getInvoiceValueById(salesOrderId: number, tx?: Tx): Promise<number> {
+    const database = tx ?? db;
+    const [order] = await database
+      .select({ invoice_value: sales_orders.invoice_value })
+      .from(sales_orders)
+      .where(eq(sales_orders.id, salesOrderId));
+    if (!order) throw new AppError(`Sales order ${salesOrderId} not found`, 404);
+    return order.invoice_value;
+  },
+
+  updateInvoiceValue(total: number, sales_order_id: number, tx?: Tx) {
+    const database = tx ?? db;
+
+    return database
+      .update(sales_orders)
+      .set({ invoice_value: total, balance_due: total })
+      .where(eq(sales_orders.id, sales_order_id));
   },
 };

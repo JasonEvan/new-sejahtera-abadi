@@ -117,4 +117,15 @@ export const saleService = {
       lines: formattedLines,
     };
   },
+
+  getReturnEligibleOrders(clientId: number) {
+    return saleOrderRepository.getReturnEligibleOrders(clientId);
+  },
+
+  async getSaleReturnLines(invoiceNumber: string) {
+    const result =
+      await saleOrderRepository.getSaleReturnLinesWithMeta(invoiceNumber);
+    if (!result) throw new AppError("Invoice not found", 404);
+    return result;
+  },
 };
