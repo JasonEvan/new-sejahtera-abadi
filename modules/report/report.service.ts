@@ -12,6 +12,102 @@ import {
 } from "./report.types";
 
 export const reportService = {
+  // async getInventoryLedgers(stockId: number) {
+  //   const data = await reportRepository.getInventoryLedgers(stockId);
+  //   const [stock] = await stockRepository.getStartingStock(stockId);
+
+  //   let runningStock = stock.initial_stock;
+  //   let totalQtyIn = 0;
+  //   let totalQtyOut = 0;
+  //   const tableRows: InventoryLedgerTableRow[] = [];
+
+  //   tableRows.push({
+  //     invoice_number: null,
+  //     invoice_date: null,
+  //     name: "SALDO AWAL",
+  //     city: null,
+  //     type: null,
+  //     price: null,
+  //     qty_in: null,
+  //     qty_out: null,
+  //     final_qty: runningStock,
+  //   });
+
+  //   data.forEach((row) => {
+  //     let qtyIn = 0;
+  //     let qtyOut = 0;
+  //     const returnedQty = row.return_qty || 0;
+
+  //     if (row.type === "B") {
+  //       qtyIn = row.qty + returnedQty;
+  //       runningStock += qtyIn;
+  //       totalQtyIn += qtyIn;
+  //     } else {
+  //       qtyOut = row.qty + returnedQty;
+  //       runningStock -= qtyOut;
+  //       totalQtyOut += qtyOut;
+  //     }
+
+  //     tableRows.push({
+  //       invoice_number: row.invoice_number,
+  //       invoice_date: dayjs(row.invoice_date).format("DD/MM/YYYY"),
+  //       name: row.name,
+  //       city: row.city,
+  //       type: row.type as "B" | "J",
+  //       price: row.price,
+  //       qty_in: qtyIn > 0 ? qtyIn : null,
+  //       qty_out: qtyOut > 0 ? qtyOut : null,
+  //       final_qty: runningStock,
+  //     });
+
+  //     if (returnedQty > 0) {
+  //       let returnQtyIn = 0;
+  //       let returnQtyOut = 0;
+  //       let returnType = "";
+
+  //       if (row.type === "B") {
+  //         returnQtyOut = returnedQty;
+  //         runningStock -= returnQtyOut;
+  //         totalQtyOut += returnQtyOut;
+  //         returnType = "BR";
+  //       } else {
+  //         returnQtyIn = returnedQty;
+  //         runningStock += returnQtyIn;
+  //         totalQtyIn += returnQtyIn;
+  //         returnType = "JR";
+  //       }
+
+  //       tableRows.push({
+  //         invoice_number: row.invoice_number,
+  //         invoice_date: row.return_date
+  //           ? dayjs(row.return_date).format("DD/MM/YYYY")
+  //           : dayjs(row.invoice_date).format("DD/MM/YYYY"),
+  //         name: row.name,
+  //         city: row.city,
+  //         type: returnType as "BR" | "JR",
+  //         price: row.price,
+  //         qty_in: returnQtyIn > 0 ? returnQtyIn : null,
+  //         qty_out: returnQtyOut > 0 ? returnQtyOut : null,
+  //         final_qty: runningStock,
+  //       });
+  //     }
+  //   });
+
+  //   tableRows.push({
+  //     invoice_number: null,
+  //     invoice_date: null,
+  //     name: "TOTAL QTY",
+  //     city: null,
+  //     type: null,
+  //     price: null,
+  //     qty_in: totalQtyIn,
+  //     qty_out: totalQtyOut,
+  //     final_qty: runningStock,
+  //   });
+
+  //   return tableRows;
+  // },
+
   async getInventoryLedgers(stockId: number) {
     const data = await reportRepository.getInventoryLedgers(stockId);
     const [stock] = await stockRepository.getStartingStock(stockId);
@@ -21,6 +117,7 @@ export const reportService = {
     let totalQtyOut = 0;
     const tableRows: InventoryLedgerTableRow[] = [];
 
+    // Saldo Awal
     tableRows.push({
       invoice_number: null,
       invoice_date: null,
@@ -33,66 +130,39 @@ export const reportService = {
       final_qty: runningStock,
     });
 
+    // Proses Baris demi Baris (Sudah bersih dan kronologis dari Database!)
     data.forEach((row) => {
       let qtyIn = 0;
       let qtyOut = 0;
-      const returnedQty = row.return_qty || 0;
+      const currentQty = row.qty;
 
-      if (row.type === "B") {
-        qtyIn = row.qty + returnedQty;
+      // Barang Masuk: Beli ("B") atau Retur Jual ("JR")
+      if (row.type === "B" || row.type === "JR") {
+        qtyIn = currentQty;
         runningStock += qtyIn;
         totalQtyIn += qtyIn;
-      } else {
-        qtyOut = row.qty + returnedQty;
+      }
+      // Barang Keluar: Jual ("J") atau Retur Beli ("BR")
+      else if (row.type === "J" || row.type === "BR") {
+        qtyOut = currentQty;
         runningStock -= qtyOut;
         totalQtyOut += qtyOut;
       }
 
       tableRows.push({
         invoice_number: row.invoice_number,
-        invoice_date: dayjs(row.invoice_date).format("DD/MM/YYYY"),
+        invoice_date: dayjs(row.invoice_date).format("DD/MM/YYYY"), // Pake row.date dari query baru
         name: row.name,
         city: row.city,
-        type: row.type as "B" | "J",
+        type: row.type as "B" | "J" | "BR" | "JR",
         price: row.price,
         qty_in: qtyIn > 0 ? qtyIn : null,
         qty_out: qtyOut > 0 ? qtyOut : null,
         final_qty: runningStock,
       });
-
-      if (returnedQty > 0) {
-        let returnQtyIn = 0;
-        let returnQtyOut = 0;
-        let returnType = "";
-
-        if (row.type === "B") {
-          returnQtyOut = returnedQty;
-          runningStock -= returnQtyOut;
-          totalQtyOut += returnQtyOut;
-          returnType = "BR";
-        } else {
-          returnQtyIn = returnedQty;
-          runningStock += returnQtyIn;
-          totalQtyIn += returnQtyIn;
-          returnType = "JR";
-        }
-
-        tableRows.push({
-          invoice_number: row.invoice_number,
-          invoice_date: row.return_date
-            ? dayjs(row.return_date).format("DD/MM/YYYY")
-            : dayjs(row.invoice_date).format("DD/MM/YYYY"),
-          name: row.name,
-          city: row.city,
-          type: returnType as "BR" | "JR",
-          price: row.price,
-          qty_in: returnQtyIn > 0 ? returnQtyIn : null,
-          qty_out: returnQtyOut > 0 ? returnQtyOut : null,
-          final_qty: runningStock,
-        });
-      }
     });
 
+    // Total Footer
     tableRows.push({
       invoice_number: null,
       invoice_date: null,

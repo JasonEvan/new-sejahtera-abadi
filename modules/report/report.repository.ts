@@ -18,18 +18,83 @@ import { asc, eq, max, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 
 export const reportRepository = {
+  // getInventoryLedgers(stockId: number) {
+  //   const subquerySales = db
+  //     .select({
+  //       invoice_number: sales_orders.invoice_number,
+  //       invoice_date: sales_orders.invoice_date,
+  //       name: clients.name,
+  //       city: clients.city,
+  //       type: sales_order_lines.type,
+  //       price: sales_order_lines.price,
+  //       qty: sales_order_lines.qty,
+  //       return_qty: sales_return_lines.qty,
+  //       return_date: sales_returns.return_date,
+  //     })
+  //     .from(sales_order_lines)
+  //     .innerJoin(
+  //       sales_orders,
+  //       eq(sales_order_lines.sales_order_id, sales_orders.id),
+  //     )
+  //     .leftJoin(clients, eq(sales_order_lines.client_id, clients.id))
+  //     .leftJoin(
+  //       sales_return_lines,
+  //       eq(sales_order_lines.id, sales_return_lines.sales_order_line_id),
+  //     )
+  //     .leftJoin(
+  //       sales_returns,
+  //       eq(sales_return_lines.sales_return_id, sales_returns.id),
+  //     )
+  //     .where(eq(sales_order_lines.stock_id, stockId));
+
+  //   const subqueryPurchases = db
+  //     .select({
+  //       invoice_number: purchase_orders.invoice_number,
+  //       invoice_date: purchase_orders.invoice_date,
+  //       name: clients.name,
+  //       city: clients.city,
+  //       type: purchase_order_lines.type,
+  //       price: purchase_order_lines.price,
+  //       qty: purchase_order_lines.qty,
+  //       return_qty: purchase_return_lines.qty,
+  //       return_date: purchase_returns.return_date,
+  //     })
+  //     .from(purchase_order_lines)
+  //     .innerJoin(
+  //       purchase_orders,
+  //       eq(purchase_order_lines.purchase_order_id, purchase_orders.id),
+  //     )
+  //     .leftJoin(clients, eq(purchase_order_lines.client_id, clients.id))
+  //     .leftJoin(
+  //       purchase_return_lines,
+  //       eq(
+  //         purchase_order_lines.id,
+  //         purchase_return_lines.purchase_order_line_id,
+  //       ),
+  //     )
+  //     .leftJoin(
+  //       purchase_returns,
+  //       eq(purchase_return_lines.purchase_return_id, purchase_returns.id),
+  //     )
+  //     .where(eq(purchase_order_lines.stock_id, stockId));
+
+  //   return unionAll(subquerySales, subqueryPurchases).orderBy(
+  //     asc(sql`invoice_date`),
+  //     asc(sql`invoice_number`),
+  //   );
+  // },
+
   getInventoryLedgers(stockId: number) {
-    const subquerySales = db
+    // 1. Ambil murni baris JUAL ("J")
+    const qSales = db
       .select({
-        invoice_number: sales_orders.invoice_number,
         invoice_date: sales_orders.invoice_date,
+        invoice_number: sales_orders.invoice_number,
         name: clients.name,
         city: clients.city,
         type: sales_order_lines.type,
         price: sales_order_lines.price,
         qty: sales_order_lines.qty,
-        return_qty: sales_return_lines.qty,
-        return_date: sales_returns.return_date,
       })
       .from(sales_order_lines)
       .innerJoin(
@@ -37,27 +102,49 @@ export const reportRepository = {
         eq(sales_order_lines.sales_order_id, sales_orders.id),
       )
       .leftJoin(clients, eq(sales_order_lines.client_id, clients.id))
-      .leftJoin(
-        sales_return_lines,
-        eq(sales_order_lines.id, sales_return_lines.sales_order_line_id),
-      )
-      .leftJoin(
+      .where(eq(sales_order_lines.stock_id, stockId));
+
+    // 2. Ambil murni baris RETUR JUAL ("JR")
+    const qSalesReturns = db
+      .select({
+        // PERBAIKAN: Gunakan sales_orders.invoice_date sebagai fallback
+        invoice_date:
+          sql<Date>`COALESCE(${sales_returns.return_date}, ${sales_orders.invoice_date})`.as(
+            "date",
+          ),
+        invoice_number: sales_orders.invoice_number,
+        name: clients.name,
+        city: clients.city,
+        type: sales_return_lines.type,
+        price: sales_return_lines.price,
+        qty: sales_return_lines.qty,
+      })
+      .from(sales_return_lines)
+      .innerJoin(
         sales_returns,
         eq(sales_return_lines.sales_return_id, sales_returns.id),
       )
+      .innerJoin(
+        sales_order_lines,
+        eq(sales_return_lines.sales_order_line_id, sales_order_lines.id),
+      )
+      .innerJoin(
+        sales_orders,
+        eq(sales_returns.sales_order_id, sales_orders.id),
+      )
+      .leftJoin(clients, eq(sales_returns.client_id, clients.id))
       .where(eq(sales_order_lines.stock_id, stockId));
 
-    const subqueryPurchases = db
+    // 3. Ambil murni baris BELI ("B")
+    const qPurchases = db
       .select({
-        invoice_number: purchase_orders.invoice_number,
         invoice_date: purchase_orders.invoice_date,
+        invoice_number: purchase_orders.invoice_number,
         name: clients.name,
         city: clients.city,
         type: purchase_order_lines.type,
         price: purchase_order_lines.price,
         qty: purchase_order_lines.qty,
-        return_qty: purchase_return_lines.qty,
-        return_date: purchase_returns.return_date,
       })
       .from(purchase_order_lines)
       .innerJoin(
@@ -65,23 +152,49 @@ export const reportRepository = {
         eq(purchase_order_lines.purchase_order_id, purchase_orders.id),
       )
       .leftJoin(clients, eq(purchase_order_lines.client_id, clients.id))
-      .leftJoin(
-        purchase_return_lines,
-        eq(
-          purchase_order_lines.id,
-          purchase_return_lines.purchase_order_line_id,
-        ),
-      )
-      .leftJoin(
+      .where(eq(purchase_order_lines.stock_id, stockId));
+
+    // 4. Ambil murni baris RETUR BELI ("BR")
+    const qPurchaseReturns = db
+      .select({
+        // PERBAIKAN: Gunakan purchase_orders.invoice_date sebagai fallback
+        invoice_date:
+          sql<Date>`COALESCE(${purchase_returns.return_date}, ${purchase_orders.invoice_date})`.as(
+            "date",
+          ),
+        invoice_number: purchase_orders.invoice_number,
+        name: clients.name,
+        city: clients.city,
+        type: purchase_return_lines.type,
+        price: purchase_return_lines.price,
+        qty: purchase_return_lines.qty,
+      })
+      .from(purchase_return_lines)
+      .innerJoin(
         purchase_returns,
         eq(purchase_return_lines.purchase_return_id, purchase_returns.id),
       )
+      .innerJoin(
+        purchase_order_lines,
+        eq(
+          purchase_return_lines.purchase_order_line_id,
+          purchase_order_lines.id,
+        ),
+      )
+      .innerJoin(
+        purchase_orders,
+        eq(purchase_returns.purchase_order_id, purchase_orders.id),
+      )
+      .leftJoin(clients, eq(purchase_returns.client_id, clients.id))
       .where(eq(purchase_order_lines.stock_id, stockId));
 
-    return unionAll(subquerySales, subqueryPurchases).orderBy(
-      asc(sql`invoice_date`),
-      asc(sql`invoice_number`),
-    );
+    // Gabungkan ke-4 nya, urutkan berdasarkan tanggal transaksi
+    return unionAll(
+      qSales,
+      qSalesReturns,
+      qPurchases,
+      qPurchaseReturns,
+    ).orderBy(asc(sql`invoice_date`), asc(sql`invoice_number`));
   },
 
   getAllPayables() {
