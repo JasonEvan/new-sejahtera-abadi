@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createPurchase } from "./purchase.api";
+import { createPurchase, createPurchaseReturn } from "./purchase.api";
 import { toast } from "sonner";
 import { usePurchaseStore } from "@/stores/transactions/usePurchaseStore";
 import { getClientsKey } from "../client/client.keys";
@@ -8,7 +8,9 @@ import { invalidateOrdersMenuKey } from "./purchase.keys";
 import {
   getAllPayablesKey,
   invalidateInventoryLedgersKey,
+  invalidateProfitReportKey,
 } from "../report/report.keys";
+import { usePurchaseReturnStore } from "@/stores/transactions/usePurchaseReturnStore";
 
 export const useCreatePurchaseMutation = () => {
   const queryClient = useQueryClient();
@@ -28,6 +30,25 @@ export const useCreatePurchaseMutation = () => {
         queryKey: invalidateInventoryLedgersKey(),
       });
       queryClient.invalidateQueries({ queryKey: getAllPayablesKey() });
+    },
+  });
+};
+
+export const useCreatePurchaseReturnMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createPurchaseReturn,
+    onSuccess: (data) => {
+      toast.success(data.message || "Retur beli berhasil dibuat", {
+        position: "bottom-right",
+      });
+
+      usePurchaseReturnStore.getState().clear();
+
+      queryClient.invalidateQueries({ queryKey: getClientsKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
+      queryClient.invalidateQueries({ queryKey: getAllPayablesKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateProfitReportKey() });
     },
   });
 };

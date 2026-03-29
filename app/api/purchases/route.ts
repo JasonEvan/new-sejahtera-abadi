@@ -16,6 +16,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const clientId = request.nextUrl.searchParams.get("client_id");
   const isPaidOff = request.nextUrl.searchParams.get("is_paid_off") === "true";
   const forMenu = request.nextUrl.searchParams.get("for_menu") === "true";
+  const forReturn = request.nextUrl.searchParams.get("for_return") === "true";
 
   if (!clientId || isNaN(Number(clientId))) {
     throw new AppError("Client ID is required in a valid format", 400);
@@ -24,6 +25,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   let data;
   if (forMenu) {
     data = await purchaseService.getOrdersMenu(Number(clientId), isPaidOff);
+  } else if (forReturn) {
+    data = await purchaseService.getReturnEligibleOrders(Number(clientId));
   }
 
   return NextResponse.json({ data });

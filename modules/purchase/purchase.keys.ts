@@ -5,3 +5,7 @@ export const getPurchaseInvoicesKey = (invoicePrefix: string) =>
   ["purchase-invoices", invoicePrefix] as const;
 export const getPurchaseInvoiceDetailKey = (invoiceNumber: string) =>
   ["purchase-invoice-detail", invoiceNumber] as const;
+export const getReturnEligibleOrdersKey = (clientId: number) =>
+  ["purchase-return-eligible-orders", clientId] as const;
+export const getPurchaseReturnLinesKey = (invoiceNumber: string) =>
+  ["purchase-return-lines", invoiceNumber] as const;

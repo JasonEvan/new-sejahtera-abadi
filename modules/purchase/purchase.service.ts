@@ -1,6 +1,10 @@
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
-import { InsertPurchase, PurchaseInvoiceDetailLine, PurchaseInvoiceHeader } from "./purchase.types";
+import {
+  InsertPurchase,
+  PurchaseInvoiceDetailLine,
+  PurchaseInvoiceHeader,
+} from "./purchase.types";
 import { purchaseOrderRepository } from "./purchase-order.repository";
 import { AppError } from "@/lib/errors";
 import { purchaseOrderLineRepository } from "./purchase-order-line.repository";
@@ -42,8 +46,22 @@ export const purchaseService = {
     return purchaseOrderRepository.getPurchaseInvoices(invoicePrefix);
   },
 
+  getReturnEligibleOrders(clientId: number) {
+    return purchaseOrderRepository.getReturnEligibleOrders(clientId);
+  },
+
+  async getPurchaseReturnLines(invoiceNumber: string) {
+    const result =
+      await purchaseOrderRepository.getPurchaseReturnLinesWithMeta(
+        invoiceNumber,
+      );
+    if (!result) throw new AppError("Invoice not found", 404);
+    return result;
+  },
+
   async getPurchaseInvoiceDetail(invoiceNumber: string) {
-    const { header, lines } = await purchaseOrderRepository.getPurchaseInvoiceDetail(invoiceNumber);
+    const { header, lines } =
+      await purchaseOrderRepository.getPurchaseInvoiceDetail(invoiceNumber);
 
     if (!header) throw new AppError("Invoice not found", 404);
 
