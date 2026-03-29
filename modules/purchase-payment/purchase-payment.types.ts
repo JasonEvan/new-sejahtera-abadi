@@ -13,6 +13,36 @@ export interface PurchasePaymentTableRow {
   paid_amount: number;
 }
 
+export interface PurchasePaymentHistoryRow {
+  id: number;
+  transaction_number: string;
+  payment_date: string;
+  paid_amount: number;
+}
+
+export interface EditPayablesInvoiceDetail {
+  invoice_number: string;
+  invoice_value: number;
+  paid_amount: number;
+  balance_due: number;
+  payments: PurchasePaymentHistoryRow[];
+}
+
+export interface EditPayablesPaymentInput {
+  transaction_number: string;
+  payment_date: string;
+  paid_amount: number;
+}
+
+export interface DeleteEditPayablesByInvoiceInput {
+  invoice_number: string;
+}
+
+export interface UpdateEditPayablesByInvoiceInput {
+  invoice_number: string;
+  payments: EditPayablesPaymentInput[];
+}
+
 export type PurchasePaymentFormField = z.infer<
   ReturnType<typeof createPurchasePaymentValidation>
 >;

@@ -46,6 +46,23 @@ export const purchaseOrderRepository = {
     return order;
   },
 
+  async getByInvoiceNumber(invoiceNumber: string, tx?: Tx) {
+    const database = tx ?? db;
+
+    const [order] = await database
+      .select({
+        id: purchase_orders.id,
+        client_id: purchase_orders.client_id,
+        invoice_value: purchase_orders.invoice_value,
+        paid_amount: purchase_orders.paid_amount,
+        balance_due: purchase_orders.balance_due,
+      })
+      .from(purchase_orders)
+      .where(eq(purchase_orders.invoice_number, invoiceNumber));
+
+    return order;
+  },
+
   getOrdersMenu(clientId: number, isPaidOff: boolean) {
     return db
       .select({
@@ -242,6 +259,22 @@ export const purchaseOrderRepository = {
       .update(purchase_orders)
       .set({ invoice_value: total, balance_due: total })
       .where(eq(purchase_orders.id, purchase_order_id));
+  },
+
+  updatePaidAndBalanceDue(
+    purchaseOrderId: number,
+    data: { paid_amount: number; balance_due: number },
+    tx?: Tx,
+  ) {
+    const database = tx ?? db;
+
+    return database
+      .update(purchase_orders)
+      .set({
+        paid_amount: data.paid_amount,
+        balance_due: data.balance_due,
+      })
+      .where(eq(purchase_orders.id, purchaseOrderId));
   },
 
   updateInvoiceMeta(

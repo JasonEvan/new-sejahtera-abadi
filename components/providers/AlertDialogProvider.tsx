@@ -30,6 +30,11 @@ export default function AlertDialogProvider() {
     alertDialogs.close();
   };
 
+  const handleConfirm = async () => {
+    props.onConfirm();
+    alertDialogs.close();
+  };
+
   return (
     <AlertDialog open={isOpen}>
       <AlertDialogContent size="sm">
@@ -50,7 +55,8 @@ export default function AlertDialogProvider() {
           </AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            onClick={props.onConfirm}
+            type="button"
+            onClick={handleConfirm}
             className="cursor-pointer"
           >
             {props.confirmText || "Delete"}
