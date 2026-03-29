@@ -9,3 +9,7 @@ export const getReturnEligibleOrdersKey = (clientId: number) =>
   ["purchase-return-eligible-orders", clientId] as const;
 export const getPurchaseReturnLinesKey = (invoiceNumber: string) =>
   ["purchase-return-lines", invoiceNumber] as const;
+export const getLatestPurchasedItemsByClientKey = (
+  clientId: number,
+  namePrefix: string,
+) => ["latest-purchased-items", clientId, namePrefix] as const;

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  getLatestPurchasedItemsByClientKey,
   getOrdersMenuKey,
   getPurchaseInvoiceDetailKey,
   getPurchaseInvoicesKey,
@@ -7,6 +8,7 @@ import {
   getReturnEligibleOrdersKey,
 } from "./purchase.keys";
 import {
+  getLatestPurchasedItemsByClient,
   getOrdersMenu,
   getPurchaseInvoiceDetail,
   getPurchaseInvoices,
@@ -76,6 +78,19 @@ export const useGetPurchaseReturnLines = (
   return useQuery({
     queryKey: getPurchaseReturnLinesKey(invoiceNumber),
     queryFn: () => getPurchaseReturnLines(invoiceNumber),
+    select: (data) => data.data,
+    enabled,
+  });
+};
+
+export const useGetLatestPurchasedItemsByClient = (
+  clientId: number,
+  namePrefix: string,
+  enabled: boolean,
+) => {
+  return useQuery({
+    queryKey: getLatestPurchasedItemsByClientKey(clientId, namePrefix),
+    queryFn: () => getLatestPurchasedItemsByClient(clientId, namePrefix),
     select: (data) => data.data,
     enabled,
   });

@@ -24,6 +24,53 @@ export const purchaseOrderLineRepository = {
     return database.insert(purchase_order_lines).values(mappedData);
   },
 
+  insertPurchaseOrderLineForEdit(
+    data: {
+      client_id: number;
+      cart: {
+        stock_id: number;
+        quantity: number;
+        product_price: number;
+        subtotal: number;
+      }[];
+    },
+    purchase_order_id: number,
+    tx?: Tx,
+  ) {
+    const database = tx ?? db;
+
+    const mappedData = data.cart.map((item) => ({
+      purchase_order_id,
+      client_id: data.client_id,
+      stock_id: item.stock_id,
+      price: item.product_price,
+      qty: item.quantity,
+      total_price: item.subtotal,
+    }));
+
+    return database.insert(purchase_order_lines).values(mappedData);
+  },
+
+  getByPurchaseOrderId(purchaseOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .select({
+        id: purchase_order_lines.id,
+        stock_id: purchase_order_lines.stock_id,
+        qty: purchase_order_lines.qty,
+      })
+      .from(purchase_order_lines)
+      .where(eq(purchase_order_lines.purchase_order_id, purchaseOrderId))
+      .orderBy(asc(purchase_order_lines.stock_id));
+  },
+
+  deleteByPurchaseOrderId(purchaseOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .delete(purchase_order_lines)
+      .where(eq(purchase_order_lines.purchase_order_id, purchaseOrderId));
+  },
+
   getStockIds(ids: number[]) {
     return db
       .select({

@@ -8,7 +8,7 @@ import {
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
-import { and, asc, eq, like, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, like, ne, sql } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 
 export const purchaseOrderRepository = {
@@ -29,6 +29,21 @@ export const purchaseOrderRepository = {
       .returning({
         id: purchase_orders.id,
       });
+  },
+
+  async getById(purchaseOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    const [order] = await database
+      .select({
+        id: purchase_orders.id,
+        client_id: purchase_orders.client_id,
+        invoice_value: purchase_orders.invoice_value,
+        paid_amount: purchase_orders.paid_amount,
+      })
+      .from(purchase_orders)
+      .where(eq(purchase_orders.id, purchaseOrderId));
+
+    return order;
   },
 
   getOrdersMenu(clientId: number, isPaidOff: boolean) {
@@ -227,5 +242,64 @@ export const purchaseOrderRepository = {
       .update(purchase_orders)
       .set({ invoice_value: total, balance_due: total })
       .where(eq(purchase_orders.id, purchase_order_id));
+  },
+
+  updateInvoiceMeta(
+    purchaseOrderId: number,
+    data: { invoiceValue: number; discount: number; balanceDue: number },
+    tx?: Tx,
+  ) {
+    const database = tx ?? db;
+
+    return database
+      .update(purchase_orders)
+      .set({
+        invoice_value: data.invoiceValue,
+        invoice_discount: data.discount,
+        balance_due: data.balanceDue,
+      })
+      .where(eq(purchase_orders.id, purchaseOrderId));
+  },
+
+  async getLatestPurchasedItemsByClient(clientId: number, namePrefix: string) {
+    const normalizedPrefix = namePrefix.trim();
+    if (!normalizedPrefix) return [];
+
+    const rows = await db
+      .select({
+        name: stocks.name,
+        price: purchase_order_lines.price,
+        bought_at: purchase_orders.invoice_date,
+      })
+      .from(purchase_order_lines)
+      .innerJoin(
+        purchase_orders,
+        eq(purchase_order_lines.purchase_order_id, purchase_orders.id),
+      )
+      .innerJoin(stocks, eq(purchase_order_lines.stock_id, stocks.id))
+      .where(
+        and(
+          eq(purchase_orders.client_id, clientId),
+          ilike(stocks.name, `${normalizedPrefix}%`),
+        ),
+      )
+      .orderBy(asc(stocks.name), desc(purchase_orders.invoice_date));
+
+    const latestByName = new Map<
+      string,
+      { name: string; price: number; bought_at: Date }
+    >();
+
+    for (const row of rows) {
+      if (!latestByName.has(row.name)) {
+        latestByName.set(row.name, row);
+      }
+    }
+
+    return Array.from(latestByName.values()).map((item) => ({
+      name: item.name,
+      price: item.price,
+      bought_at: item.bought_at.toISOString(),
+    }));
   },
 };

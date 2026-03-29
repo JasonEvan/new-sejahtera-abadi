@@ -1,5 +1,6 @@
 import z from "zod";
 import {
+  backendEditPurchaseValidation,
   backendPurchaseValidation,
   createItemValidation,
 } from "./purchase.validation";
@@ -18,6 +19,7 @@ export type PurchaseTableRow = {
 export type ItemValidation = z.infer<typeof createItemValidation>;
 
 export type InsertPurchase = z.infer<typeof backendPurchaseValidation>;
+export type EditPurchase = z.infer<typeof backendEditPurchaseValidation>;
 
 export type PurchaseOrder = typeof purchase_orders.$inferSelect;
 
@@ -43,4 +45,10 @@ export type PurchaseInvoiceHeader = {
   invoice_value: number;
   client_name: string;
   client_city: string;
+};
+
+export type LatestPurchasedItem = {
+  name: string;
+  price: number;
+  bought_at: string;
 };

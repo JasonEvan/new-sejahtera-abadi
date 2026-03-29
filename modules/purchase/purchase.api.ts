@@ -1,6 +1,8 @@
 import api from "@/lib/axios";
 import {
+  EditPurchase,
   InsertPurchase,
+  LatestPurchasedItem,
   PurchaseInvoiceDetailLine,
   PurchaseInvoiceHeader,
   PurchaseInvoiceRow,
@@ -13,6 +15,17 @@ import {
 
 export async function createPurchase(data: InsertPurchase) {
   const response = await api.post<{ message: string }>("/purchases", data);
+  return response.data;
+}
+
+export async function updatePurchase(
+  purchaseOrderId: number,
+  data: EditPurchase,
+) {
+  const response = await api.put<{ message: string }>(
+    `/purchases/${purchaseOrderId}`,
+    data,
+  );
   return response.data;
 }
 
@@ -64,5 +77,21 @@ export async function createPurchaseReturn(data: InsertPurchaseReturn) {
     "/returns/purchases",
     data,
   );
+  return response.data;
+}
+
+export async function getLatestPurchasedItemsByClient(
+  clientId: number,
+  namePrefix: string,
+) {
+  const queryParams = new URLSearchParams({
+    client_id: clientId.toString(),
+    name_prefix: namePrefix,
+  });
+
+  const response = await api.get<{ data: LatestPurchasedItem[] }>(
+    `/purchases/bought-items?${queryParams.toString()}`,
+  );
+
   return response.data;
 }
