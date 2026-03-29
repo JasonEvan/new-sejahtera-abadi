@@ -1,6 +1,11 @@
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
-import { InsertSale, SalesInvoiceDetailLine, SalesInvoiceHeader } from "./sale.types";
+import {
+  EditSale,
+  InsertSale,
+  SalesInvoiceDetailLine,
+  SalesInvoiceHeader,
+} from "./sale.types";
 import { saleOrderRepository } from "./sale-order.repository";
 import { saleOrderLineRepository } from "./sale-order-line.repository";
 import { stockRepository } from "../stock/stock.repository";
@@ -8,6 +13,7 @@ import { salespersonRepository } from "../salesperson/salesperson.repository";
 import { clientRepository } from "../client/client.repository";
 import { AppError } from "@/lib/errors";
 import { Tx } from "@/lib/common-types";
+import { salesReturnRepository } from "../sales-return/sales-return.repository";
 
 export const saleService = {
   async validateStockAvailability(cart: InsertSale["cart"], tx: Tx) {
@@ -71,6 +77,98 @@ export const saleService = {
     });
   },
 
+  updateSale(salesOrderId: number, data: EditSale) {
+    return db.transaction(async (tx) => {
+      const order = await saleOrderRepository.getById(salesOrderId, tx);
+      if (!order) {
+        throw new AppError("Sales order not found", 404);
+      }
+
+      const hasReturn = await salesReturnRepository.hasReturnForSalesOrder(
+        salesOrderId,
+        tx,
+      );
+      if (hasReturn) {
+        throw new AppError(
+          "Nota tidak bisa diedit karena sudah memiliki retur penjualan",
+          400,
+        );
+      }
+
+      if (order.client_id !== data.client_id) {
+        throw new AppError("Client does not match selected sales order", 400);
+      }
+
+      const oldTotal = order.invoice_value;
+
+      const existingLines = await saleOrderLineRepository.getBySalesOrderId(
+        salesOrderId,
+        tx,
+      );
+
+      // Revert previous inventory movement from this invoice.
+      const revertedStocks = existingLines
+        .filter((line) => line.stock_id !== null)
+        .map((line) => ({
+          id: line.stock_id as number,
+          quantity: line.qty,
+        }));
+
+      await stockRepository.bulkIncrementStockAndDecrementQtyOut(
+        revertedStocks,
+        tx,
+      );
+
+      await saleOrderLineRepository.deleteBySalesOrderId(salesOrderId, tx);
+
+      await this.validateStockAvailability(data.cart, tx);
+
+      await saleOrderLineRepository.insertSaleOrderLineForEdit(
+        {
+          client_id: data.client_id,
+          cart: data.cart,
+        },
+        salesOrderId,
+        tx,
+      );
+
+      const newStockOut = data.cart.map((item) => ({
+        id: item.stock_id,
+        quantity: item.quantity,
+      }));
+
+      await stockRepository.bulkDecrementStockAndIncrementQtyOut(
+        newStockOut,
+        tx,
+      );
+
+      const balanceDue = data.total - order.paid_amount;
+      if (balanceDue < 0) {
+        throw new AppError(
+          "New total cannot be lower than amount already paid",
+          400,
+        );
+      }
+
+      await saleOrderRepository.updateInvoiceMeta(
+        salesOrderId,
+        {
+          invoiceValue: data.total,
+          discount: data.discount,
+          balanceDue,
+        },
+        tx,
+      );
+
+      const receivableDelta = data.total - oldTotal;
+      await clientRepository.incReceivableBalance(
+        data.client_id,
+        receivableDelta,
+        tx,
+      );
+    });
+  },
+
   getOrdersMenu(clientId: number, isPaidOff: boolean) {
     return saleOrderRepository.getOrdersMenu(clientId, isPaidOff);
   },
@@ -80,7 +178,8 @@ export const saleService = {
   },
 
   async getSalesInvoiceDetail(invoiceNumber: string) {
-    const { header, lines } = await saleOrderRepository.getSalesInvoiceDetail(invoiceNumber);
+    const { header, lines } =
+      await saleOrderRepository.getSalesInvoiceDetail(invoiceNumber);
 
     if (!header) throw new AppError("Invoice not found", 404);
 
@@ -127,5 +226,9 @@ export const saleService = {
       await saleOrderRepository.getSaleReturnLinesWithMeta(invoiceNumber);
     if (!result) throw new AppError("Invoice not found", 404);
     return result;
+  },
+
+  getLatestSoldItemsByClient(clientId: number, namePrefix: string) {
+    return saleOrderRepository.getLatestSoldItemsByClient(clientId, namePrefix);
   },
 };

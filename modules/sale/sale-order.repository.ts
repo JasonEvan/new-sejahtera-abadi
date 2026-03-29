@@ -8,7 +8,7 @@ import {
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
-import { and, asc, eq, like, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, like, ne, sql } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 
 export const saleOrderRepository = {
@@ -29,6 +29,21 @@ export const saleOrderRepository = {
       .returning({
         id: sales_orders.id,
       });
+  },
+
+  async getById(salesOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    const [order] = await database
+      .select({
+        id: sales_orders.id,
+        client_id: sales_orders.client_id,
+        invoice_value: sales_orders.invoice_value,
+        paid_amount: sales_orders.paid_amount,
+      })
+      .from(sales_orders)
+      .where(eq(sales_orders.id, salesOrderId));
+
+    return order;
   },
 
   getOrdersMenu(clientId: number, isPaidOff: boolean) {
@@ -201,7 +216,8 @@ export const saleOrderRepository = {
       .select({ invoice_discount: sales_orders.invoice_discount })
       .from(sales_orders)
       .where(eq(sales_orders.id, salesOrderId));
-    if (!order) throw new AppError(`Sales order ${salesOrderId} not found`, 404);
+    if (!order)
+      throw new AppError(`Sales order ${salesOrderId} not found`, 404);
     return order.invoice_discount;
   },
 
@@ -211,7 +227,8 @@ export const saleOrderRepository = {
       .select({ invoice_value: sales_orders.invoice_value })
       .from(sales_orders)
       .where(eq(sales_orders.id, salesOrderId));
-    if (!order) throw new AppError(`Sales order ${salesOrderId} not found`, 404);
+    if (!order)
+      throw new AppError(`Sales order ${salesOrderId} not found`, 404);
     return order.invoice_value;
   },
 
@@ -222,5 +239,64 @@ export const saleOrderRepository = {
       .update(sales_orders)
       .set({ invoice_value: total, balance_due: total })
       .where(eq(sales_orders.id, sales_order_id));
+  },
+
+  updateInvoiceMeta(
+    salesOrderId: number,
+    data: { invoiceValue: number; discount: number; balanceDue: number },
+    tx?: Tx,
+  ) {
+    const database = tx ?? db;
+
+    return database
+      .update(sales_orders)
+      .set({
+        invoice_value: data.invoiceValue,
+        invoice_discount: data.discount,
+        balance_due: data.balanceDue,
+      })
+      .where(eq(sales_orders.id, salesOrderId));
+  },
+
+  async getLatestSoldItemsByClient(clientId: number, namePrefix: string) {
+    const normalizedPrefix = namePrefix.trim();
+    if (!normalizedPrefix) return [];
+
+    const rows = await db
+      .select({
+        name: stocks.name,
+        price: sales_order_lines.price,
+        sold_at: sales_orders.invoice_date,
+      })
+      .from(sales_order_lines)
+      .innerJoin(
+        sales_orders,
+        eq(sales_order_lines.sales_order_id, sales_orders.id),
+      )
+      .innerJoin(stocks, eq(sales_order_lines.stock_id, stocks.id))
+      .where(
+        and(
+          eq(sales_orders.client_id, clientId),
+          ilike(stocks.name, `${normalizedPrefix}%`),
+        ),
+      )
+      .orderBy(asc(stocks.name), desc(sales_orders.invoice_date));
+
+    const latestByName = new Map<
+      string,
+      { name: string; price: number; sold_at: Date }
+    >();
+
+    for (const row of rows) {
+      if (!latestByName.has(row.name)) {
+        latestByName.set(row.name, row);
+      }
+    }
+
+    return Array.from(latestByName.values()).map((item) => ({
+      name: item.name,
+      price: item.price,
+      sold_at: item.sold_at.toISOString(),
+    }));
   },
 };

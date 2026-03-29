@@ -1,6 +1,8 @@
 import api from "@/lib/axios";
 import {
+  EditSale,
   InsertSale,
+  LatestSoldItem,
   SalesInvoiceDetailLine,
   SalesInvoiceHeader,
   SalesInvoiceRow,
@@ -13,6 +15,14 @@ import {
 
 export async function createSale(data: InsertSale) {
   const response = await api.post<{ message: string }>("/sales", data);
+  return response.data;
+}
+
+export async function updateSale(salesOrderId: number, data: EditSale) {
+  const response = await api.put<{ message: string }>(
+    `/sales/${salesOrderId}`,
+    data,
+  );
   return response.data;
 }
 
@@ -61,5 +71,21 @@ export async function getSaleReturnLines(invoiceNumber: string) {
 
 export async function createSaleReturn(data: InsertSaleReturn) {
   const response = await api.post<{ message: string }>("/returns/sales", data);
+  return response.data;
+}
+
+export async function getLatestSoldItemsByClient(
+  clientId: number,
+  namePrefix: string,
+) {
+  const queryParams = new URLSearchParams({
+    client_id: clientId.toString(),
+    name_prefix: namePrefix,
+  });
+
+  const response = await api.get<{ data: LatestSoldItem[] }>(
+    `/sales/sold-items?${queryParams.toString()}`,
+  );
+
   return response.data;
 }

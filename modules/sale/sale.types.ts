@@ -1,5 +1,9 @@
 import z from "zod";
-import { backendSaleValidation, createItemValidation } from "./sale.validation";
+import {
+  backendEditSaleValidation,
+  backendSaleValidation,
+  createItemValidation,
+} from "./sale.validation";
 import { sales_orders } from "@/drizzle/schema";
 
 export type SaleTableRow = {
@@ -15,6 +19,7 @@ export type SaleTableRow = {
 export type ItemValidation = z.infer<ReturnType<typeof createItemValidation>>;
 
 export type InsertSale = z.infer<typeof backendSaleValidation>;
+export type EditSale = z.infer<typeof backendEditSaleValidation>;
 
 export type SalesOrder = typeof sales_orders.$inferSelect;
 
@@ -40,4 +45,10 @@ export type SalesInvoiceHeader = {
   invoice_value: number;
   client_name: string;
   client_city: string;
+};
+
+export type LatestSoldItem = {
+  name: string;
+  price: number;
+  sold_at: string;
 };

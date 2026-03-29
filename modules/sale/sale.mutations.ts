@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createSale, createSaleReturn } from "./sale.api";
+import { createSale, createSaleReturn, updateSale } from "./sale.api";
 import { toast } from "sonner";
 import { getClientsKey } from "../client/client.keys";
 import {
@@ -9,6 +9,7 @@ import {
 import { getStocksKey } from "../stock/stock.keys";
 import { useSaleStore } from "@/stores/transactions/useSaleStore";
 import { useSaleReturnStore } from "@/stores/transactions/useSaleReturnStore";
+import { useEditSaleStore } from "@/stores/transactions/useEditSaleStore";
 import { invalidateOrdersMenuKey } from "./sale.keys";
 import {
   getAllReceivablesKey,
@@ -56,6 +57,35 @@ export const useCreateSaleReturnMutation = () => {
       queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
       queryClient.invalidateQueries({ queryKey: getAllReceivablesKey() });
       queryClient.invalidateQueries({ queryKey: invalidateProfitReportKey() });
+    },
+  });
+};
+
+export const useUpdateSaleMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      salesOrderId,
+      data,
+    }: {
+      salesOrderId: number;
+      data: Parameters<typeof updateSale>[1];
+    }) => updateSale(salesOrderId, data),
+    onSuccess: (response) => {
+      toast.success(response.message || "Nota penjualan berhasil diupdate", {
+        position: "bottom-right",
+      });
+
+      useEditSaleStore.getState().clear();
+
+      queryClient.invalidateQueries({ queryKey: getClientsKey() });
+      queryClient.invalidateQueries({ queryKey: getStocksKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
+      queryClient.invalidateQueries({ queryKey: getAllReceivablesKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateProfitReportKey() });
+      queryClient.invalidateQueries({
+        queryKey: invalidateInventoryLedgersKey(),
+      });
     },
   });
 };

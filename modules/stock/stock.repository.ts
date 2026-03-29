@@ -113,4 +113,29 @@ export const stockRepository = {
 
     return database.execute(query);
   },
+
+  bulkIncrementStockAndDecrementQtyOut(
+    items: { id: number; quantity: number }[],
+    tx?: Tx,
+  ) {
+    if (items.length === 0) return;
+
+    const database = tx ?? db;
+
+    const values = sql.join(
+      items.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      sql`, `,
+    );
+
+    const query = sql`
+      UPDATE ${stocks} AS s
+      SET
+        ending_stock = s.ending_stock + v.quantity,
+        qty_out = s.qty_out - v.quantity
+      FROM (VALUES ${values}) AS v(id, quantity)
+      WHERE s.id = v.id
+    `;
+
+    return database.execute(query);
+  },
 };

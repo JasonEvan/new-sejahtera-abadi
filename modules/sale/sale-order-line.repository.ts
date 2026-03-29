@@ -21,6 +21,54 @@ export const saleOrderLineRepository = {
     return database.insert(sales_order_lines).values(mappedData);
   },
 
+  insertSaleOrderLineForEdit(
+    data: {
+      client_id: number;
+      cart: {
+        stock_id: number;
+        quantity: number;
+        selling_price: number;
+        subtotal: number;
+      }[];
+    },
+    sales_order_id: number,
+    tx?: Tx,
+  ) {
+    const database = tx ?? db;
+
+    const mappedData = data.cart.map((item) => ({
+      sales_order_id,
+      client_id: data.client_id,
+      stock_id: item.stock_id,
+      price: item.selling_price,
+      qty: item.quantity,
+      total_price: item.subtotal,
+      salesperson_id: null,
+    }));
+
+    return database.insert(sales_order_lines).values(mappedData);
+  },
+
+  getBySalesOrderId(salesOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .select({
+        id: sales_order_lines.id,
+        stock_id: sales_order_lines.stock_id,
+        qty: sales_order_lines.qty,
+      })
+      .from(sales_order_lines)
+      .where(eq(sales_order_lines.sales_order_id, salesOrderId))
+      .orderBy(asc(sales_order_lines.stock_id));
+  },
+
+  deleteBySalesOrderId(salesOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .delete(sales_order_lines)
+      .where(eq(sales_order_lines.sales_order_id, salesOrderId));
+  },
+
   getStockIds(ids: number[]) {
     return db
       .select({
