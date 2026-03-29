@@ -46,6 +46,23 @@ export const saleOrderRepository = {
     return order;
   },
 
+  async getByInvoiceNumber(invoiceNumber: string, tx?: Tx) {
+    const database = tx ?? db;
+
+    const [order] = await database
+      .select({
+        id: sales_orders.id,
+        client_id: sales_orders.client_id,
+        invoice_value: sales_orders.invoice_value,
+        paid_amount: sales_orders.paid_amount,
+        balance_due: sales_orders.balance_due,
+      })
+      .from(sales_orders)
+      .where(eq(sales_orders.invoice_number, invoiceNumber));
+
+    return order;
+  },
+
   getOrdersMenu(clientId: number, isPaidOff: boolean) {
     return db
       .select({
@@ -239,6 +256,22 @@ export const saleOrderRepository = {
       .update(sales_orders)
       .set({ invoice_value: total, balance_due: total })
       .where(eq(sales_orders.id, sales_order_id));
+  },
+
+  updatePaidAndBalanceDue(
+    salesOrderId: number,
+    data: { paid_amount: number; balance_due: number },
+    tx?: Tx,
+  ) {
+    const database = tx ?? db;
+
+    return database
+      .update(sales_orders)
+      .set({
+        paid_amount: data.paid_amount,
+        balance_due: data.balance_due,
+      })
+      .where(eq(sales_orders.id, salesOrderId));
   },
 
   updateInvoiceMeta(

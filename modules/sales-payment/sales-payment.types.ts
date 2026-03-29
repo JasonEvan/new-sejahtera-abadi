@@ -13,6 +13,36 @@ export interface SalesPaymentTableRow {
   paid_amount: number;
 }
 
+export interface SalesPaymentHistoryRow {
+  id: number;
+  transaction_number: string;
+  payment_date: string;
+  paid_amount: number;
+}
+
+export interface EditReceivablesInvoiceDetail {
+  invoice_number: string;
+  invoice_value: number;
+  paid_amount: number;
+  balance_due: number;
+  payments: SalesPaymentHistoryRow[];
+}
+
+export interface EditReceivablesPaymentInput {
+  transaction_number: string;
+  payment_date: string;
+  paid_amount: number;
+}
+
+export interface DeleteEditReceivablesByInvoiceInput {
+  invoice_number: string;
+}
+
+export interface UpdateEditReceivablesByInvoiceInput {
+  invoice_number: string;
+  payments: EditReceivablesPaymentInput[];
+}
+
 export type SalesPaymentFormField = z.infer<
   ReturnType<typeof createSalesPaymentValidation>
 >;
