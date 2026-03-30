@@ -1,9 +1,18 @@
 import { Tx } from "@/lib/common-types";
-import { InsertPurchaseReturn } from "./purchase-return.types";
+import {
+  EditPurchaseReturnDetail,
+  InsertPurchaseReturn,
+} from "./purchase-return.types";
 import db from "@/lib/drizzle";
-import { purchase_returns } from "@/drizzle/schema";
+import {
+  purchase_order_lines,
+  purchase_orders,
+  purchase_return_lines,
+  purchase_returns,
+  stocks,
+} from "@/drizzle/schema";
 import dayjs from "dayjs";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 export const purchaseReturnRepository = {
   createPurchaseReturn(data: InsertPurchaseReturn, tx?: Tx) {
@@ -27,5 +36,147 @@ export const purchaseReturnRepository = {
       .limit(1);
 
     return !!row;
+  },
+
+  getByPurchaseOrderId(purchaseOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+
+    return database
+      .select({
+        id: purchase_returns.id,
+      })
+      .from(purchase_returns)
+      .where(eq(purchase_returns.purchase_order_id, purchaseOrderId));
+  },
+
+  deleteByPurchaseOrderId(purchaseOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+
+    return database
+      .delete(purchase_returns)
+      .where(eq(purchase_returns.purchase_order_id, purchaseOrderId));
+  },
+
+  getUnpaidReturnedInvoices() {
+    return db
+      .select({
+        id: purchase_orders.id,
+        invoice_number: purchase_orders.invoice_number,
+      })
+      .from(purchase_orders)
+      .innerJoin(
+        purchase_returns,
+        eq(purchase_orders.id, purchase_returns.purchase_order_id),
+      )
+      .where(eq(purchase_orders.paid_amount, 0))
+      .groupBy(purchase_orders.id, purchase_orders.invoice_number)
+      .orderBy(desc(purchase_orders.id));
+  },
+
+  async getEditPurchaseReturnDetailByInvoice(
+    invoiceNumber: string,
+  ): Promise<EditPurchaseReturnDetail | null> {
+    const [header] = await db
+      .select({
+        purchase_return_id: purchase_returns.id,
+        purchase_order_id: purchase_orders.id,
+        client: purchase_orders.client_id,
+        invoice_number: purchase_orders.invoice_number,
+        return_date: purchase_returns.return_date,
+        discount: purchase_orders.invoice_discount,
+        total: purchase_orders.invoice_value,
+      })
+      .from(purchase_returns)
+      .innerJoin(
+        purchase_orders,
+        eq(purchase_returns.purchase_order_id, purchase_orders.id),
+      )
+      .where(
+        and(
+          eq(purchase_orders.invoice_number, invoiceNumber),
+          eq(purchase_orders.paid_amount, 0),
+        ),
+      )
+      .orderBy(desc(purchase_returns.id))
+      .limit(1);
+
+    if (!header) return null;
+
+    const returnLines = await db
+      .select({
+        id: purchase_order_lines.id,
+        stock_id: purchase_order_lines.stock_id,
+        name: stocks.name,
+        price: purchase_order_lines.price,
+        qty: purchase_order_lines.qty,
+        return_qty:
+          sql<number>`COALESCE(SUM(${purchase_return_lines.qty}), 0)`.mapWith(
+            Number,
+          ),
+      })
+      .from(purchase_order_lines)
+      .leftJoin(
+        purchase_return_lines,
+        eq(
+          purchase_return_lines.purchase_order_line_id,
+          purchase_order_lines.id,
+        ),
+      )
+      .leftJoin(
+        purchase_returns,
+        and(
+          eq(purchase_return_lines.purchase_return_id, purchase_returns.id),
+          eq(purchase_returns.purchase_order_id, header.purchase_order_id),
+        ),
+      )
+      .leftJoin(stocks, eq(purchase_order_lines.stock_id, stocks.id))
+      .where(
+        eq(purchase_order_lines.purchase_order_id, header.purchase_order_id),
+      )
+      .groupBy(
+        purchase_order_lines.id,
+        purchase_order_lines.stock_id,
+        stocks.name,
+        purchase_order_lines.price,
+        purchase_order_lines.qty,
+      );
+
+    const lines = returnLines.map((line) => {
+      const original_qty = line.qty + line.return_qty;
+      const subtotal = line.price * line.qty;
+
+      return {
+        id: line.id,
+        stock_id: line.stock_id ?? 0,
+        name: line.name ?? "",
+        price: line.price,
+        original_qty,
+        qty: line.qty,
+        return_qty: line.return_qty,
+        subtotal,
+      };
+    });
+
+    const invoice_value = lines.reduce(
+      (acc, line) => acc + line.price * line.original_qty,
+      0,
+    );
+    const total = header.total;
+
+    return {
+      transaction_information: {
+        purchase_return_id: header.purchase_return_id,
+        purchase_order_id: header.purchase_order_id,
+        client: header.client,
+        invoice_number: header.invoice_number,
+        return_date: dayjs(header.return_date).toISOString(),
+      },
+      lines,
+      meta: {
+        invoice_value,
+        discount: header.discount,
+        total,
+      },
+    };
   },
 };

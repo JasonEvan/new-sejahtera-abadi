@@ -1,6 +1,7 @@
 import { Tx } from "@/lib/common-types";
 import db from "@/lib/drizzle";
-import { purchase_return_lines } from "@/drizzle/schema";
+import { purchase_order_lines, purchase_return_lines } from "@/drizzle/schema";
+import { eq, inArray } from "drizzle-orm";
 
 type EnrichedReturnLine = {
   purchase_order_line_id: number;
@@ -25,5 +26,41 @@ export const purchaseReturnLineRepository = {
     }));
 
     return database.insert(purchase_return_lines).values(mappedData);
+  },
+
+  getByPurchaseReturnIds(purchaseReturnIds: number[], tx?: Tx) {
+    if (purchaseReturnIds.length === 0) return [];
+
+    const database = tx ?? db;
+
+    return database
+      .select({
+        purchase_order_line_id: purchase_return_lines.purchase_order_line_id,
+        return_qty: purchase_return_lines.qty,
+        stock_id: purchase_order_lines.stock_id,
+      })
+      .from(purchase_return_lines)
+      .innerJoin(
+        purchase_order_lines,
+        eq(
+          purchase_return_lines.purchase_order_line_id,
+          purchase_order_lines.id,
+        ),
+      )
+      .where(
+        inArray(purchase_return_lines.purchase_return_id, purchaseReturnIds),
+      );
+  },
+
+  deleteByPurchaseReturnIds(purchaseReturnIds: number[], tx?: Tx) {
+    if (purchaseReturnIds.length === 0) return;
+
+    const database = tx ?? db;
+
+    return database
+      .delete(purchase_return_lines)
+      .where(
+        inArray(purchase_return_lines.purchase_return_id, purchaseReturnIds),
+      );
   },
 };

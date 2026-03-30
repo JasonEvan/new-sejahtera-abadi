@@ -35,3 +35,33 @@ export type InsertPurchaseReturn = {
     return_qty: number;
   }[];
 };
+
+export type UpdatePurchaseReturn = {
+  invoice_number: string;
+  return_date: string;
+  lines: {
+    purchase_order_line_id: number;
+    return_qty: number;
+  }[];
+};
+
+export type EditPurchaseReturnInvoiceOption = {
+  id: number;
+  invoice_number: string;
+};
+
+export type EditPurchaseReturnDetail = {
+  transaction_information: {
+    purchase_return_id: number;
+    purchase_order_id: number;
+    client: number;
+    invoice_number: string;
+    return_date: string;
+  };
+  lines: PurchaseReturnTableRow[];
+  meta: {
+    invoice_value: number;
+    discount: number;
+    total: number;
+  };
+};
