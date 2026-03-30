@@ -35,3 +35,33 @@ export type InsertSaleReturn = {
     return_qty: number;
   }[];
 };
+
+export type UpdateSaleReturn = {
+  invoice_number: string;
+  return_date: string;
+  lines: {
+    sales_order_line_id: number;
+    return_qty: number;
+  }[];
+};
+
+export type EditSaleReturnInvoiceOption = {
+  id: number;
+  invoice_number: string;
+};
+
+export type EditSaleReturnDetail = {
+  transaction_information: {
+    sales_return_id: number;
+    sales_order_id: number;
+    client: number;
+    invoice_number: string;
+    return_date: string;
+  };
+  lines: SaleReturnTableRow[];
+  meta: {
+    invoice_value: number;
+    discount: number;
+    total: number;
+  };
+};

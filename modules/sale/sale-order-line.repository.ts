@@ -127,4 +127,26 @@ export const saleOrderLineRepository = {
 
     return database.execute(query);
   },
+
+  bulkIncrementQuantity(data: { id: number; quantity: number }[], tx?: Tx) {
+    if (data.length === 0) return;
+
+    const database = tx ?? db;
+
+    const values = sql.join(
+      data.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      sql`, `,
+    );
+
+    const query = sql`
+      UPDATE ${sales_order_lines} AS sol
+      SET
+        qty = sol.qty + v.quantity,
+        total_price = (sol.qty + v.quantity) * sol.price
+      FROM (VALUES ${values}) AS v(id, quantity)
+      WHERE sol.id = v.id
+    `;
+
+    return database.execute(query);
+  },
 };
