@@ -94,7 +94,14 @@ export const reportRepository = {
         city: clients.city,
         type: sales_order_lines.type,
         price: sales_order_lines.price,
-        qty: sales_order_lines.qty,
+        qty: sql<number>`${sales_order_lines.qty} + COALESCE(
+          (SELECT SUM(qty) 
+          FROM ${sales_return_lines} 
+          WHERE ${sales_return_lines.sales_order_line_id} = ${sales_order_lines.id}
+          ), 0
+        )`
+          .mapWith(Number)
+          .as("qty"),
       })
       .from(sales_order_lines)
       .innerJoin(
@@ -110,7 +117,7 @@ export const reportRepository = {
         // PERBAIKAN: Gunakan sales_orders.invoice_date sebagai fallback
         invoice_date:
           sql<Date>`COALESCE(${sales_returns.return_date}, ${sales_orders.invoice_date})`.as(
-            "date",
+            "invoice_date",
           ),
         invoice_number: sales_orders.invoice_number,
         name: clients.name,
@@ -144,7 +151,14 @@ export const reportRepository = {
         city: clients.city,
         type: purchase_order_lines.type,
         price: purchase_order_lines.price,
-        qty: purchase_order_lines.qty,
+        qty: sql<number>`${purchase_order_lines.qty} + COALESCE(
+          (SELECT SUM(qty) 
+          FROM ${purchase_return_lines} 
+          WHERE ${purchase_return_lines.purchase_order_line_id} = ${purchase_order_lines.id}
+          ), 0
+        )`
+          .mapWith(Number)
+          .as("qty"),
       })
       .from(purchase_order_lines)
       .innerJoin(
@@ -160,7 +174,7 @@ export const reportRepository = {
         // PERBAIKAN: Gunakan purchase_orders.invoice_date sebagai fallback
         invoice_date:
           sql<Date>`COALESCE(${purchase_returns.return_date}, ${purchase_orders.invoice_date})`.as(
-            "date",
+            "invoice_date",
           ),
         invoice_number: purchase_orders.invoice_number,
         name: clients.name,
