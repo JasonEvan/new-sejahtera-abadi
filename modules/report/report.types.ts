@@ -68,3 +68,34 @@ export interface ProfitTableRow {
   invoice_value: number | null;
   invoice_profit: number | null;
 }
+
+export interface DashboardHeadlineStat {
+  value: number;
+  deltaPercentage: number | null;
+}
+
+export interface DashboardOperationalStats {
+  salesOrdersToday: number;
+  purchaseOrdersToday: number;
+  lowStockAlerts: number;
+  paidInvoicesThisWeek: number;
+  pendingReceivables: number;
+  returnRequestsThisMonth: number;
+}
+
+export interface DashboardActivityItem {
+  title: string;
+  subtitle: string;
+  occurredAt: string;
+}
+
+export interface DashboardSnapshot {
+  headline: {
+    todayRevenue: DashboardHeadlineStat;
+    grossProfit: DashboardHeadlineStat;
+    openReceivables: DashboardHeadlineStat;
+    activeClients: DashboardHeadlineStat;
+  };
+  operational: DashboardOperationalStats;
+  recentActivity: DashboardActivityItem[];
+}

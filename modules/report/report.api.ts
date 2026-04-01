@@ -4,6 +4,7 @@ import {
   AllReceivablesTableRow,
   ClientPayablesTableRow,
   ClientReceivablesTableRow,
+  DashboardSnapshot,
   InventoryLedgerTableRow,
   ProfitTableRow,
 } from "./report.types";
@@ -46,6 +47,13 @@ export async function getReceivablesByClient(clientId: number) {
 export async function getProfitReport(month: number, year: number) {
   const response = await api.get<{ data: ProfitTableRow[] }>(
     `/reports/profits?month=${month}&year=${year}`,
+  );
+  return response.data;
+}
+
+export async function getDashboardSnapshot() {
+  const response = await api.get<{ data: DashboardSnapshot }>(
+    "/reports/dashboard",
   );
   return response.data;
 }

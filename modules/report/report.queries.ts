@@ -1,6 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAllPayablesKey, getAllReceivablesKey, getInventoryLedgersKey, getPayablesByClientKey, getProfitReportKey, getReceivablesByClientKey } from "./report.keys";
-import { getAllPayables, getAllReceivables, getInventoryLedgers, getPayablesByClient, getProfitReport, getReceivablesByClient } from "./report.api";
+import {
+  getAllPayablesKey,
+  getAllReceivablesKey,
+  getDashboardSnapshotKey,
+  getInventoryLedgersKey,
+  getPayablesByClientKey,
+  getProfitReportKey,
+  getReceivablesByClientKey,
+} from "./report.keys";
+import {
+  getAllPayables,
+  getAllReceivables,
+  getDashboardSnapshot,
+  getInventoryLedgers,
+  getPayablesByClient,
+  getProfitReport,
+  getReceivablesByClient,
+} from "./report.api";
 
 export const useGetInventoryLedgers = (stockId: number, enabled: boolean) => {
   return useQuery({
@@ -36,7 +52,10 @@ export const useGetPayablesByClient = (clientId: number, enabled: boolean) => {
   });
 };
 
-export const useGetReceivablesByClient = (clientId: number, enabled: boolean) => {
+export const useGetReceivablesByClient = (
+  clientId: number,
+  enabled: boolean,
+) => {
   return useQuery({
     queryKey: getReceivablesByClientKey(clientId),
     queryFn: () => getReceivablesByClient(clientId),
@@ -55,5 +74,14 @@ export const useGetProfitReport = (
     queryFn: () => getProfitReport(month, year),
     select: (data) => data.data,
     enabled,
+  });
+};
+
+export const useGetDashboardSnapshot = () => {
+  return useQuery({
+    queryKey: getDashboardSnapshotKey(),
+    queryFn: getDashboardSnapshot,
+    select: (data) => data.data,
+    staleTime: 60_000,
   });
 };

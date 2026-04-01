@@ -24,7 +24,7 @@ export const columns = [
     header: () => <div className="text-right">Nilai Nota</div>,
     cell: (info) => (
       <div className="text-right">
-        {info.getValue().toLocaleString("id-ID")}
+        {info.getValue()?.toLocaleString("id-ID")}
       </div>
     ),
   }),

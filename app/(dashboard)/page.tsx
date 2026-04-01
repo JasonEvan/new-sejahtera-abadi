@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowUpRight,
   Banknote,
   Boxes,
@@ -7,6 +10,7 @@ import {
   Download,
   FileClock,
   PackageCheck,
+  RefreshCcw,
   ShoppingCart,
   Store,
   TrendingUp,
@@ -14,6 +18,9 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useGetDashboardSnapshot } from "@/modules/report/report.queries";
+import { DashboardSnapshot } from "@/modules/report/report.types";
 
 const quickActions = [
   {
@@ -54,66 +61,63 @@ const quickActions = [
   },
 ] as const;
 
-const headlineStats = [
+const headlineStatsConfig = [
   {
+    key: "todayRevenue",
     label: "Today Revenue",
-    value: 24875000,
     unit: "IDR",
-    growth: "+12.4%",
     icon: CircleDollarSign,
   },
   {
+    key: "grossProfit",
     label: "Gross Profit",
-    value: 7310000,
     unit: "IDR",
-    growth: "+7.8%",
     icon: TrendingUp,
   },
   {
+    key: "openReceivables",
     label: "Open Receivables",
-    value: 12890000,
     unit: "IDR",
-    growth: "-2.1%",
     icon: Banknote,
   },
   {
-    label: "Active Clients",
-    value: 183,
+    key: "activeClients",
+    label: "Active Clients (30d)",
     unit: "accounts",
-    growth: "+4 new",
     icon: Store,
   },
 ] as const;
 
-const operationalStats = [
-  { label: "Sales Orders", value: 42, helper: "Today" },
-  { label: "Purchase Orders", value: 16, helper: "Today" },
-  { label: "Low Stock Alerts", value: 9, helper: "Need refill" },
-  { label: "Paid Invoices", value: 31, helper: "This week" },
-  { label: "Pending Deliveries", value: 7, helper: "Due soon" },
-  { label: "Return Requests", value: 3, helper: "Open" },
-] as const;
-
-const recentActivity = [
+const operationalStatsConfig = [
   {
-    title: "Invoice SO-2401 paid",
-    subtitle: "PT Maju Sentosa - IDR 1,850,000",
-    time: "12 min ago",
+    key: "salesOrdersToday",
+    label: "Sales Orders",
+    helper: "Today",
   },
   {
-    title: "Purchase PO-1132 created",
-    subtitle: "CV Sumber Pangan - 18 items",
-    time: "45 min ago",
+    key: "purchaseOrdersToday",
+    label: "Purchase Orders",
+    helper: "Today",
   },
   {
-    title: "Stock adjustment approved",
-    subtitle: "Gudang Utama - 6 SKU corrected",
-    time: "1 hr ago",
+    key: "lowStockAlerts",
+    label: "Low Stock Alerts",
+    helper: "Ending stock <= 5",
   },
   {
-    title: "Export completed",
-    subtitle: "stocks_2026-04-01.csv",
-    time: "2 hr ago",
+    key: "paidInvoicesThisWeek",
+    label: "Paid Invoices",
+    helper: "This week",
+  },
+  {
+    key: "pendingReceivables",
+    label: "Pending Receivables",
+    helper: "Open invoices",
+  },
+  {
+    key: "returnRequestsThisMonth",
+    label: "Return Requests",
+    helper: "This month",
   },
 ] as const;
 
@@ -133,7 +137,46 @@ function formatCompactIdr(value: number) {
   }).format(value);
 }
 
+function formatDeltaPercentage(delta: number | null) {
+  if (delta === null) {
+    return "No previous baseline";
+  }
+
+  if (delta === 0) {
+    return "0.0% vs previous period";
+  }
+
+  const prefix = delta > 0 ? "+" : "";
+  return `${prefix}${delta.toFixed(1)}% vs previous period`;
+}
+
+function formatRelativeTime(isoDate: string) {
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Unknown time";
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - parsed.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} hr ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day ago`;
+}
+
 export default function Home() {
+  const { data, isLoading, isFetching, isError, refetch } =
+    useGetDashboardSnapshot();
+
+  const snapshot = data as DashboardSnapshot | undefined;
+  const showSkeleton = isLoading && !snapshot;
+
   return (
     <div className="relative space-y-6 pb-4">
       <div className="pointer-events-none absolute inset-x-0 -top-6 -z-10 h-44 rounded-3xl bg-linear-to-r from-orange-200/45 via-amber-100/20 to-lime-200/35 blur-3xl" />
@@ -160,14 +203,15 @@ export default function Home() {
                 </Link>
               </Button>
               <Button asChild variant="outline" className="cursor-pointer">
-                <Link href="/view">View Transactions</Link>
+                <Link href="/view/all-receivables">View Transactions</Link>
               </Button>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 animate-in fade-in slide-in-from-right-1 duration-500">
-            {headlineStats.map((item) => {
+            {headlineStatsConfig.map((item) => {
               const Icon = item.icon;
+              const stat = snapshot?.headline[item.key];
 
               return (
                 <article
@@ -182,20 +226,61 @@ export default function Home() {
                       <Icon className="size-4" />
                     </div>
                   </div>
-                  <p className="text-lg font-black tracking-tight">
-                    {item.unit === "IDR"
-                      ? formatCompactIdr(item.value)
-                      : new Intl.NumberFormat("id-ID").format(item.value)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {item.growth} vs yesterday
-                  </p>
+
+                  {showSkeleton ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-6 w-24" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-lg font-black tracking-tight">
+                        {typeof stat?.value === "number"
+                          ? item.unit === "IDR"
+                            ? formatCompactIdr(stat.value)
+                            : new Intl.NumberFormat("id-ID").format(stat.value)
+                          : "--"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatDeltaPercentage(stat?.deltaPercentage ?? null)}
+                      </p>
+                    </>
+                  )}
                 </article>
               );
             })}
           </div>
         </div>
       </section>
+
+      {isError && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 size-4 text-destructive" />
+              <div>
+                <p className="text-sm font-semibold">
+                  Dashboard data unavailable
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Some sections could not load from backend endpoints.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="cursor-pointer"
+            >
+              <RefreshCcw className={isFetching ? "animate-spin" : ""} />
+              Retry
+            </Button>
+          </div>
+        </div>
+      )}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
@@ -244,20 +329,28 @@ export default function Home() {
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {operationalStats.map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-lg border bg-background p-3"
-              >
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-                <p className="mt-1 text-2xl font-black leading-none tracking-tight">
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {stat.helper}
-                </p>
-              </div>
-            ))}
+            {operationalStatsConfig.map((stat) => {
+              const value = snapshot?.operational[stat.key];
+
+              return (
+                <div
+                  key={stat.label}
+                  className="rounded-lg border bg-background p-3"
+                >
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  {showSkeleton ? (
+                    <Skeleton className="mt-2 h-7 w-16" />
+                  ) : (
+                    <p className="mt-1 text-2xl font-black leading-none tracking-tight">
+                      {typeof value === "number" ? value : "--"}
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {stat.helper}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </article>
 
@@ -277,22 +370,46 @@ export default function Home() {
           </div>
 
           <ul className="space-y-2.5">
-            {recentActivity.map((activity) => (
-              <li
-                key={activity.title}
-                className="rounded-lg border bg-background p-3"
-              >
-                <p className="text-sm font-semibold tracking-tight">
-                  {activity.title}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {activity.subtitle}
-                </p>
-                <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground/80">
-                  {activity.time}
-                </p>
-              </li>
-            ))}
+            {showSkeleton &&
+              Array.from({ length: 4 }).map((_, index) => (
+                <li
+                  key={`activity-skeleton-${index}`}
+                  className="rounded-lg border bg-background p-3"
+                >
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="mt-2 h-3 w-56" />
+                  <Skeleton className="mt-2 h-3 w-20" />
+                </li>
+              ))}
+
+            {!showSkeleton &&
+              (snapshot?.recentActivity.length ? (
+                snapshot.recentActivity.map((activity) => (
+                  <li
+                    key={`${activity.title}-${activity.occurredAt}`}
+                    className="rounded-lg border bg-background p-3"
+                  >
+                    <p className="text-sm font-semibold tracking-tight">
+                      {activity.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {activity.subtitle}
+                    </p>
+                    <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground/80">
+                      {formatRelativeTime(activity.occurredAt)}
+                    </p>
+                  </li>
+                ))
+              ) : (
+                <li className="rounded-lg border bg-background p-3">
+                  <p className="text-sm font-semibold tracking-tight">
+                    No activity found
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Transactions will appear here once available.
+                  </p>
+                </li>
+              ))}
           </ul>
         </article>
       </section>

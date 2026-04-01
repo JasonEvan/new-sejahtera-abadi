@@ -18,6 +18,323 @@ import { asc, eq, max, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 
 export const reportRepository = {
+  async getDashboardSnapshot() {
+    const [
+      todayRevenue,
+      yesterdayRevenue,
+      todayGrossProfit,
+      yesterdayGrossProfit,
+      openReceivables,
+      todayOpenReceivables,
+      yesterdayOpenReceivables,
+      activeClientsLast30Days,
+      activeClientsPrevious30Days,
+      salesOrdersToday,
+      purchaseOrdersToday,
+      lowStockAlerts,
+      paidInvoicesThisWeek,
+      pendingReceivables,
+      returnRequestsThisMonth,
+      recentActivity,
+    ] = await Promise.all([
+      db
+        .select({
+          value: sql<number>`COALESCE(SUM(${sales_orders.invoice_value}), 0)`
+            .mapWith(Number)
+            .as("value"),
+        })
+        .from(sales_orders)
+        .where(sql`DATE(${sales_orders.invoice_date}) = CURRENT_DATE`),
+
+      db
+        .select({
+          value: sql<number>`COALESCE(SUM(${sales_orders.invoice_value}), 0)`
+            .mapWith(Number)
+            .as("value"),
+        })
+        .from(sales_orders)
+        .where(
+          sql`DATE(${sales_orders.invoice_date}) = CURRENT_DATE - INTERVAL '1 day'`,
+        ),
+
+      db
+        .select({
+          value: sql<number>`COALESCE(
+            SUM((${sales_order_lines.price} - COALESCE(${stocks.product_price}, 0)) * ${sales_order_lines.qty}),
+            0
+          )`
+            .mapWith(Number)
+            .as("value"),
+        })
+        .from(sales_order_lines)
+        .innerJoin(
+          sales_orders,
+          eq(sales_order_lines.sales_order_id, sales_orders.id),
+        )
+        .leftJoin(stocks, eq(sales_order_lines.stock_id, stocks.id))
+        .where(sql`DATE(${sales_orders.invoice_date}) = CURRENT_DATE`),
+
+      db
+        .select({
+          value: sql<number>`COALESCE(
+            SUM((${sales_order_lines.price} - COALESCE(${stocks.product_price}, 0)) * ${sales_order_lines.qty}),
+            0
+          )`
+            .mapWith(Number)
+            .as("value"),
+        })
+        .from(sales_order_lines)
+        .innerJoin(
+          sales_orders,
+          eq(sales_order_lines.sales_order_id, sales_orders.id),
+        )
+        .leftJoin(stocks, eq(sales_order_lines.stock_id, stocks.id))
+        .where(
+          sql`DATE(${sales_orders.invoice_date}) = CURRENT_DATE - INTERVAL '1 day'`,
+        ),
+
+      db
+        .select({
+          value: sql<number>`COALESCE(SUM(${sales_orders.balance_due}), 0)`
+            .mapWith(Number)
+            .as("value"),
+        })
+        .from(sales_orders)
+        .where(sql`${sales_orders.balance_due} > 0`),
+
+      db
+        .select({
+          value: sql<number>`COALESCE(SUM(${sales_orders.balance_due}), 0)`
+            .mapWith(Number)
+            .as("value"),
+        })
+        .from(sales_orders)
+        .where(
+          sql`${sales_orders.balance_due} > 0 AND DATE(${sales_orders.invoice_date}) = CURRENT_DATE`,
+        ),
+
+      db
+        .select({
+          value: sql<number>`COALESCE(SUM(${sales_orders.balance_due}), 0)`
+            .mapWith(Number)
+            .as("value"),
+        })
+        .from(sales_orders)
+        .where(
+          sql`${sales_orders.balance_due} > 0 AND DATE(${sales_orders.invoice_date}) = CURRENT_DATE - INTERVAL '1 day'`,
+        ),
+
+      db.execute(sql`
+        SELECT COUNT(DISTINCT activity.client_id)::int AS value
+        FROM (
+          SELECT ${sales_orders.client_id} AS client_id
+          FROM ${sales_orders}
+          WHERE ${sales_orders.invoice_date} >= CURRENT_DATE - INTERVAL '30 day'
+          UNION ALL
+          SELECT ${purchase_orders.client_id} AS client_id
+          FROM ${purchase_orders}
+          WHERE ${purchase_orders.invoice_date} >= CURRENT_DATE - INTERVAL '30 day'
+        ) AS activity
+      `),
+
+      db.execute(sql`
+        SELECT COUNT(DISTINCT activity.client_id)::int AS value
+        FROM (
+          SELECT ${sales_orders.client_id} AS client_id
+          FROM ${sales_orders}
+          WHERE ${sales_orders.invoice_date} >= CURRENT_DATE - INTERVAL '60 day'
+            AND ${sales_orders.invoice_date} < CURRENT_DATE - INTERVAL '30 day'
+          UNION ALL
+          SELECT ${purchase_orders.client_id} AS client_id
+          FROM ${purchase_orders}
+          WHERE ${purchase_orders.invoice_date} >= CURRENT_DATE - INTERVAL '60 day'
+            AND ${purchase_orders.invoice_date} < CURRENT_DATE - INTERVAL '30 day'
+        ) AS activity
+      `),
+
+      db
+        .select({
+          value: sql<number>`COUNT(*)::int`.mapWith(Number).as("value"),
+        })
+        .from(sales_orders)
+        .where(sql`DATE(${sales_orders.invoice_date}) = CURRENT_DATE`),
+
+      db
+        .select({
+          value: sql<number>`COUNT(*)::int`.mapWith(Number).as("value"),
+        })
+        .from(purchase_orders)
+        .where(sql`DATE(${purchase_orders.invoice_date}) = CURRENT_DATE`),
+
+      db
+        .select({
+          value: sql<number>`COUNT(*)::int`.mapWith(Number).as("value"),
+        })
+        .from(stocks)
+        .where(sql`${stocks.ending_stock} <= 5`),
+
+      db
+        .select({
+          value: sql<number>`COUNT(*)::int`.mapWith(Number).as("value"),
+        })
+        .from(sales_orders)
+        .where(
+          sql`${sales_orders.balance_due} <= 0 AND ${sales_orders.invoice_date} >= date_trunc('week', now())`,
+        ),
+
+      db
+        .select({
+          value: sql<number>`COUNT(*)::int`.mapWith(Number).as("value"),
+        })
+        .from(sales_orders)
+        .where(sql`${sales_orders.balance_due} > 0`),
+
+      db.execute(sql`
+        SELECT (
+          (SELECT COUNT(*)::int
+            FROM ${sales_returns}
+            WHERE date_trunc('month', ${sales_returns.return_date}) = date_trunc('month', now())
+          ) +
+          (SELECT COUNT(*)::int
+            FROM ${purchase_returns}
+            WHERE date_trunc('month', ${purchase_returns.return_date}) = date_trunc('month', now())
+          )
+        )::int AS value
+      `),
+
+      db.execute(sql`
+        SELECT activity.title, activity.subtitle, activity.occurred_at
+        FROM (
+          SELECT
+            'Sale invoice created' AS title,
+            ${sales_orders.invoice_number} || ' - ' || COALESCE(${clients.name}, 'Unknown Client') AS subtitle,
+            ${sales_orders.invoice_date} AS occurred_at
+          FROM ${sales_orders}
+          LEFT JOIN ${clients} ON ${sales_orders.client_id} = ${clients.id}
+
+          UNION ALL
+
+          SELECT
+            'Purchase invoice created' AS title,
+            ${purchase_orders.invoice_number} || ' - ' || COALESCE(${clients.name}, 'Unknown Supplier') AS subtitle,
+            ${purchase_orders.invoice_date} AS occurred_at
+          FROM ${purchase_orders}
+          LEFT JOIN ${clients} ON ${purchase_orders.client_id} = ${clients.id}
+
+          UNION ALL
+
+          SELECT
+            'Sales payment received' AS title,
+            ${sales_orders.invoice_number} || ' - Rp ' || ${sales_payments.paid_amount}::text AS subtitle,
+            ${sales_payments.payment_date} AS occurred_at
+          FROM ${sales_payments}
+          INNER JOIN ${sales_orders} ON ${sales_payments.sales_order_id} = ${sales_orders.id}
+
+          UNION ALL
+
+          SELECT
+            'Supplier payment made' AS title,
+            ${purchase_orders.invoice_number} || ' - Rp ' || ${purchase_payments.paid_amount}::text AS subtitle,
+            ${purchase_payments.payment_date} AS occurred_at
+          FROM ${purchase_payments}
+          INNER JOIN ${purchase_orders} ON ${purchase_payments.purchase_order_id} = ${purchase_orders.id}
+
+          UNION ALL
+
+          SELECT
+            'Sales return recorded' AS title,
+            ${sales_orders.invoice_number} || ' - ' || COALESCE(${clients.name}, 'Unknown Client') AS subtitle,
+            ${sales_returns.return_date} AS occurred_at
+          FROM ${sales_returns}
+          INNER JOIN ${sales_orders} ON ${sales_returns.sales_order_id} = ${sales_orders.id}
+          LEFT JOIN ${clients} ON ${sales_returns.client_id} = ${clients.id}
+
+          UNION ALL
+
+          SELECT
+            'Purchase return recorded' AS title,
+            ${purchase_orders.invoice_number} || ' - ' || COALESCE(${clients.name}, 'Unknown Supplier') AS subtitle,
+            ${purchase_returns.return_date} AS occurred_at
+          FROM ${purchase_returns}
+          INNER JOIN ${purchase_orders} ON ${purchase_returns.purchase_order_id} = ${purchase_orders.id}
+          LEFT JOIN ${clients} ON ${purchase_returns.client_id} = ${clients.id}
+        ) AS activity
+        WHERE activity.occurred_at IS NOT NULL
+        ORDER BY activity.occurred_at DESC
+        LIMIT 6
+      `),
+    ]);
+
+    const todayRevenueValue = todayRevenue[0]?.value ?? 0;
+    const yesterdayRevenueValue = yesterdayRevenue[0]?.value ?? 0;
+    const todayGrossProfitValue = todayGrossProfit[0]?.value ?? 0;
+    const yesterdayGrossProfitValue = yesterdayGrossProfit[0]?.value ?? 0;
+    const openReceivablesValue = openReceivables[0]?.value ?? 0;
+    const todayOpenReceivablesValue = todayOpenReceivables[0]?.value ?? 0;
+    const yesterdayOpenReceivablesValue =
+      yesterdayOpenReceivables[0]?.value ?? 0;
+
+    const activeLast30Days = Number(activeClientsLast30Days[0]?.value ?? 0);
+    const activePrevious30Days = Number(
+      activeClientsPrevious30Days[0]?.value ?? 0,
+    );
+    const thisMonthReturns = Number(returnRequestsThisMonth[0]?.value ?? 0);
+
+    function toDeltaPercentage(current: number, previous: number) {
+      if (previous === 0) {
+        return current === 0 ? 0 : null;
+      }
+
+      return Number((((current - previous) / previous) * 100).toFixed(1));
+    }
+
+    return {
+      headline: {
+        todayRevenue: {
+          value: todayRevenueValue,
+          deltaPercentage: toDeltaPercentage(
+            todayRevenueValue,
+            yesterdayRevenueValue,
+          ),
+        },
+        grossProfit: {
+          value: todayGrossProfitValue,
+          deltaPercentage: toDeltaPercentage(
+            todayGrossProfitValue,
+            yesterdayGrossProfitValue,
+          ),
+        },
+        openReceivables: {
+          value: openReceivablesValue,
+          deltaPercentage: toDeltaPercentage(
+            todayOpenReceivablesValue,
+            yesterdayOpenReceivablesValue,
+          ),
+        },
+        activeClients: {
+          value: activeLast30Days,
+          deltaPercentage: toDeltaPercentage(
+            activeLast30Days,
+            activePrevious30Days,
+          ),
+        },
+      },
+      operational: {
+        salesOrdersToday: salesOrdersToday[0]?.value ?? 0,
+        purchaseOrdersToday: purchaseOrdersToday[0]?.value ?? 0,
+        lowStockAlerts: lowStockAlerts[0]?.value ?? 0,
+        paidInvoicesThisWeek: paidInvoicesThisWeek[0]?.value ?? 0,
+        pendingReceivables: pendingReceivables[0]?.value ?? 0,
+        returnRequestsThisMonth: thisMonthReturns,
+      },
+      recentActivity: recentActivity.map((activity) => ({
+        title: String(activity.title),
+        subtitle: String(activity.subtitle),
+        occurredAt: new Date(String(activity.occurred_at)).toISOString(),
+      })),
+    };
+  },
+
   // getInventoryLedgers(stockId: number) {
   //   const subquerySales = db
   //     .select({

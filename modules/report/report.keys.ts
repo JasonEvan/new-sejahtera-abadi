@@ -11,3 +11,4 @@ export const getReceivablesByClientKey = (clientId: number) =>
 export const getProfitReportKey = (month: number, year: number) =>
   ["profit-report", month, year] as const;
 export const invalidateProfitReportKey = () => ["profit-report"] as const;
+export const getDashboardSnapshotKey = () => ["dashboard-snapshot"] as const;

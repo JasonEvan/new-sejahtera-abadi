@@ -6,12 +6,17 @@ import {
   AllReceivablesTableRow,
   ClientPayablesTableRow,
   ClientReceivablesTableRow,
+  DashboardSnapshot,
   InventoryLedgerTableRow,
   ProfitQueryResult,
   ProfitTableRow,
 } from "./report.types";
 
 export const reportService = {
+  async getDashboardSnapshot(): Promise<DashboardSnapshot> {
+    return reportRepository.getDashboardSnapshot();
+  },
+
   // async getInventoryLedgers(stockId: number) {
   //   const data = await reportRepository.getInventoryLedgers(stockId);
   //   const [stock] = await stockRepository.getStartingStock(stockId);
