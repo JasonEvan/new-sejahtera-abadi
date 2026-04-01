@@ -153,7 +153,6 @@ export async function truncateAllTables(): Promise<void> {
 
 export async function restoreFromSqlDump(sqlContent: string): Promise<void> {
   const trimmedContent = sqlContent.trim();
-  await truncateAllTables();
   if (!trimmedContent) {
     return;
   }
@@ -161,17 +160,27 @@ export async function restoreFromSqlDump(sqlContent: string): Promise<void> {
   const statements = splitSqlStatements(trimmedContent);
 
   await db.transaction(async (tx) => {
+    // Execute TRUNCATE inside the transaction for atomicity
+    const tableNames = TABLES_IN_INSERT_ORDER.map(quoteIdentifier).join(", ");
+    const truncateQuery = drizzleSql.raw(
+      `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`,
+    );
+    await tx.execute(truncateQuery);
+
     for (const statement of statements) {
       const normalizedStatement = statement.replace(/;$/, "").trim();
       if (!normalizedStatement) {
         continue;
       }
 
-      if (/^BEGIN$/i.test(normalizedStatement)) {
+      // Clean comments before checking for transaction commands
+      const commandOnly = normalizedStatement.replace(/^--.*$/gm, "").trim();
+      if (!commandOnly) {
         continue;
       }
 
-      if (/^COMMIT$/i.test(normalizedStatement)) {
+      // Skip transaction control statements
+      if (/^(BEGIN|COMMIT|ROLLBACK|START\s+TRANSACTION)$/i.test(commandOnly)) {
         continue;
       }
 
