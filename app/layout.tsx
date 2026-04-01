@@ -6,6 +6,7 @@ import QueryProvider from "@/components/providers/QueryProvider";
 import { Toaster } from "sonner";
 import DialogProvider from "@/components/providers/DialogProvider";
 import AlertDialogProvider from "@/components/providers/AlertDialogProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,16 +29,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <QueryProvider>
-          <TooltipProvider>{children}</TooltipProvider>
-          <DialogProvider />
-          <AlertDialogProvider />
-        </QueryProvider>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+            <DialogProvider />
+            <AlertDialogProvider />
+          </QueryProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
