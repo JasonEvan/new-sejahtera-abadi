@@ -1,4 +1,11 @@
 import jsPDF from "jspdf";
+import type {
+  AllPayablesTableRow,
+  AllReceivablesTableRow,
+  ClientPayablesTableRow,
+  ClientReceivablesTableRow,
+  InventoryLedgerTableRow,
+} from "@/modules/report/report.types";
 
 export interface SalesInvoicePrintDetail {
   tanggal_nota: string;
@@ -35,6 +42,55 @@ function parseTotalToNumber(total: SalesInvoiceTotal): number {
 
 function formatNumber(value: number | null | undefined): string {
   return (value ?? 0).toLocaleString("id-ID");
+}
+
+type HorizontalAlign = "left" | "right";
+
+interface ReportColumn<T> {
+  header: string;
+  width: number;
+  gapAfter?: number;
+  align?: HorizontalAlign;
+  getValue: (row: T, index: number) => string;
+}
+
+function getColumnX<T>(
+  columns: ReportColumn<T>[],
+  columnIndex: number,
+  leftMargin: number,
+): number {
+  return (
+    leftMargin +
+    columns
+      .slice(0, columnIndex)
+      .reduce(
+        (acc, current) => acc + current.width + (current.gapAfter ?? 0),
+        0,
+      )
+  );
+}
+
+function toPrintable(value: string | number | null): string {
+  if (value === null) return "";
+  return String(value);
+}
+
+function openPdfForPrint(pdf: jsPDF, fileName: string) {
+  const pdfBlob = pdf.output("blob");
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  const printWindow = window.open(pdfUrl, "_blank");
+
+  if (printWindow) {
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = pdfUrl;
+  link.download = fileName;
+  link.click();
 }
 
 export const printService = {
@@ -149,21 +205,344 @@ export const printService = {
     // Bottom text
     pdf.text(`${rupiahToString(parseTotalToNumber(total))} rupiah`, 5, y);
 
-    // Generate PDF blob and open in new window for printing
-    const pdfBlob = pdf.output("blob");
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    const printWindow = window.open(pdfUrl, "_blank");
+    openPdfForPrint(pdf, "nota.pdf");
+  },
 
-    if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.print();
-      };
-    } else {
-      const link = document.createElement("a");
-      link.href = pdfUrl;
-      link.download = "nota.pdf";
-      link.click();
-    }
+  printA4Report<T>(
+    title: string,
+    rows: T[],
+    columns: ReportColumn<T>[],
+    fileName: string,
+  ) {
+    const pdf = new jsPDF("p", "mm", "a4");
+    const leftMargin = 10;
+    const topMargin = 12;
+    const rowHeight = 5.5;
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const bottomLimit = pageHeight - 10;
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(12);
+
+    const drawHeader = () => {
+      let y = topMargin;
+      pdf.text("SEJAHTERA ABADI", leftMargin, y);
+      y += 5;
+      pdf.text("SEMARANG", leftMargin, y);
+      y += 5;
+      pdf.text(title, leftMargin, y);
+      y += 7;
+
+      pdf.setFontSize(9);
+      columns.forEach((column, columnIndex) => {
+        const x = getColumnX(columns, columnIndex, leftMargin);
+        const textWidth = pdf.getTextWidth(column.header);
+        const textX =
+          column.align === "right" ? x + column.width - textWidth : x;
+        pdf.text(column.header, textX, y);
+      });
+
+      return y + 4;
+    };
+
+    let y = drawHeader();
+
+    rows.forEach((row, index) => {
+      if (y + rowHeight > bottomLimit) {
+        pdf.addPage();
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(12);
+        y = drawHeader();
+      }
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+
+      columns.forEach((column, columnIndex) => {
+        const cellText = column.getValue(row, index);
+        const x = getColumnX(columns, columnIndex, leftMargin);
+        const textWidth = pdf.getTextWidth(cellText);
+        const textX =
+          column.align === "right" ? x + column.width - textWidth : x;
+
+        pdf.text(cellText, textX, y);
+      });
+
+      y += rowHeight;
+    });
+
+    openPdfForPrint(pdf, fileName);
+  },
+
+  handlePrintInventoryLedger(
+    rows: InventoryLedgerTableRow[],
+    stockName: string,
+  ) {
+    const columns: ReportColumn<InventoryLedgerTableRow>[] = [
+      {
+        header: "No",
+        width: 10,
+        gapAfter: 2,
+        align: "right",
+        getValue: (_, index) => String(index + 1),
+      },
+      {
+        header: "Nomor Nota",
+        width: 28,
+        getValue: (row) => toPrintable(row.invoice_number),
+      },
+      {
+        header: "Tanggal",
+        width: 25,
+        getValue: (row) => toPrintable(row.invoice_date),
+      },
+      { header: "Nama", width: 38, getValue: (row) => toPrintable(row.name) },
+      { header: "Kota", width: 24, getValue: (row) => toPrintable(row.city) },
+      { header: "Tipe", width: 12, getValue: (row) => toPrintable(row.type) },
+      {
+        header: "Harga",
+        width: 16,
+        align: "right",
+        getValue: (row) => toPrintable(row.price),
+      },
+      {
+        header: "Qty In",
+        width: 12,
+        align: "right",
+        getValue: (row) => toPrintable(row.qty_in),
+      },
+      {
+        header: "Qty Out",
+        width: 14,
+        align: "right",
+        getValue: (row) => toPrintable(row.qty_out),
+      },
+      {
+        header: "Qty Akhir",
+        width: 16,
+        align: "right",
+        getValue: (row) => toPrintable(row.final_qty),
+      },
+    ];
+
+    this.printA4Report(
+      `LAPORAN KARTU PERSEDIAAN ${stockName}`,
+      rows,
+      columns,
+      "inventory-ledger.pdf",
+    );
+  },
+
+  handlePrintAllReceivables(rows: AllReceivablesTableRow[]) {
+    const columns: ReportColumn<AllReceivablesTableRow>[] = [
+      {
+        header: "No",
+        width: 10,
+        gapAfter: 2,
+        align: "right",
+        getValue: (_, index) => String(index + 1),
+      },
+      { header: "Nama", width: 35, getValue: (row) => row.name },
+      { header: "Kota", width: 22, getValue: (row) => row.city },
+      {
+        header: "Nomor Nota",
+        width: 28,
+        getValue: (row) => row.invoice_number,
+      },
+      {
+        header: "Tanggal",
+        width: 25,
+        getValue: (row) => toPrintable(row.invoice_date),
+      },
+      {
+        header: "Nilai Nota",
+        width: 18,
+        align: "right",
+        getValue: (row) => toPrintable(row.invoice_value),
+      },
+      {
+        header: "Lunas",
+        width: 18,
+        gapAfter: 2,
+        align: "right",
+        getValue: (row) => toPrintable(row.paid_amount),
+      },
+      {
+        header: "Tgl Bayar",
+        width: 18,
+        getValue: (row) => toPrintable(row.payment_date),
+      },
+      {
+        header: "Saldo",
+        width: 16,
+        align: "right",
+        getValue: (row) => toPrintable(row.balance_due),
+      },
+    ];
+
+    this.printA4Report("LAPORAN PIUTANG", rows, columns, "all-receivables.pdf");
+  },
+
+  handlePrintReceivablesPerClient(
+    rows: ClientReceivablesTableRow[],
+    clientName: string,
+  ) {
+    const columns: ReportColumn<ClientReceivablesTableRow>[] = [
+      {
+        header: "No",
+        width: 10,
+        gapAfter: 2,
+        align: "right",
+        getValue: (_, index) => String(index + 1),
+      },
+      {
+        header: "Nomor Nota",
+        width: 34,
+        getValue: (row) => row.invoice_number,
+      },
+      {
+        header: "Tanggal",
+        width: 32,
+        getValue: (row) => toPrintable(row.invoice_date),
+      },
+      {
+        header: "Nilai Nota",
+        width: 28,
+        align: "right",
+        getValue: (row) => toPrintable(row.invoice_value),
+      },
+      {
+        header: "Lunas",
+        width: 28,
+        gapAfter: 2,
+        align: "right",
+        getValue: (row) => toPrintable(row.paid_amount),
+      },
+      {
+        header: "Tanggal Lunas",
+        width: 28,
+        getValue: (row) => toPrintable(row.payment_date),
+      },
+      {
+        header: "Saldo",
+        width: 28,
+        align: "right",
+        getValue: (row) => toPrintable(row.balance_due),
+      },
+    ];
+
+    this.printA4Report(
+      `LAPORAN PIUTANG ${clientName}`,
+      rows,
+      columns,
+      "receivables-per-client.pdf",
+    );
+  },
+
+  handlePrintAllPayables(rows: AllPayablesTableRow[]) {
+    const columns: ReportColumn<AllPayablesTableRow>[] = [
+      {
+        header: "No",
+        width: 10,
+        gapAfter: 2,
+        align: "right",
+        getValue: (_, index) => String(index + 1),
+      },
+      { header: "Nama", width: 35, getValue: (row) => row.name },
+      { header: "Kota", width: 22, getValue: (row) => row.city },
+      {
+        header: "Nomor Nota",
+        width: 28,
+        getValue: (row) => row.invoice_number,
+      },
+      {
+        header: "Tanggal",
+        width: 25,
+        getValue: (row) => toPrintable(row.invoice_date),
+      },
+      {
+        header: "Nilai Nota",
+        width: 18,
+        align: "right",
+        getValue: (row) => toPrintable(row.invoice_value),
+      },
+      {
+        header: "Lunas",
+        width: 18,
+        gapAfter: 2,
+        align: "right",
+        getValue: (row) => toPrintable(row.paid_amount),
+      },
+      {
+        header: "Tgl Bayar",
+        width: 18,
+        getValue: (row) => toPrintable(row.payment_date),
+      },
+      {
+        header: "Saldo",
+        width: 16,
+        align: "right",
+        getValue: (row) => toPrintable(row.balance_due),
+      },
+    ];
+
+    this.printA4Report("LAPORAN UTANG", rows, columns, "all-payables.pdf");
+  },
+
+  handlePrintPayablesPerClient(
+    rows: ClientPayablesTableRow[],
+    clientName: string,
+  ) {
+    const columns: ReportColumn<ClientPayablesTableRow>[] = [
+      {
+        header: "No",
+        width: 10,
+        gapAfter: 2,
+        align: "right",
+        getValue: (_, index) => String(index + 1),
+      },
+      {
+        header: "Nomor Nota",
+        width: 34,
+        getValue: (row) => row.invoice_number,
+      },
+      {
+        header: "Tanggal",
+        width: 32,
+        getValue: (row) => toPrintable(row.invoice_date),
+      },
+      {
+        header: "Nilai Nota",
+        width: 28,
+        align: "right",
+        getValue: (row) => toPrintable(row.invoice_value),
+      },
+      {
+        header: "Lunas",
+        width: 28,
+        gapAfter: 2,
+        align: "right",
+        getValue: (row) => toPrintable(row.paid_amount),
+      },
+      {
+        header: "Tanggal Lunas",
+        width: 28,
+        getValue: (row) => toPrintable(row.payment_date),
+      },
+      {
+        header: "Saldo",
+        width: 28,
+        align: "right",
+        getValue: (row) => toPrintable(row.balance_due),
+      },
+    ];
+
+    this.printA4Report(
+      `LAPORAN UTANG ${clientName}`,
+      rows,
+      columns,
+      "payables-per-client.pdf",
+    );
   },
 };
 

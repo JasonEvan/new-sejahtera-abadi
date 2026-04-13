@@ -4,6 +4,7 @@ import ComboboxField from "@/components/shared/ComboboxField";
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { printService } from "@/lib/print.service";
 import { useGetInventoryLedgers } from "@/modules/report/report.queries";
 import { useGetStocks } from "@/modules/stock/stock.queries";
 import { useEffect, useState } from "react";
@@ -30,6 +31,9 @@ export default function InventoryLedgerContent() {
   const onSubmit = (data: { stock_id: number }) => {
     setStockId(data.stock_id);
   };
+
+  const selectedStockName =
+    stocks?.find((stock) => stock.id === stockId)?.name ?? "";
 
   useEffect(() => {
     if (isError) {
@@ -58,7 +62,21 @@ export default function InventoryLedgerContent() {
               items={stocks || []}
             />
           </div>
-          <Button type="submit">Submit</Button>
+          <div className="flex gap-2">
+            <Button type="submit">Submit</Button>
+            <Button
+              type="button"
+              onClick={() =>
+                printService.handlePrintInventoryLedger(
+                  inventoryLedgers || [],
+                  selectedStockName,
+                )
+              }
+              disabled={!inventoryLedgers || inventoryLedgers.length === 0}
+            >
+              Print
+            </Button>
+          </div>
         </form>
       </FormProvider>
       {isLoading ? (

@@ -4,6 +4,7 @@ import ComboboxField from "@/components/shared/ComboboxField";
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { printService } from "@/lib/print.service";
 import { useGetClientNames } from "@/modules/client/client.queries";
 import { useGetPayablesByClient } from "@/modules/report/report.queries";
 import { useEffect, useState } from "react";
@@ -30,6 +31,9 @@ export default function PayablesPerClientContent() {
   const onSubmit = (data: { client_id: number }) => {
     setClientId(data.client_id);
   };
+
+  const selectedClientName =
+    clientNames?.find((client) => client.id === clientId)?.name ?? "";
 
   useEffect(() => {
     if (isError) {
@@ -58,7 +62,21 @@ export default function PayablesPerClientContent() {
               items={clientNames || []}
             />
           </div>
-          <Button type="submit">Submit</Button>
+          <div className="flex gap-2">
+            <Button type="submit">Submit</Button>
+            <Button
+              type="button"
+              onClick={() =>
+                printService.handlePrintPayablesPerClient(
+                  payables || [],
+                  selectedClientName,
+                )
+              }
+              disabled={!payables || payables.length === 0}
+            >
+              Print
+            </Button>
+          </div>
         </form>
       </FormProvider>
       {isLoading ? (
