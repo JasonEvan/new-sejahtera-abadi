@@ -4,6 +4,20 @@ import db from "@/lib/drizzle";
 import { sales_order_lines } from "@/drizzle/schema";
 import { eq, inArray, sql, asc } from "drizzle-orm";
 
+type SalesOrderLineQtyItem = { id: number; quantity: number };
+
+function aggregateSalesOrderLineQtyItems(
+  items: SalesOrderLineQtyItem[],
+): SalesOrderLineQtyItem[] {
+  const aggregated = new Map<number, number>();
+
+  for (const item of items) {
+    aggregated.set(item.id, (aggregated.get(item.id) ?? 0) + item.quantity);
+  }
+
+  return Array.from(aggregated, ([id, quantity]) => ({ id, quantity }));
+}
+
 export const saleOrderLineRepository = {
   insertSaleOrderLine(data: InsertSale, sales_order_id: number, tx?: Tx) {
     const database = tx ?? db;
@@ -107,12 +121,16 @@ export const saleOrderLineRepository = {
   },
 
   bulkDecrementQuantity(data: { id: number; quantity: number }[], tx?: Tx) {
-    if (data.length === 0) return;
+    const aggregatedData = aggregateSalesOrderLineQtyItems(data);
+
+    if (aggregatedData.length === 0) return;
 
     const database = tx ?? db;
 
     const values = sql.join(
-      data.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      aggregatedData.map(
+        (item) => sql`(${item.id}::int, ${item.quantity}::int)`,
+      ),
       sql`, `,
     );
 
@@ -129,12 +147,16 @@ export const saleOrderLineRepository = {
   },
 
   bulkIncrementQuantity(data: { id: number; quantity: number }[], tx?: Tx) {
-    if (data.length === 0) return;
+    const aggregatedData = aggregateSalesOrderLineQtyItems(data);
+
+    if (aggregatedData.length === 0) return;
 
     const database = tx ?? db;
 
     const values = sql.join(
-      data.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      aggregatedData.map(
+        (item) => sql`(${item.id}::int, ${item.quantity}::int)`,
+      ),
       sql`, `,
     );
 

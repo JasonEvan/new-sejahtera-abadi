@@ -4,6 +4,49 @@ import { asc, eq, inArray, sql } from "drizzle-orm";
 import { InsertStock } from "./stock.types";
 import { Tx } from "@/lib/common-types";
 
+type StockQtyItem = { id: number; quantity: number };
+type StockQtyPriceItem = { id: number; quantity: number; product_price?: number };
+
+function aggregateStockItems(items: StockQtyItem[]): StockQtyItem[] {
+  const aggregated = new Map<number, number>();
+
+  for (const item of items) {
+    aggregated.set(item.id, (aggregated.get(item.id) ?? 0) + item.quantity);
+  }
+
+  return Array.from(aggregated, ([id, quantity]) => ({ id, quantity }));
+}
+
+function aggregateStockItemsWithPrice(
+  items: StockQtyPriceItem[],
+): StockQtyPriceItem[] {
+  const aggregated = new Map<number, { quantity: number; product_price?: number }>();
+
+  for (const item of items) {
+    const current = aggregated.get(item.id);
+
+    if (!current) {
+      aggregated.set(item.id, {
+        quantity: item.quantity,
+        product_price: item.product_price,
+      });
+      continue;
+    }
+
+    current.quantity += item.quantity;
+
+    if (item.product_price !== undefined) {
+      current.product_price = item.product_price;
+    }
+  }
+
+  return Array.from(aggregated, ([id, value]) => ({
+    id,
+    quantity: value.quantity,
+    product_price: value.product_price,
+  }));
+}
+
 export const stockRepository = {
   getAllStocks() {
     return db
@@ -61,12 +104,14 @@ export const stockRepository = {
     items: { id: number; quantity: number }[],
     tx?: Tx,
   ) {
-    if (items.length === 0) return;
+    const aggregatedItems = aggregateStockItems(items);
+
+    if (aggregatedItems.length === 0) return;
 
     const database = tx ?? db;
 
     const values = sql.join(
-      items.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      aggregatedItems.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
       sql`, `,
     );
 
@@ -86,12 +131,14 @@ export const stockRepository = {
     items: { id: number; quantity: number; product_price?: number }[],
     tx?: Tx,
   ) {
-    if (items.length === 0) return;
+    const aggregatedItems = aggregateStockItemsWithPrice(items);
+
+    if (aggregatedItems.length === 0) return;
 
     const database = tx ?? db;
 
     const values = sql.join(
-      items.map((item) => {
+      aggregatedItems.map((item) => {
         if (item.product_price !== undefined) {
           return sql`(${item.id}::int, ${item.quantity}::int, ${item.product_price}::int)`;
         } else {
@@ -118,12 +165,14 @@ export const stockRepository = {
     items: { id: number; quantity: number }[],
     tx?: Tx,
   ) {
-    if (items.length === 0) return;
+    const aggregatedItems = aggregateStockItems(items);
+
+    if (aggregatedItems.length === 0) return;
 
     const database = tx ?? db;
 
     const values = sql.join(
-      items.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      aggregatedItems.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
       sql`, `,
     );
 
@@ -143,12 +192,14 @@ export const stockRepository = {
     items: { id: number; quantity: number }[],
     tx?: Tx,
   ) {
-    if (items.length === 0) return;
+    const aggregatedItems = aggregateStockItems(items);
+
+    if (aggregatedItems.length === 0) return;
 
     const database = tx ?? db;
 
     const values = sql.join(
-      items.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      aggregatedItems.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
       sql`, `,
     );
 

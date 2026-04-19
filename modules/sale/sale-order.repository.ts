@@ -11,6 +11,29 @@ import dayjs from "dayjs";
 import { and, asc, desc, eq, ilike, like, ne, sql } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 
+type SalesOrderPaymentItem = {
+  sales_order_id: number;
+  paid_amount: number;
+};
+
+function aggregateSalesOrderPaymentItems(
+  items: SalesOrderPaymentItem[],
+): SalesOrderPaymentItem[] {
+  const aggregated = new Map<number, number>();
+
+  for (const item of items) {
+    aggregated.set(
+      item.sales_order_id,
+      (aggregated.get(item.sales_order_id) ?? 0) + item.paid_amount,
+    );
+  }
+
+  return Array.from(aggregated, ([sales_order_id, paid_amount]) => ({
+    sales_order_id,
+    paid_amount,
+  }));
+}
+
 export const saleOrderRepository = {
   insertSaleOrder(data: InsertSale, tx?: Tx) {
     const database = tx ?? db;
@@ -85,12 +108,14 @@ export const saleOrderRepository = {
     items: { sales_order_id: number; paid_amount: number }[],
     tx?: Tx,
   ) {
-    if (items.length === 0) return;
+    const aggregatedItems = aggregateSalesOrderPaymentItems(items);
+
+    if (aggregatedItems.length === 0) return;
 
     const database = tx ?? db;
 
     const values = sql.join(
-      items.map(
+      aggregatedItems.map(
         (item) => sql`(${item.sales_order_id}::int, ${item.paid_amount}::int)`,
       ),
       sql`, `,
