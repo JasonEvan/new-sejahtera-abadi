@@ -8,6 +8,7 @@ import {
   Package,
   Pencil,
   RotateCcw,
+  Settings,
   ShoppingCart,
   Wallet,
 } from "lucide-react";
@@ -98,6 +99,11 @@ const sidebarItems = [
       { title: "Backup", url: "/backup" },
       { title: "Export", url: "/export" },
     ],
+  },
+  {
+    title: "Settings",
+    icon: Settings,
+    children: [{ title: "User", url: "/settings/users" }],
   },
 ];
 
