@@ -30,6 +30,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../ui/collapsible";
+import { User } from "@/modules/user/user.types";
 
 const sidebarItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -152,7 +153,7 @@ function SidebarCollapsibleItem({ item }: { item: (typeof sidebarItems)[1] }) {
   );
 }
 
-export default function AppSidebar() {
+export default function AppSidebar({ user }: { user: User }) {
   return (
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border px-4 py-3 mb-1">
@@ -162,9 +163,11 @@ export default function AppSidebar() {
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-sidebar-foreground">
-              POS System
+              {user.email || "POS System"}
             </span>
-            <span className="text-xs text-muted-foreground">Enterprise</span>
+            <span className="text-xs text-muted-foreground">
+              {user.role?.toUpperCase() || "ADMIN"}
+            </span>
           </div>
         </div>
       </SidebarHeader>

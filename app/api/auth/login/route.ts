@@ -41,7 +41,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // 3. Create session and set cookie
   // The login function in lib/auth.ts handles the cookie configuration:
   // httpOnly: true, secure: prod, maxAge: 3h, path: "/", sameSite: "lax"
-  await login({ userId: user.id, email: user.email });
+  await login({ userId: user.id, email: user.email, role: user.role });
 
   return NextResponse.json({
     success: true,
@@ -49,6 +49,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     user: {
       id: user.id,
       email: user.email,
+      role: user.role,
     },
   });
 });
