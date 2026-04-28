@@ -16,6 +16,10 @@ import { dialogs } from "@/lib/dialogs";
 import { alertDialogs } from "@/lib/alert-dialogs";
 import RoleForm from "./RoleForm";
 import RolePermissionContent from "./RolePermissionContent";
+import {
+  editRoleKey,
+  updateRolePermissionsKey,
+} from "@/modules/role/role.keys";
 
 export default function RoleList() {
   const { data: roles, isLoading } = useGetRoles();
@@ -27,7 +31,7 @@ export default function RoleList() {
       description: "Perbarui informasi role ini.",
       type: "form",
       formId: "role-form",
-      mutationKey: ["edit-role"],
+      mutationKey: editRoleKey(),
       children: <RoleForm role={role} onSuccess={() => dialogs.close()} />,
     });
   };
@@ -38,7 +42,7 @@ export default function RoleList() {
       description: "Pilih permission yang akan diberikan kepada role ini.",
       type: "form",
       formId: "role-permission-form",
-      mutationKey: ["update-role-permissions"],
+      mutationKey: updateRolePermissionsKey(),
       children: <RolePermissionContent role={role} />,
     });
   };

@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import RoleList from "./_components/RoleList";
 import RoleForm from "./_components/RoleForm";
 import { dialogs } from "@/lib/dialogs";
+import { addRoleKey } from "@/modules/role/role.keys";
 
 export default function RolesPage() {
   const handleAddRole = () => {
@@ -13,7 +14,7 @@ export default function RolesPage() {
       description: "Masukkan informasi role baru yang ingin ditambahkan.",
       type: "form",
       formId: "role-form",
-      mutationKey: ["add-role"],
+      mutationKey: addRoleKey(),
       children: <RoleForm onSuccess={() => dialogs.close()} />,
     });
   };
