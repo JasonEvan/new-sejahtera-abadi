@@ -2,12 +2,17 @@
 
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import RoleList from "./_components/RoleList";
 import RoleForm from "./_components/RoleForm";
 import { dialogs } from "@/lib/dialogs";
 import { addRoleKey } from "@/modules/role/role.keys";
+import { useGetRoles } from "@/modules/role/role.queries";
+import { DataTable } from "@/components/shared/DataTable";
+import { useRoleColumns } from "./_components/columns";
 
 export default function RolesPage() {
+  const { data: roles, isLoading } = useGetRoles();
+  const { columns } = useRoleColumns();
+
   const handleAddRole = () => {
     dialogs.open({
       title: "Tambah Role Baru",
@@ -29,7 +34,12 @@ export default function RolesPage() {
           </Button>
         </div>
       </div>
-      <RoleList />
+
+      {isLoading ? (
+        <div>Loading...</div>
+      ) : (
+        <DataTable columns={columns} data={roles || []} />
+      )}
     </div>
   );
 }
