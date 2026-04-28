@@ -17,7 +17,7 @@ export default function Topbar() {
       await api.post("/auth/logout");
       toast.success("Berhasil logout");
       router.push("/login");
-    } catch (error) {
+    } catch {
       toast.error("Gagal logout");
     }
   };

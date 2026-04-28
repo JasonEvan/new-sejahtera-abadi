@@ -1,18 +1,45 @@
 import {
   integer,
   pgTable,
+  primaryKey,
   serial,
   timestamp,
   unique,
   varchar,
 } from "drizzle-orm/pg-core";
 
+// --- Roles Table ---
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 50 }).notNull().unique(),
+});
+
+// --- Permissions Table ---
+export const permissions = pgTable("permissions", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+});
+
+// --- Role Permissions (Many-to-Many Join Table) ---
+export const role_permissions = pgTable(
+  "role_permissions",
+  {
+    role_id: integer("role_id")
+      .notNull()
+      .references(() => roles.id),
+    permission_id: integer("permission_id")
+      .notNull()
+      .references(() => permissions.id),
+  },
+  (table) => [primaryKey({ columns: [table.role_id, table.permission_id] })],
+);
+
 // --- Users Table ---
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
-  role: varchar("role", { length: 20 }).notNull().default("admin"), // admin, owner, etc
+  role_id: integer("role_id").references(() => roles.id),
 });
 
 // --- Clients Table ---

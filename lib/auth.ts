@@ -1,10 +1,11 @@
-import { SignJWT, jwtVerify } from "jose";
+import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
+import { User } from "@/modules/user/user.types";
 
 const secretKey = "secret";
 const key = new TextEncoder().encode(process.env.JWT_SECRET || secretKey);
 
-export async function encrypt(payload: any) {
+export async function encrypt(payload: JWTPayload) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -12,14 +13,14 @@ export async function encrypt(payload: any) {
     .sign(key);
 }
 
-export async function decrypt(input: string): Promise<any> {
+export async function decrypt(input: string): Promise<JWTPayload> {
   const { payload } = await jwtVerify(input, key, {
     algorithms: ["HS256"],
   });
   return payload;
 }
 
-export async function login(payload: any) {
+export async function login(payload: JWTPayload) {
   // Create the session
   const session = await encrypt(payload);
 
@@ -38,8 +39,8 @@ export async function logout() {
   (await cookies()).set("session", "", { expires: new Date(0) });
 }
 
-export async function getSession() {
+export async function getSession(): Promise<User | null> {
   const session = (await cookies()).get("session")?.value;
   if (!session) return null;
-  return await decrypt(session);
+  return (await decrypt(session)) as unknown as User;
 }

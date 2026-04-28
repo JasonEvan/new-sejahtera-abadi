@@ -7,21 +7,25 @@ import {
   useAddUserMutation,
   useEditUserMutation,
 } from "@/modules/user/user.mutations";
-import { User } from "@/modules/user/user.types";
+import { User, InsertUser } from "@/modules/user/user.types";
 import InputField from "@/components/shared/InputField";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { useGetRoles } from "@/modules/role/role.queries";
 
 export default function UserForm({ user }: { user?: User }) {
   const addUserMutation = useAddUserMutation();
   const editUserMutation = useEditUserMutation();
+  const { data: roles, isLoading: isLoadingRoles } = useGetRoles();
 
   const methods = useForm<UserFormValues>({
     defaultValues: {
       email: user?.email || "",
       password: "",
-      role: (user?.role as "admin" | "owner") || "admin",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      role_id: (user?.role_id ?? undefined) as any,
     },
-    resolver: zodResolver(userSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(userSchema) as any,
   });
 
   const {
@@ -32,9 +36,12 @@ export default function UserForm({ user }: { user?: User }) {
 
   const onSubmit = (data: UserFormValues) => {
     if (user) {
-      editUserMutation.mutate({ id: user.id, data: data as any });
+      editUserMutation.mutate({
+        id: user.id,
+        data: data as InsertUser,
+      });
     } else {
-      addUserMutation.mutate(data as any);
+      addUserMutation.mutate(data as unknown as InsertUser);
     }
   };
 
@@ -60,16 +67,21 @@ export default function UserForm({ user }: { user?: User }) {
           placeholder="******"
         />
 
-        <Field data-invalid={!!errors.role}>
+        <Field data-invalid={!!errors.role_id}>
           <FieldLabel>Role</FieldLabel>
           <select
-            {...register("role")}
+            {...register("role_id")}
+            disabled={isLoadingRoles}
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <option value="admin">Admin</option>
-            <option value="owner">Owner</option>
+            <option value="">Pilih Role</option>
+            {roles?.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+              </option>
+            ))}
           </select>
-          {errors.role && <FieldError>{errors.role.message}</FieldError>}
+          {errors.role_id && <FieldError>{errors.role_id.message}</FieldError>}
         </Field>
       </form>
     </FormProvider>

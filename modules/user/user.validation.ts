@@ -8,9 +8,7 @@ export const userSchema = z.object({
     .min(6, "Password minimal 6 karakter")
     .optional()
     .or(z.literal("")),
-  role: z.enum(["admin", "owner"], {
-    message: "Role harus dipilih",
-  }),
+  role_id: z.coerce.number().min(1, "Role harus dipilih"),
 });
 
 export type UserFormValues = z.infer<typeof userSchema>;

@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/drizzle";
-import { users } from "@/drizzle/schema";
-import { eq } from "drizzle-orm";
 import { login } from "@/lib/auth";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import bcrypt from "bcrypt";
+import { userRepository } from "@/modules/user/user.repository";
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const body = await request.json();
@@ -18,9 +16,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
 
   // 1. Find user
-  const user = await db.query.users.findFirst({
-    where: eq(users.email, email),
-  });
+  const user = await userRepository.getUserByEmail(email);
 
   if (!user) {
     return NextResponse.json(
@@ -41,7 +37,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // 3. Create session and set cookie
   // The login function in lib/auth.ts handles the cookie configuration:
   // httpOnly: true, secure: prod, maxAge: 3h, path: "/", sameSite: "lax"
-  await login({ userId: user.id, email: user.email, role: user.role });
+  await login({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+  });
 
   return NextResponse.json({
     success: true,

@@ -2,6 +2,7 @@ import AppSidebar from "@/components/shared/AppSidebar";
 import Topbar from "@/components/shared/Topbar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { getSession } from "@/lib/auth";
+import { User } from "@/modules/user/user.types";
 
 export default async function DashboardLayout({
   children,
@@ -10,7 +11,7 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <AppSidebar user={user} />
+      <AppSidebar user={user as User} />
       <main className="w-full min-h-screen">
         <Topbar />
         <section className="container mx-auto px-4 py-3">{children}</section>
