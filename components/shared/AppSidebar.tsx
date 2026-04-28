@@ -104,7 +104,10 @@ const sidebarItems = [
   {
     title: "Settings",
     icon: Settings,
-    children: [{ title: "User", url: "/settings/users" }],
+    children: [
+      { title: "User", url: "/settings/users" },
+      { title: "Role", url: "/settings/roles" },
+    ],
   },
 ];
 
