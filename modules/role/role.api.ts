@@ -20,3 +20,20 @@ export async function deleteRole(id: number) {
   const response = await api.delete<{ message: string }>(`/roles/${id}`);
   return response.data;
 }
+
+export async function getPermissions() {
+  const response = await api.get<{ data: any[] }>("/permissions");
+  return response.data;
+}
+
+export async function getRolePermissions(roleId: number) {
+  const response = await api.get<{ data: any[] }>(`/roles/${roleId}/permissions`);
+  return response.data;
+}
+
+export async function updateRolePermissions(roleId: number, permissionIds: number[]) {
+  const response = await api.put<{ message: string }>(`/roles/${roleId}/permissions`, {
+    permissionIds,
+  });
+  return response.data;
+}

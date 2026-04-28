@@ -9,7 +9,6 @@ import {
 } from "@/modules/role/role.mutations";
 import { Role, InsertRole } from "@/modules/role/role.types";
 import InputField from "@/components/shared/InputField";
-import { Button } from "@/components/ui/button";
 
 export default function RoleForm({
   role,
@@ -42,21 +41,18 @@ export default function RoleForm({
     }
   };
 
-  const isPending = addRoleMutation.isPending || editRoleMutation.isPending;
-
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form
+        id="role-form"
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-4"
+      >
         <InputField
           name="name"
           label="Nama Role"
           placeholder="Contoh: Manager"
         />
-        <div className="flex justify-end pt-2">
-          <Button type="submit" disabled={isPending}>
-            {role ? "Simpan Perubahan" : "Tambah Role"}
-          </Button>
-        </div>
       </form>
     </FormProvider>
   );

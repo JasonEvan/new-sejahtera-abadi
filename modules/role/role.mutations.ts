@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { addRole, deleteRole, editRole } from "./role.api";
+import { addRole, deleteRole, editRole, updateRolePermissions } from "./role.api";
 import { getRolesKey } from "./role.keys";
 import { toast } from "sonner";
 
@@ -41,6 +41,29 @@ export const useDeleteRoleMutation = () => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Gagal menghapus role");
+    },
+  });
+};
+
+export const useUpdateRolePermissionsMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      roleId,
+      permissionIds,
+    }: {
+      roleId: number;
+      permissionIds: number[];
+    }) => updateRolePermissions(roleId, permissionIds),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: getRolesKey() });
+      queryClient.invalidateQueries({
+        queryKey: ["role-permissions", variables.roleId],
+      });
+      toast.success(data.message);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Gagal memperbarui permission");
     },
   });
 };

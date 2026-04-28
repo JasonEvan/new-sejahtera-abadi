@@ -21,4 +21,16 @@ export const roleService = {
     }
     return roleRepository.deleteRole(id);
   },
+
+  getRolePermissions(roleId: number) {
+    return roleRepository.getRolePermissions(roleId);
+  },
+
+  updateRolePermissions(roleId: number, permissionIds: number[]) {
+    return roleRepository.updateRolePermissions(roleId, permissionIds);
+  },
+
+  getAllPermissions() {
+    return roleRepository.getAllPermissions();
+  },
 };
