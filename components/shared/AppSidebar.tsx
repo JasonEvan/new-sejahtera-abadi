@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  ChevronDown,
-  Database,
-  Eye,
-  LayoutDashboard,
-  Package,
-  Pencil,
-  RotateCcw,
-  Settings,
-  ShoppingCart,
-  Wallet,
-} from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -23,95 +12,17 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "../ui/sidebar";
+} from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../ui/collapsible";
+} from "@/components/ui/collapsible";
 import { User } from "@/modules/user/user.types";
+import { sidebarItems, SidebarItem } from "@/lib/menu";
 
-const sidebarItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  {
-    title: "Master",
-    icon: Package,
-    children: [
-      { title: "Client", url: "/clients" },
-      { title: "Stock", url: "/stocks" },
-      { title: "Salesman", url: "/salesmen" },
-    ],
-  },
-  {
-    title: "Transaksi",
-    icon: ShoppingCart,
-    children: [
-      { title: "Jual", url: "/sales" },
-      { title: "Beli", url: "/purchases" },
-    ],
-  },
-  {
-    title: "Pelunasan",
-    icon: Wallet,
-    children: [
-      { title: "Utang", url: "/payables" },
-      { title: "Piutang", url: "/receivables" },
-    ],
-  },
-  {
-    title: "Edit",
-    icon: Pencil,
-    children: [
-      { title: "Edit Jual", url: "/edit/sales" },
-      { title: "Edit Beli", url: "/edit/purchases" },
-      { title: "Edit Utang", url: "/edit/payables" },
-      { title: "Edit Piutang", url: "/edit/receivables" },
-      { title: "Edit Retur Beli", url: "/edit/purchase-return" },
-      { title: "Edit Retur Jual", url: "/edit/sales-return" },
-    ],
-  },
-  {
-    title: "Lihat",
-    icon: Eye,
-    children: [
-      { title: "Kartu Persediaan", url: "/view/inventory-ledger" },
-      { title: "Semua Utang", url: "/view/all-payables" },
-      { title: "Utang per Client", url: "/view/payables-per-client" },
-      { title: "Semua Piutang", url: "/view/all-receivables" },
-      { title: "Piutang per Client", url: "/view/receivables-per-client" },
-      { title: "Nota Penjualan", url: "/view/sales-invoice" },
-      { title: "Nota Pembelian", url: "/view/purchase-invoice" },
-      { title: "Laporan Laba", url: "/view/profit-report" },
-    ],
-  },
-  {
-    title: "Retur",
-    icon: RotateCcw,
-    children: [
-      { title: "Retur Jual", url: "/returns/sales" },
-      { title: "Retur Beli", url: "/returns/purchase" },
-    ],
-  },
-  {
-    title: "System",
-    icon: Database,
-    children: [
-      { title: "Backup", url: "/backup" },
-      { title: "Export", url: "/export" },
-    ],
-  },
-  {
-    title: "Settings",
-    icon: Settings,
-    children: [
-      { title: "User", url: "/settings/users" },
-      { title: "Role", url: "/settings/roles" },
-    ],
-  },
-];
-
-function SidebarSingleItem({ item }: { item: (typeof sidebarItems)[0] }) {
+function SidebarSingleItem({ item }: { item: SidebarItem }) {
   const router = useRouter();
   return (
     <SidebarMenuItem>
@@ -126,8 +37,25 @@ function SidebarSingleItem({ item }: { item: (typeof sidebarItems)[0] }) {
   );
 }
 
-function SidebarCollapsibleItem({ item }: { item: (typeof sidebarItems)[1] }) {
+function SidebarCollapsibleItem({
+  item,
+  userPermissions,
+}: {
+  item: SidebarItem;
+  userPermissions: string[];
+}) {
   const router = useRouter();
+
+  const filteredChildren = item.children?.filter((child) => {
+    if (!child.permission) return true;
+    if (Array.isArray(child.permission)) {
+      return child.permission.some((p) => userPermissions.includes(p));
+    }
+    return userPermissions.includes(child.permission as string);
+  });
+
+  if (filteredChildren?.length === 0) return null;
+
   return (
     <Collapsible className="group/collapsible">
       <SidebarGroup>
@@ -141,7 +69,7 @@ function SidebarCollapsibleItem({ item }: { item: (typeof sidebarItems)[1] }) {
         <CollapsibleContent>
           <SidebarGroupContent>
             <ul className="mt-1 space-y-0.5 border-l border-sidebar-border ml-5.5 pl-3">
-              {item.children?.map((child) => (
+              {filteredChildren?.map((child) => (
                 <SidebarMenuItem key={child.title}>
                   <SidebarMenuButton onClick={() => router.push(child.url)}>
                     <span>{child.title}</span>
@@ -176,13 +104,46 @@ export default function AppSidebar({ user }: { user: User }) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {sidebarItems.map((item) =>
-            item.children ? (
-              <SidebarCollapsibleItem key={item.title} item={item} />
-            ) : (
-              <SidebarSingleItem key={item.title} item={item} />
-            ),
-          )}
+          {sidebarItems
+            .filter((item) => {
+              // If item has children, it's visible if at least one child is visible
+              if (item.children && item.children.length > 0) {
+                return item.children.some((child) => {
+                  if (!child.permission) return true;
+                  if (Array.isArray(child.permission)) {
+                    return child.permission.some(
+                      (p) => user.permissions?.includes(p) ?? false,
+                    );
+                  }
+                  return (
+                    user.permissions?.includes(child.permission as string) ??
+                    false
+                  );
+                });
+              }
+
+              // If item has no children, check its own permission
+              if (!item.permission) return true;
+              if (Array.isArray(item.permission)) {
+                return item.permission.some(
+                  (p) => user.permissions?.includes(p) ?? false,
+                );
+              }
+              return (
+                user.permissions?.includes(item.permission as string) ?? false
+              );
+            })
+            .map((item) =>
+              item.children ? (
+                <SidebarCollapsibleItem
+                  key={item.title}
+                  item={item}
+                  userPermissions={user.permissions || []}
+                />
+              ) : (
+                <SidebarSingleItem key={item.title} item={item} />
+              ),
+            )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="border-t border-sidebar-border px-4 py-3">

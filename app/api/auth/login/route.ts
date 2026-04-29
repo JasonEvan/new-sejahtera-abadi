@@ -38,9 +38,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // The login function in lib/auth.ts handles the cookie configuration:
   // httpOnly: true, secure: prod, maxAge: 3h, path: "/", sameSite: "lax"
   await login({
-    userId: user.id,
+    id: user.id,
     email: user.email,
     role: user.role,
+    permissions: user.permissions,
   });
 
   return NextResponse.json({

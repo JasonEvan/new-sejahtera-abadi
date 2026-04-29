@@ -2,6 +2,8 @@ import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
 import { User } from "@/modules/user/user.types";
 
+import { userRepository } from "@/modules/user/user.repository";
+
 const secretKey = "secret";
 const key = new TextEncoder().encode(process.env.JWT_SECRET || secretKey);
 
@@ -42,5 +44,17 @@ export async function logout() {
 export async function getSession(): Promise<User | null> {
   const session = (await cookies()).get("session")?.value;
   if (!session) return null;
-  return (await decrypt(session)) as unknown as User;
+
+  try {
+    const decoded = (await decrypt(session)) as any;
+    const userId = decoded.id || decoded.userId;
+    if (!userId) return null;
+
+    // Fetch fresh user data from DB to ensure permissions are up to date
+    const user = await userRepository.getUserById(Number(userId));
+    return user as User | null;
+  } catch (error) {
+    console.error("Session decryption failed:", error);
+    return null;
+  }
 }
