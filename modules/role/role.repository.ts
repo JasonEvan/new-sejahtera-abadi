@@ -47,6 +47,8 @@ export const roleRepository = {
       .select({
         id: permissions.id,
         name: permissions.name,
+        display_name: permissions.display_name,
+        module: permissions.module,
       })
       .from(permissions)
       .innerJoin(
@@ -74,6 +76,9 @@ export const roleRepository = {
   },
 
   getAllPermissions() {
-    return db.select().from(permissions).orderBy(asc(permissions.name));
+    return db
+      .select()
+      .from(permissions)
+      .orderBy(asc(permissions.module), asc(permissions.display_name));
   },
 };

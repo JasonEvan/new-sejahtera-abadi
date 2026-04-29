@@ -18,6 +18,8 @@ export const roles = pgTable("roles", {
 export const permissions = pgTable("permissions", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull().unique(),
+  display_name: varchar("display_name", { length: 255 }).default("").notNull(),
+  module: varchar("module", { length: 100 }).default("").notNull(),
 });
 
 // --- Role Permissions (Many-to-Many Join Table) ---

@@ -1,5 +1,5 @@
 import api from "@/lib/axios";
-import { Role, InsertRole } from "./role.types";
+import { Role, InsertRole, Permission } from "./role.types";
 
 export async function getRoles() {
   const response = await api.get<{ data: Role[] }>("/roles");
@@ -22,18 +22,26 @@ export async function deleteRole(id: number) {
 }
 
 export async function getPermissions() {
-  const response = await api.get<{ data: any[] }>("/permissions");
+  const response = await api.get<{ data: Permission[] }>("/permissions");
   return response.data;
 }
 
 export async function getRolePermissions(roleId: number) {
-  const response = await api.get<{ data: any[] }>(`/roles/${roleId}/permissions`);
+  const response = await api.get<{ data: Permission[] }>(
+    `/roles/${roleId}/permissions`,
+  );
   return response.data;
 }
 
-export async function updateRolePermissions(roleId: number, permissionIds: number[]) {
-  const response = await api.put<{ message: string }>(`/roles/${roleId}/permissions`, {
-    permissionIds,
-  });
+export async function updateRolePermissions(
+  roleId: number,
+  permissionIds: number[],
+) {
+  const response = await api.put<{ message: string }>(
+    `/roles/${roleId}/permissions`,
+    {
+      permissionIds,
+    },
+  );
   return response.data;
 }

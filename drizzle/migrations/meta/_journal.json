@@ -36,6 +36,13 @@
       "when": 1777307449926,
       "tag": "0004_empty_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777388581659,
+      "tag": "0005_nice_iron_monger",
+      "breakpoints": true
     }
   ]
 }

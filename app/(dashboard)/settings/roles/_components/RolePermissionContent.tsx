@@ -8,7 +8,7 @@ import {
 } from "@/modules/role/role.queries";
 import { useUpdateRolePermissionsMutation } from "@/modules/role/role.mutations";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Role } from "@/modules/role/role.types";
+import { Role, Permission } from "@/modules/role/role.types";
 import { dialogs } from "@/lib/dialogs";
 
 interface RolePermissionContentProps {
@@ -69,28 +69,48 @@ export default function RolePermissionContent({
     );
   }
 
+  const groupedPermissions = allPermissions?.reduce(
+    (acc, permission) => {
+      const module = permission.module || "Other";
+      if (!acc[module]) acc[module] = [];
+      acc[module].push(permission);
+      return acc;
+    },
+    {} as Record<string, Permission[]>,
+  );
+
   return (
     <form id="role-permission-form" onSubmit={handleSubmit} className="py-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {allPermissions?.map((permission) => (
-          <div
-            key={permission.id}
-            className="flex items-center gap-4 p-4 rounded-xl border border-border/50 hover:bg-muted/50 hover:border-primary/20 transition-all group"
-          >
-            <Checkbox
-              id={`perm-${permission.id}`}
-              checked={selectedIds.includes(permission.id)}
-              onCheckedChange={() => handleToggle(permission.id)}
-              className="data-[state=checked]:scale-110 transition-transform cursor-pointer"
-            />
-            <label
-              htmlFor={`perm-${permission.id}`}
-              className="text-sm font-semibold leading-none cursor-pointer flex-1 group-hover:text-primary transition-colors"
-            >
-              {permission.name}
-            </label>
-          </div>
-        ))}
+      <div className="space-y-8">
+        {groupedPermissions &&
+          Object.entries(groupedPermissions).map(([module, permissions]) => (
+            <div key={module} className="space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b pb-2">
+                {module}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {permissions.map((permission) => (
+                  <div
+                    key={permission.id}
+                    className="flex items-center gap-4 p-4 rounded-xl border border-border/50 hover:bg-muted/50 hover:border-primary/20 transition-all group"
+                  >
+                    <Checkbox
+                      id={`perm-${permission.id}`}
+                      checked={selectedIds.includes(permission.id)}
+                      onCheckedChange={() => handleToggle(permission.id)}
+                      className="data-[state=checked]:scale-110 transition-transform cursor-pointer"
+                    />
+                    <label
+                      htmlFor={`perm-${permission.id}`}
+                      className="text-sm font-semibold leading-none cursor-pointer flex-1 group-hover:text-primary transition-colors"
+                    >
+                      {permission.display_name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
       </div>
     </form>
   );
