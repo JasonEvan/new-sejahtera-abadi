@@ -11,10 +11,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { dialogs } from "@/lib/dialogs";
 import ClientForm from "./ClientForm";
 import { addClientKey } from "@/modules/client/client.keys";
+import { useMe } from "@/modules/user/user.queries";
 
 export default function ClientTable() {
   const { data: clients, isLoading, isError, error } = useGetClients();
   const columns = useColumns();
+  const { data: user } = useMe();
 
   useEffect(() => {
     if (isError) {
@@ -35,11 +37,18 @@ export default function ClientTable() {
     });
   }
 
+  const canCreate = user?.permissions?.includes("client.create");
+
   return (
     <div className="flex flex-col">
-      <Button className="ml-auto mb-2 cursor-pointer" onClick={handleAddClient}>
-        <Plus /> Tambah
-      </Button>
+      {canCreate && (
+        <Button
+          className="ml-auto mb-2 cursor-pointer"
+          onClick={handleAddClient}
+        >
+          <Plus /> Tambah
+        </Button>
+      )}
       {isLoading && !isError ? (
         <div className="flex justify-center">
           <Spinner />

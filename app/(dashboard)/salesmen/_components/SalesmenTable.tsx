@@ -11,6 +11,7 @@ import { useColumns } from "./columns";
 import { dialogs } from "@/lib/dialogs";
 import SalesmenForm from "./SalesmenForm";
 import { addSalespersonKey } from "@/modules/salesperson/salesperson.keys";
+import { useMe } from "@/modules/user/user.queries";
 
 export default function SalesmenTable() {
   const {
@@ -20,6 +21,7 @@ export default function SalesmenTable() {
     error,
   } = useGetSalespersons();
   const columns = useColumns();
+  const { data: user } = useMe();
 
   useEffect(() => {
     if (isError) {
@@ -40,14 +42,18 @@ export default function SalesmenTable() {
     });
   }
 
+  const canCreate = user?.permissions?.includes("salesman.create");
+
   return (
     <div className="flex flex-col">
-      <Button
-        className="ml-auto mb-2 cursor-pointer"
-        onClick={handleAddSalesperson}
-      >
-        <Plus /> Tambah
-      </Button>
+      {canCreate && (
+        <Button
+          className="ml-auto mb-2 cursor-pointer"
+          onClick={handleAddSalesperson}
+        >
+          <Plus /> Tambah
+        </Button>
+      )}
       {isLoading && !isError ? (
         <div className="flex justify-center">
           <Spinner />

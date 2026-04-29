@@ -20,3 +20,10 @@ export async function deleteUser(id: number) {
   const response = await api.delete<{ message: string }>(`/users/${id}`);
   return response.data;
 }
+
+export async function getCurrentUser() {
+  const response = await api.get<{ authenticated: boolean; user: User }>(
+    "/auth/me",
+  );
+  return response.data;
+}
