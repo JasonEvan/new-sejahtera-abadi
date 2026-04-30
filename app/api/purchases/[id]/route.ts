@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
@@ -10,6 +11,12 @@ export const PUT = withErrorHandler(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> },
   ) => {
+    const session = await getSession();
+
+    if (!session || !session.permissions?.includes("purchase.update")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
     const purchaseOrderId = Number((await params).id);
     if (isNaN(purchaseOrderId)) {
       throw new AppError("Invalid purchase order ID", 400);

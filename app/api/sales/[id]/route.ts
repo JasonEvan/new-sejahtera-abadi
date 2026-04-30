@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
@@ -10,6 +11,12 @@ export const PUT = withErrorHandler(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> },
   ) => {
+    const session = await getSession();
+
+    if (!session || !session.permissions?.includes("sales.update")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
     const salesOrderId = Number((await params).id);
     if (isNaN(salesOrderId)) {
       throw new AppError("Invalid sales order ID", 400);

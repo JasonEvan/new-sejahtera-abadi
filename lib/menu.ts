@@ -56,11 +56,11 @@ export const sidebarItems: SidebarItem[] = [
     icon: Wallet,
     permission: ["sales.payment.create", "purchase.payment.create"],
     children: [
-      { title: "Utang", url: "/payables", permission: "sales.payment.create" },
+      { title: "Utang", url: "/payables", permission: "purchase.payment.create" },
       {
         title: "Piutang",
         url: "/receivables",
-        permission: "purchase.payment.create",
+        permission: "sales.payment.create",
       },
     ],
   },
@@ -85,12 +85,12 @@ export const sidebarItems: SidebarItem[] = [
       {
         title: "Edit Utang",
         url: "/edit/payables",
-        permission: "sales.payment.update",
+        permission: "purchase.payment.update",
       },
       {
         title: "Edit Piutang",
         url: "/edit/receivables",
-        permission: "purchase.payment.update",
+        permission: "sales.payment.update",
       },
       {
         title: "Edit Retur Beli",

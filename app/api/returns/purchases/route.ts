@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
 import { AppError } from "@/lib/errors";
@@ -39,6 +40,12 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 });
 
 export const PUT = withErrorHandler(async (request: NextRequest) => {
+  const session = await getSession();
+
+  if (!session || !session.permissions?.includes("purchase.return.update")) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
   const body = await request.json();
   const validatedBody = validate(body, backendEditPurchaseReturnValidation);
 
