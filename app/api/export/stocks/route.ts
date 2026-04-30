@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import {
   createStockCsvReadableStream,
@@ -6,6 +7,12 @@ import {
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
+  const session = await getSession();
+
+  if (!session || !session.permissions?.includes("download.backup")) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
   const requestedColumns = request.nextUrl.searchParams.getAll("columns");
   const selectedColumns = parseStockExportColumns(requestedColumns);
   const stream = createStockCsvReadableStream(selectedColumns);
