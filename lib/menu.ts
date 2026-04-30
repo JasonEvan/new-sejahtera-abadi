@@ -54,13 +54,13 @@ export const sidebarItems: SidebarItem[] = [
   {
     title: "Pelunasan",
     icon: Wallet,
-    permission: ["sales.payment.view", "purchase.payment.view"],
+    permission: ["sales.payment.create", "purchase.payment.create"],
     children: [
-      { title: "Utang", url: "/payables", permission: "sales.payment.view" },
+      { title: "Utang", url: "/payables", permission: "sales.payment.create" },
       {
         title: "Piutang",
         url: "/receivables",
-        permission: "purchase.payment.view",
+        permission: "purchase.payment.create",
       },
     ],
   },
