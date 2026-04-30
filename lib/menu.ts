@@ -45,10 +45,10 @@ export const sidebarItems: SidebarItem[] = [
   {
     title: "Transaksi",
     icon: ShoppingCart,
-    permission: ["sales.view", "purchase.view"],
+    permission: ["sales.create", "purchase.create"],
     children: [
-      { title: "Jual", url: "/sales", permission: "sales.view" },
-      { title: "Beli", url: "/purchases", permission: "purchase.view" },
+      { title: "Jual", url: "/sales", permission: "sales.create" },
+      { title: "Beli", url: "/purchases", permission: "purchase.create" },
     ],
   },
   {
