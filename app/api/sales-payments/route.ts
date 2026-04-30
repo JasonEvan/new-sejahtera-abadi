@@ -7,6 +7,12 @@ import { backendSalesPaymentValidation } from "@/modules/sales-payment/sales-pay
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withErrorHandler(async () => {
+  const session = await getSession();
+
+  if (!session || !session.permissions?.includes("sales.payment.view")) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
   const data = await reportService.getAllReceivables();
 
   return NextResponse.json({ data });

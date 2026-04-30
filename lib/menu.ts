@@ -56,7 +56,11 @@ export const sidebarItems: SidebarItem[] = [
     icon: Wallet,
     permission: ["sales.payment.create", "purchase.payment.create"],
     children: [
-      { title: "Utang", url: "/payables", permission: "purchase.payment.create" },
+      {
+        title: "Utang",
+        url: "/payables",
+        permission: "purchase.payment.create",
+      },
       {
         title: "Piutang",
         url: "/receivables",
@@ -124,22 +128,22 @@ export const sidebarItems: SidebarItem[] = [
       {
         title: "Semua Utang",
         url: "/view/all-payables",
-        permission: "sales.payment.view",
+        permission: "purchase.payment.view",
       },
       {
         title: "Utang per Client",
         url: "/view/payables-per-client",
-        permission: "sales.payment.view",
+        permission: "purchase.payment.view",
       },
       {
         title: "Semua Piutang",
         url: "/view/all-receivables",
-        permission: "purchase.payment.view",
+        permission: "sales.payment.view",
       },
       {
         title: "Piutang per Client",
         url: "/view/receivables-per-client",
-        permission: "purchase.payment.view",
+        permission: "sales.payment.view",
       },
       {
         title: "Nota Penjualan",
