@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
 import { userService } from "@/modules/user/user.service";
@@ -10,6 +11,12 @@ export const PUT = withErrorHandler(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> },
   ) => {
+    const session = await getSession();
+
+    if (!session || !session.permissions?.includes("user.update")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
     const { id } = await params;
     const body = await request.json();
     const validatedBody = validate(body, userSchema);
@@ -24,6 +31,12 @@ export const PUT = withErrorHandler(
 
 export const DELETE = withErrorHandler(
   async (_: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    const session = await getSession();
+
+    if (!session || !session.permissions?.includes("user.delete")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
     const { id } = await params;
     await userService.deleteUser(Number(id));
     return NextResponse.json({ message: "User berhasil dihapus" });

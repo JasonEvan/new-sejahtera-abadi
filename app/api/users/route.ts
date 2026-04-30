@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
 import { userService } from "@/modules/user/user.service";
@@ -6,11 +7,23 @@ import { InsertUser } from "@/modules/user/user.types";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withErrorHandler(async () => {
+  const session = await getSession();
+
+  if (!session || !session.permissions?.includes("user.view")) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
   const data = await userService.getUsers();
   return NextResponse.json({ data });
 });
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
+  const session = await getSession();
+
+  if (!session || !session.permissions?.includes("user.create")) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
   const body = await request.json();
   const validatedBody = validate(body, userSchema);
 
