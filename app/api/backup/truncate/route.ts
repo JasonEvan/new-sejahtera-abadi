@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 export const DELETE = withErrorHandler(async () => {
   const session = await getSession();
 
-  if (!session || !session.permissions?.includes("download.backup")) {
+  if (!session || !session.permissions?.includes("delete.backup")) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 

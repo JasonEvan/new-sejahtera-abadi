@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const session = await getSession();
 
-  if (!session || !session.permissions?.includes("download.backup")) {
+  if (!session || !session.permissions?.includes("restore.backup")) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 

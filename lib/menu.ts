@@ -182,7 +182,7 @@ export const sidebarItems: SidebarItem[] = [
   {
     title: "System",
     icon: Database,
-    permission: ["download.backup"],
+    permission: ["download.backup", "restore.backup", "delete.backup"],
     children: [
       { title: "Backup", url: "/backup", permission: "download.backup" },
       { title: "Export", url: "/export", permission: "download.backup" },
