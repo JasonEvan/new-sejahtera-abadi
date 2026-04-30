@@ -29,6 +29,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     }
   }
 
+  if (forReturn) {
+    if (!session || !session.permissions?.includes("sales.return.view")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+  }
+
   if (!clientId || isNaN(Number(clientId))) {
     throw new AppError("Client ID is required in a valid format", 400);
   }
