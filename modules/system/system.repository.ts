@@ -165,61 +165,75 @@ export const systemRepository = {
       );
   },
 
-  async deleteSalesOrderCascading(salesOrderId: number, tx: Tx) {
+  async bulkDeleteSalesOrders(salesOrderIds: number[], tx: Tx) {
+    if (salesOrderIds.length === 0) return;
+
     // 1. Delete sales_return_lines
-    await tx.execute(sql`
-      DELETE FROM ${sales_return_lines} 
-      WHERE sales_return_id IN (
-        SELECT id FROM ${sales_returns} WHERE sales_order_id = ${salesOrderId}
-      )
-    `);
+    await tx.delete(sales_return_lines).where(
+      inArray(
+        sales_return_lines.sales_return_id,
+        tx
+          .select({ id: sales_returns.id })
+          .from(sales_returns)
+          .where(inArray(sales_returns.sales_order_id, salesOrderIds)),
+      ),
+    );
 
     // 2. Delete sales_returns
     await tx
       .delete(sales_returns)
-      .where(eq(sales_returns.sales_order_id, salesOrderId));
+      .where(inArray(sales_returns.sales_order_id, salesOrderIds));
 
     // 3. Delete sales_payments
     await tx
       .delete(sales_payments)
-      .where(eq(sales_payments.sales_order_id, salesOrderId));
+      .where(inArray(sales_payments.sales_order_id, salesOrderIds));
 
     // 4. Delete sales_order_lines
     await tx
       .delete(sales_order_lines)
-      .where(eq(sales_order_lines.sales_order_id, salesOrderId));
+      .where(inArray(sales_order_lines.sales_order_id, salesOrderIds));
 
     // 5. Delete sales_orders
-    await tx.delete(sales_orders).where(eq(sales_orders.id, salesOrderId));
+    await tx.delete(sales_orders).where(inArray(sales_orders.id, salesOrderIds));
   },
 
-  async deletePurchaseOrderCascading(purchaseOrderId: number, tx: Tx) {
+  async bulkDeletePurchaseOrders(purchaseOrderIds: number[], tx: Tx) {
+    if (purchaseOrderIds.length === 0) return;
+
     // 1. Delete purchase_return_lines
-    await tx.execute(sql`
-      DELETE FROM ${purchase_return_lines} 
-      WHERE purchase_return_id IN (
-        SELECT id FROM ${purchase_returns} WHERE purchase_order_id = ${purchaseOrderId}
-      )
-    `);
+    await tx.delete(purchase_return_lines).where(
+      inArray(
+        purchase_return_lines.purchase_return_id,
+        tx
+          .select({ id: purchase_returns.id })
+          .from(purchase_returns)
+          .where(inArray(purchase_returns.purchase_order_id, purchaseOrderIds)),
+      ),
+    );
 
     // 2. Delete purchase_returns
     await tx
       .delete(purchase_returns)
-      .where(eq(purchase_returns.purchase_order_id, purchaseOrderId));
+      .where(inArray(purchase_returns.purchase_order_id, purchaseOrderIds));
 
     // 3. Delete purchase_payments
     await tx
       .delete(purchase_payments)
-      .where(eq(purchase_payments.purchase_order_id, purchaseOrderId));
+      .where(
+        inArray(purchase_payments.purchase_order_id, purchaseOrderIds),
+      );
 
     // 4. Delete purchase_order_lines
     await tx
       .delete(purchase_order_lines)
-      .where(eq(purchase_order_lines.purchase_order_id, purchaseOrderId));
+      .where(
+        inArray(purchase_order_lines.purchase_order_id, purchaseOrderIds),
+      );
 
     // 5. Delete purchase_orders
     await tx
       .delete(purchase_orders)
-      .where(eq(purchase_orders.id, purchaseOrderId));
+      .where(inArray(purchase_orders.id, purchaseOrderIds));
   },
 };

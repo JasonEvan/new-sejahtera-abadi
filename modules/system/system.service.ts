@@ -44,13 +44,8 @@ export const systemService = {
       }
 
       // 5. Delete transactions cascadingly
-      for (const soId of salesIds) {
-        await systemRepository.deleteSalesOrderCascading(soId, tx);
-      }
-
-      for (const poId of purchaseIds) {
-        await systemRepository.deletePurchaseOrderCascading(poId, tx);
-      }
+      await systemRepository.bulkDeleteSalesOrders(salesIds, tx);
+      await systemRepository.bulkDeletePurchaseOrders(purchaseIds, tx);
 
       return { success: true };
     });
