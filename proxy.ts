@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decrypt } from "@/lib/auth";
 import { getRoutePermissions } from "@/lib/menu";
-import { User } from "@/modules/user/user.types";
-import { userRepository } from "@/modules/user/user.repository";
 
 const routePermissions = getRoutePermissions();
 
@@ -24,19 +22,17 @@ export default async function proxy(req: NextRequest) {
   }
 
   // 3. Decrypt the session from the cookie
-  let user: User | null = null;
+  let user: any = null;
   try {
     const cookie = req.cookies.get("session")?.value;
     if (cookie) {
-      const decoded = (await decrypt(cookie)) as any;
-      const userId = decoded.id || decoded.userId;
-      if (userId) {
-        // Fetch fresh user data from DB to ensure permissions are up to date
-        user = (await userRepository.getUserById(Number(userId))) as User | null;
+      const decoded = await decrypt(cookie);
+      if (decoded?.id || decoded?.userId) {
+        user = decoded;
       }
     }
   } catch (error) {
-    console.error("Failed to decrypt session or fetch user:", error);
+    console.error("Failed to decrypt session:", error);
   }
 
   // 4. Redirect to /login if the user is not authenticated
@@ -69,9 +65,10 @@ export default async function proxy(req: NextRequest) {
     }
 
     if (requiredPermission) {
+      const userPermissions: string[] = user.permissions || [];
       const hasPermission = Array.isArray(requiredPermission)
-        ? requiredPermission.some((p) => user.permissions?.includes(p) ?? false)
-        : (user.permissions?.includes(requiredPermission as string) ?? false);
+        ? requiredPermission.some((p) => userPermissions.includes(p))
+        : userPermissions.includes(requiredPermission as string);
 
       if (!hasPermission) {
         // Forbidden
