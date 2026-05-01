@@ -60,7 +60,15 @@ export default function SalesInvoiceDetailContent({
         title={`Nota ${header.invoice_number}`}
         subtitle={`${header.client_name}, ${header.client_city} | ${header.invoice_date} | Nilai: ${header.invoice_value.toLocaleString("id-ID")}`}
       />
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex justify-end gap-2">
+        <Button
+          variant="outline"
+          onClick={() => {
+            window.location.href = `/api/export/sales-invoice/${encodeURIComponent(header.invoice_number)}`;
+          }}
+        >
+          Export Excel
+        </Button>
         <Button
           onClick={() => printService.handlePrintContinuousForm(details, total)}
         >
