@@ -8,11 +8,13 @@ import SalesmenForm from "./SalesmenForm";
 import { editSalespersonKey } from "@/modules/salesperson/salesperson.keys";
 import { useDeleteSalespersonMutation } from "@/modules/salesperson/salesperson.mutations";
 import { alertDialogs } from "@/lib/alert-dialogs";
+import { useMe } from "@/modules/user/user.queries";
 
 const columnHelper = createColumnHelper<Salesperson>();
 
 export const useColumns = () => {
   const deleteSalespersonMutation = useDeleteSalespersonMutation();
+  const { data: user } = useMe();
 
   function handleSalesmanEdit(data: Salesperson) {
     dialogs.open({
@@ -39,6 +41,9 @@ export const useColumns = () => {
     [deleteSalespersonMutation],
   );
 
+  const canUpdate = user?.permissions?.includes("salesman.update");
+  const canDelete = user?.permissions?.includes("salesman.delete");
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("name", {
@@ -63,26 +68,30 @@ export const useColumns = () => {
         header: "Aksi",
         cell: ({ row }) => (
           <div className="flex gap-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleSalesmanEdit(row.original)}
-            >
-              <Pencil />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-destructive"
-              onClick={() => handleDelete(row.original.id)}
-            >
-              <Trash2 />
-            </Button>
+            {canUpdate && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleSalesmanEdit(row.original)}
+              >
+                <Pencil />
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive"
+                onClick={() => handleDelete(row.original.id)}
+              >
+                <Trash2 />
+              </Button>
+            )}
           </div>
         ),
       }),
     ],
-    [handleDelete],
+    [handleDelete, canUpdate, canDelete],
   );
 
   return columns;

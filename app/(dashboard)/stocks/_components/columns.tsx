@@ -8,11 +8,13 @@ import StockForm from "./StockForm";
 import { updateStockKey } from "@/modules/stock/stock.keys";
 import { alertDialogs } from "@/lib/alert-dialogs";
 import { useDeleteStockMutation } from "@/modules/stock/stock.mutations";
+import { useMe } from "@/modules/user/user.queries";
 
 const columnHelper = createColumnHelper<Stock>();
 
 export const useColumns = () => {
   const deleteStockMutation = useDeleteStockMutation();
+  const { data: user } = useMe();
 
   function handleEditStock(stock: Stock) {
     dialogs.open({
@@ -38,6 +40,9 @@ export const useColumns = () => {
     },
     [deleteStockMutation],
   );
+
+  const canUpdate = user?.permissions?.includes("stock.update");
+  const canDelete = user?.permissions?.includes("stock.delete");
 
   const columns = useMemo(
     () => [
@@ -81,26 +86,30 @@ export const useColumns = () => {
         header: "Aksi",
         cell: ({ row }) => (
           <div className="flex gap-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleEditStock(row.original)}
-            >
-              <Pencil />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-destructive"
-              onClick={() => handleDeleteStock(row.original.id)}
-            >
-              <Trash2 />
-            </Button>
+            {canUpdate && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleEditStock(row.original)}
+              >
+                <Pencil />
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive"
+                onClick={() => handleDeleteStock(row.original.id)}
+              >
+                <Trash2 />
+              </Button>
+            )}
           </div>
         ),
       }),
     ],
-    [handleDeleteStock],
+    [handleDeleteStock, canUpdate, canDelete],
   );
 
   return columns;

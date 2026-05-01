@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
@@ -13,6 +14,11 @@ export const PUT = withErrorHandler(
     const salespersonId = (await params).id;
     if (isNaN(Number(salespersonId))) {
       throw new AppError("ID salesman tidak valid", 400);
+    }
+
+    const session = await getSession();
+    if (!session || !session.permissions?.includes("salesman.update")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -34,6 +40,11 @@ export const DELETE = withErrorHandler(
     const salespersonId = (await params).id;
     if (isNaN(Number(salespersonId))) {
       throw new AppError("ID salesman tidak valid", 400);
+    }
+
+    const session = await getSession();
+    if (!session || !session.permissions?.includes("salesman.delete")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     await salespersonService.deleteSalesperson(Number(salespersonId));

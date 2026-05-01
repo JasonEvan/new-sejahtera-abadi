@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
@@ -13,6 +14,11 @@ export const PUT = withErrorHandler(
     const stockId = (await params).id;
     if (isNaN(Number(stockId))) {
       throw new AppError("ID stock tidak valid", 400);
+    }
+
+    const session = await getSession();
+    if (!session || !session.permissions?.includes("stock.update")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -31,6 +37,11 @@ export const DELETE = withErrorHandler(
     const stockId = (await params).id;
     if (isNaN(Number(stockId))) {
       throw new AppError("ID stock tidak valid", 400);
+    }
+
+    const session = await getSession();
+    if (!session || !session.permissions?.includes("stock.delete")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     await stockService.deleteStock(Number(stockId));
