@@ -58,6 +58,28 @@ export default function ReceivablesTable() {
     reset();
   };
 
+  const handlePayFull = () => {
+    const balanceDue = methods.getValues("balance_due");
+    const salesOrderId = methods.getValues("sales_order_id");
+
+    if (!salesOrderId) {
+      toast.error("Pilih nota terlebih dahulu", {
+        position: "bottom-right",
+      });
+      return;
+    }
+
+    if (balanceDue === undefined || balanceDue === null) {
+      toast.error("Saldo nota tidak ditemukan", {
+        position: "bottom-right",
+      });
+      return;
+    }
+
+    setValue("paid_amount", balanceDue, { shouldValidate: true });
+    handleSubmit(onSubmit)();
+  };
+
   function handleCreatePayment() {
     salesPaymentMutation.mutate({
       client_id: clientId,
@@ -114,7 +136,15 @@ export default function ReceivablesTable() {
             />
             <InputField name="paid_amount" label="Lunas Nota" type="number" />
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="cursor-pointer"
+              onClick={handlePayFull}
+            >
+              Add Full Payment
+            </Button>
             <Button type="submit" className="cursor-pointer">
               Add
             </Button>
