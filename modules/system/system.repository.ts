@@ -121,20 +121,32 @@ export const systemRepository = {
     }));
   },
 
-  async shiftStockBalances(
-    stockId: number,
-    deletedQtyIn: number,
-    deletedQtyOut: number,
+  async bulkShiftStockBalances(
+    movements: { stockId: number; qtyIn: number; qtyOut: number }[],
     tx: Tx,
   ) {
-    return tx
-      .update(stocks)
-      .set({
-        initial_stock: sql`${stocks.initial_stock} + ${deletedQtyIn} - ${deletedQtyOut}`,
-        qty_in: sql`${stocks.qty_in} - ${deletedQtyIn}`,
-        qty_out: sql`${stocks.qty_out} - ${deletedQtyOut}`,
-      })
-      .where(eq(stocks.id, stockId));
+    if (movements.length === 0) return;
+
+    const validMovements = movements.filter(
+      (m) => m.qtyIn !== 0 || m.qtyOut !== 0,
+    );
+    if (validMovements.length === 0) return;
+
+    const valuesStrings = validMovements
+      .map((m) => `(${m.stockId}, ${m.qtyIn}, ${m.qtyOut})`)
+      .join(", ");
+
+    await tx.execute(
+      sql.raw(`
+      UPDATE stocks
+      SET 
+        initial_stock = stocks.initial_stock + v.qty_in - v.qty_out,
+        qty_in = stocks.qty_in - v.qty_in,
+        qty_out = stocks.qty_out - v.qty_out
+      FROM (VALUES ${valuesStrings}) AS v(stock_id, qty_in, qty_out)
+      WHERE stocks.id = v.stock_id
+    `),
+    );
   },
 
   async getPaidSalesOrders(startDate: Date, endDate: Date, tx?: Tx) {
@@ -169,15 +181,17 @@ export const systemRepository = {
     if (salesOrderIds.length === 0) return;
 
     // 1. Delete sales_return_lines
-    await tx.delete(sales_return_lines).where(
-      inArray(
-        sales_return_lines.sales_return_id,
-        tx
-          .select({ id: sales_returns.id })
-          .from(sales_returns)
-          .where(inArray(sales_returns.sales_order_id, salesOrderIds)),
-      ),
-    );
+    await tx
+      .delete(sales_return_lines)
+      .where(
+        inArray(
+          sales_return_lines.sales_return_id,
+          tx
+            .select({ id: sales_returns.id })
+            .from(sales_returns)
+            .where(inArray(sales_returns.sales_order_id, salesOrderIds)),
+        ),
+      );
 
     // 2. Delete sales_returns
     await tx
@@ -195,22 +209,28 @@ export const systemRepository = {
       .where(inArray(sales_order_lines.sales_order_id, salesOrderIds));
 
     // 5. Delete sales_orders
-    await tx.delete(sales_orders).where(inArray(sales_orders.id, salesOrderIds));
+    await tx
+      .delete(sales_orders)
+      .where(inArray(sales_orders.id, salesOrderIds));
   },
 
   async bulkDeletePurchaseOrders(purchaseOrderIds: number[], tx: Tx) {
     if (purchaseOrderIds.length === 0) return;
 
     // 1. Delete purchase_return_lines
-    await tx.delete(purchase_return_lines).where(
-      inArray(
-        purchase_return_lines.purchase_return_id,
-        tx
-          .select({ id: purchase_returns.id })
-          .from(purchase_returns)
-          .where(inArray(purchase_returns.purchase_order_id, purchaseOrderIds)),
-      ),
-    );
+    await tx
+      .delete(purchase_return_lines)
+      .where(
+        inArray(
+          purchase_return_lines.purchase_return_id,
+          tx
+            .select({ id: purchase_returns.id })
+            .from(purchase_returns)
+            .where(
+              inArray(purchase_returns.purchase_order_id, purchaseOrderIds),
+            ),
+        ),
+      );
 
     // 2. Delete purchase_returns
     await tx
@@ -220,16 +240,12 @@ export const systemRepository = {
     // 3. Delete purchase_payments
     await tx
       .delete(purchase_payments)
-      .where(
-        inArray(purchase_payments.purchase_order_id, purchaseOrderIds),
-      );
+      .where(inArray(purchase_payments.purchase_order_id, purchaseOrderIds));
 
     // 4. Delete purchase_order_lines
     await tx
       .delete(purchase_order_lines)
-      .where(
-        inArray(purchase_order_lines.purchase_order_id, purchaseOrderIds),
-      );
+      .where(inArray(purchase_order_lines.purchase_order_id, purchaseOrderIds));
 
     // 5. Delete purchase_orders
     await tx

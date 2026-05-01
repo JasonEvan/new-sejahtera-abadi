@@ -31,17 +31,8 @@ export const systemService = {
         tx,
       );
 
-      // 4. Loop through movements and shift balances
-      for (const movement of stockMovements) {
-        if (movement.qtyIn === 0 && movement.qtyOut === 0) continue;
-
-        await systemRepository.shiftStockBalances(
-          movement.stockId,
-          movement.qtyIn,
-          movement.qtyOut,
-          tx,
-        );
-      }
+      // 4. Shift balances using a single Bulk Update query
+      await systemRepository.bulkShiftStockBalances(stockMovements, tx);
 
       // 5. Delete transactions cascadingly
       await systemRepository.bulkDeleteSalesOrders(salesIds, tx);
