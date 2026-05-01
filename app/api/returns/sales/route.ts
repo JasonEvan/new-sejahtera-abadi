@@ -17,16 +17,21 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   }
 
   const forMenu = request.nextUrl.searchParams.get("for_menu") === "true";
-  const invoiceNumber = request.nextUrl.searchParams.get("invoice_number");
 
   if (forMenu) {
     const data = await salesReturnService.getUnpaidReturnedInvoices();
     return NextResponse.json({ data });
   }
 
-  if (invoiceNumber) {
-    const data =
-      await salesReturnService.getEditSaleReturnDetail(invoiceNumber);
+  const returnId = request.nextUrl.searchParams.get("return_id");
+  if (returnId) {
+    const data = await salesReturnService.getEditSaleReturnDetail(Number(returnId));
+    return NextResponse.json({ data });
+  }
+
+  const salesOrderId = request.nextUrl.searchParams.get("sales_order_id");
+  if (salesOrderId) {
+    const data = await salesReturnService.getReturnHistory(Number(salesOrderId));
     return NextResponse.json({ data });
   }
 
@@ -62,7 +67,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
   const validatedBody = validate(body, backendEditSaleReturnValidation);
 
   const result = await salesReturnService.updateSaleReturn({
-    invoice_number: validatedBody.invoice_number.trim().toUpperCase(),
+    sales_return_id: validatedBody.sales_return_id,
     return_date: validatedBody.return_date,
     lines: validatedBody.lines,
   });

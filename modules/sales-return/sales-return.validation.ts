@@ -32,7 +32,7 @@ export const backendSaleReturnValidation = z.object({
 });
 
 export const backendEditSaleReturnValidation = z.object({
-  invoice_number: z.string().trim().min(1, "Nomor nota wajib diisi"),
+  sales_return_id: z.number().min(1, "ID retur wajib ada"),
   return_date: z
     .string()
     .nonempty("Tanggal retur tidak boleh kosong")
@@ -46,14 +46,5 @@ export const backendEditSaleReturnValidation = z.object({
         return_qty: z.int().min(0, "Jumlah retur tidak boleh negatif"),
       }),
     )
-    .min(1, "Minimal ada 1 baris item")
-    .superRefine((lines, ctx) => {
-      if (!lines.some((line) => line.return_qty > 0)) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Pilih minimal 1 item untuk diretur",
-          path: ["lines"],
-        });
-      }
-    }),
+    .min(1, "Minimal ada 1 baris item"),
 });

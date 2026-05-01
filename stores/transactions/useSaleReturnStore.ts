@@ -6,6 +6,7 @@ import { create } from "zustand";
 
 interface SaleReturnStore {
   transaction_information: {
+    sales_return_id?: number;
     client: number;
     sales_order_id: number;
     invoice_number: string;
@@ -31,6 +32,7 @@ interface SaleReturnStore {
 
 export const useSaleReturnStore = create<SaleReturnStore>((set) => ({
   transaction_information: {
+    sales_return_id: 0,
     client: 0,
     sales_order_id: 0,
     invoice_number: "",
@@ -74,6 +76,7 @@ export const useSaleReturnStore = create<SaleReturnStore>((set) => ({
   clear: () => {
     set({
       transaction_information: {
+        sales_return_id: 0,
         client: 0,
         sales_order_id: 0,
         invoice_number: "",

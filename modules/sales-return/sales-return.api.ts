@@ -13,10 +13,18 @@ export async function getEditSaleReturnInvoices() {
   return response.data;
 }
 
-export async function getEditSaleReturnDetail(invoiceNumber: string) {
+export async function getEditSaleReturnDetail(returnId: number) {
   const response = await api.get<{ data: EditSaleReturnDetail }>(
-    `/returns/sales?invoice_number=${encodeURIComponent(invoiceNumber)}`,
+    `/returns/sales?return_id=${returnId}`,
   );
+
+  return response.data;
+}
+
+export async function getReturnHistory(salesOrderId: number) {
+  const response = await api.get<{
+    data: { id: number; return_date: string }[];
+  }>(`/returns/sales?sales_order_id=${salesOrderId}`);
 
   return response.data;
 }

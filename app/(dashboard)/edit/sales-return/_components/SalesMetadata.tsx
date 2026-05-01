@@ -46,23 +46,23 @@ export default function SalesMetadata() {
   }, [lines, meta.invoice_value, meta.discount, setValue]);
 
   const onSubmit = () => {
-    if (!transactionInfo.invoice_number) {
+    if (!transactionInfo.sales_return_id) {
       toast.error("Pilih nota terlebih dahulu", {
         position: "bottom-right",
       });
       return;
     }
 
-    const returnableLines = lines.filter((line) => line.return_qty > 0);
-    if (returnableLines.length === 0) {
-      toast.error("Pilih minimal 1 item untuk diretur", {
-        position: "bottom-right",
-      });
-      return;
-    }
+    // const returnableLines = lines.filter((line) => line.return_qty > 0);
+    // if (returnableLines.length === 0) {
+    //   toast.error("Pilih minimal 1 item untuk diretur", {
+    //     position: "bottom-right",
+    //   });
+    //   return;
+    // }
 
     updateSaleReturnMutation.mutate({
-      invoice_number: transactionInfo.invoice_number,
+      sales_return_id: transactionInfo.sales_return_id,
       return_date: transactionInfo.return_date,
       lines: lines.map((line) => ({
         sales_order_line_id: line.id,

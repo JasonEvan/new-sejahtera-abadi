@@ -11,17 +11,6 @@ import { clientRepository } from "../client/client.repository";
 export const salesReturnService = {
   createSalesReturn(data: InsertSaleReturn) {
     return db.transaction(async (tx) => {
-      const hasReturn = await salesReturnRepository.hasReturnForSalesOrder(
-        data.sales_order_id,
-        tx,
-      );
-      if (hasReturn) {
-        throw new AppError(
-          "Retur penjualan untuk nota ini sudah ada, gunakan menu edit retur",
-          400,
-        );
-      }
-
       const [insertedReturn] = await salesReturnRepository.createSalesReturn(
         data,
         tx,
@@ -112,14 +101,11 @@ export const salesReturnService = {
     return salesReturnRepository.getUnpaidReturnedInvoices();
   },
 
-  async getEditSaleReturnDetail(invoiceNumber: string) {
-    const data =
-      await salesReturnRepository.getEditSaleReturnDetailByInvoice(
-        invoiceNumber,
-      );
+  async getEditSaleReturnDetail(returnId: number) {
+    const data = await salesReturnRepository.getEditSaleReturnDetailById(returnId);
 
     if (!data) {
-      throw new AppError("Invoice retur tidak ditemukan", 404);
+      throw new AppError("Data retur tidak ditemukan", 404);
     }
 
     return data;
@@ -127,10 +113,16 @@ export const salesReturnService = {
 
   updateSaleReturn(data: UpdateSaleReturn) {
     return db.transaction(async (tx) => {
-      const normalizedInvoice = data.invoice_number.trim().toUpperCase();
+      const [existingReturn] = await salesReturnRepository.getById(
+        data.sales_return_id,
+        tx,
+      );
+      if (!existingReturn) {
+        throw new AppError("Data retur penjualan tidak ditemukan", 404);
+      }
 
-      const order = await saleOrderRepository.getByInvoiceNumber(
-        normalizedInvoice,
+      const order = await saleOrderRepository.getById(
+        existingReturn.sales_order_id,
         tx,
       );
       if (!order) {
@@ -144,19 +136,9 @@ export const salesReturnService = {
         );
       }
 
-      const existingReturns = await salesReturnRepository.getBySalesOrderId(
-        order.id,
-        tx,
-      );
-      if (existingReturns.length === 0) {
-        throw new AppError("Data retur penjualan tidak ditemukan", 404);
-      }
-
-      const existingReturnIds = existingReturns.map((row) => row.id);
-
       const existingReturnLines =
         await salesReturnLineRepository.getBySalesReturnIds(
-          existingReturnIds,
+          [data.sales_return_id],
           tx,
         );
 
@@ -181,10 +163,10 @@ export const salesReturnService = {
       );
 
       await salesReturnLineRepository.deleteBySalesReturnIds(
-        existingReturnIds,
+        [data.sales_return_id],
         tx,
       );
-      await salesReturnRepository.deleteBySalesOrderId(order.id, tx);
+      await salesReturnRepository.deleteById(data.sales_return_id, tx);
 
       const latestOrderLines = await saleOrderLineRepository.getBySalesOrderId(
         order.id,
@@ -214,7 +196,33 @@ export const salesReturnService = {
 
       const returnableLines = data.lines.filter((line) => line.return_qty > 0);
       if (returnableLines.length === 0) {
-        throw new AppError("Pilih minimal 1 item untuk diretur", 400);
+        // The user zeroed out all items, meaning they want to cancel this return document.
+        // We already reverted the lines and stocks above, and deleted the old return.
+        // Now we just need to recalculate the invoice value back to its original state.
+        const discount = await saleOrderRepository.getDiscountById(order.id, tx);
+        const rawTotal = await saleOrderLineRepository.getSumTotalPriceByOrderId(
+          order.id,
+          tx,
+        );
+        const newInvoiceTotal = Math.floor(rawTotal * (1 - discount / 100));
+
+        await saleOrderRepository.updateInvoiceValue(
+          newInvoiceTotal,
+          order.id,
+          tx,
+        );
+
+        const receivableDelta = newInvoiceTotal - order.invoice_value;
+        await clientRepository.incReceivableBalance(
+          order.client_id,
+          receivableDelta,
+          tx,
+        );
+
+        return {
+          message:
+            "Dokumen retur berhasil dibatalkan karena semua jumlah retur di-nol-kan",
+        };
       }
 
       const lineIds = returnableLines.map((line) => line.sales_order_line_id);
@@ -305,5 +313,9 @@ export const salesReturnService = {
         message: "Sales return updated successfully",
       };
     });
+  },
+
+  getReturnHistory(salesOrderId: number) {
+    return salesReturnRepository.getReturnHistoryBySalesOrderId(salesOrderId);
   },
 };

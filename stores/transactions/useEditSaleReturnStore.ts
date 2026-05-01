@@ -38,13 +38,22 @@ export const useEditSaleReturnStore = create<EditSaleReturnStore>((set) => ({
   setTransactionInformation: (data) => set({ transaction_information: data }),
 
   lines: [],
-  setLines: (lines) => set({ lines }),
+  setLines: (lines) => {
+    set({
+      lines: lines.map((line) => ({
+        ...line,
+        _max_valid_qty: line.qty + line.return_qty,
+      })),
+    });
+  },
   updateLineReturnQty: (id, return_qty) => {
     set((state) => ({
       lines: state.lines.map((line) => {
         if (line.id !== id) return line;
 
-        const qty = line.original_qty - return_qty;
+        const maxValid = line._max_valid_qty ?? line.qty + line.return_qty;
+        const qty = maxValid - return_qty;
+
         return {
           ...line,
           return_qty,

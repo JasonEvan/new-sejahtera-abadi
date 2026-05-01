@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   useGetEditSaleReturnDetail,
   useGetEditSaleReturnInvoices,
+  useGetReturnHistory,
 } from "@/modules/sales-return/sales-return.queries";
 import { useEditSaleReturnStore } from "@/stores/transactions/useEditSaleReturnStore";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +15,8 @@ import { toast } from "sonner";
 import z from "zod";
 
 const invoiceInformationValidation = z.object({
-  sales_order_id: z.int().min(1, "Pilih nomor nota"),
+  sales_order_id: z.number().min(1, "Pilih nomor nota"),
+  sales_return_id: z.number().min(1, "Pilih tanggal retur"),
 });
 
 type InvoiceInformationFormField = z.infer<typeof invoiceInformationValidation>;
@@ -28,6 +30,7 @@ export default function InvoiceInformation() {
   const methods = useForm<InvoiceInformationFormField>({
     defaultValues: {
       sales_order_id: 0,
+      sales_return_id: 0,
     },
     mode: "onBlur",
     reValidateMode: "onChange",
@@ -41,13 +44,19 @@ export default function InvoiceInformation() {
     name: "sales_order_id",
   });
 
-  const selectedInvoiceNumber = invoices?.find(
-    (invoice) => invoice.id === watchedSalesOrderId,
-  )?.name;
+  const watchedSalesReturnId = useWatch({
+    control,
+    name: "sales_return_id",
+  });
+
+  const { data: returnHistory } = useGetReturnHistory(
+    watchedSalesOrderId,
+    !!watchedSalesOrderId,
+  );
 
   const { data: detailData } = useGetEditSaleReturnDetail(
-    selectedInvoiceNumber ?? "",
-    !!selectedInvoiceNumber,
+    watchedSalesReturnId,
+    !!watchedSalesReturnId,
   );
 
   const onSubmit = () => {
@@ -69,6 +78,7 @@ export default function InvoiceInformation() {
     useEditSaleReturnStore.getState().clear();
     reset({
       sales_order_id: 0,
+      sales_return_id: 0,
     });
   };
 
@@ -76,6 +86,7 @@ export default function InvoiceInformation() {
     if (transactionInfo.sales_order_id) {
       reset({
         sales_order_id: transactionInfo.sales_order_id,
+        sales_return_id: transactionInfo.sales_return_id,
       });
     }
   }, [transactionInfo, reset]);
@@ -93,6 +104,15 @@ export default function InvoiceInformation() {
             items={invoices || []}
             disabled={isLocked}
           />
+          {watchedSalesOrderId > 0 && (
+            <ComboboxField
+              name="sales_return_id"
+              label="Tanggal Retur"
+              placeholder="Pilih tanggal retur"
+              items={returnHistory || []}
+              disabled={isLocked}
+            />
+          )}
         </div>
         <div className="flex justify-end gap-x-3">
           <Button

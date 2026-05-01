@@ -35,21 +35,19 @@ export const salesReturnRepository = {
     return !!row;
   },
 
-  getBySalesOrderId(salesOrderId: number, tx?: Tx) {
+  getById(id: number, tx?: Tx) {
     const database = tx ?? db;
-
     return database
-      .select({ id: sales_returns.id })
+      .select()
       .from(sales_returns)
-      .where(eq(sales_returns.sales_order_id, salesOrderId));
+      .where(eq(sales_returns.id, id))
+      .limit(1);
   },
 
-  deleteBySalesOrderId(salesOrderId: number, tx?: Tx) {
+  deleteById(id: number, tx?: Tx) {
     const database = tx ?? db;
 
-    return database
-      .delete(sales_returns)
-      .where(eq(sales_returns.sales_order_id, salesOrderId));
+    return database.delete(sales_returns).where(eq(sales_returns.id, id));
   },
 
   getUnpaidReturnedInvoices() {
@@ -68,8 +66,8 @@ export const salesReturnRepository = {
       .orderBy(desc(sales_orders.id));
   },
 
-  async getEditSaleReturnDetailByInvoice(
-    invoiceNumber: string,
+  async getEditSaleReturnDetailById(
+    returnId: number,
   ): Promise<EditSaleReturnDetail | null> {
     const [header] = await db
       .select({
@@ -86,13 +84,7 @@ export const salesReturnRepository = {
         sales_orders,
         eq(sales_returns.sales_order_id, sales_orders.id),
       )
-      .where(
-        and(
-          eq(sales_orders.invoice_number, invoiceNumber),
-          eq(sales_orders.paid_amount, 0),
-        ),
-      )
-      .orderBy(desc(sales_returns.id))
+      .where(eq(sales_returns.id, returnId))
       .limit(1);
 
     if (!header) return null;
@@ -104,35 +96,22 @@ export const salesReturnRepository = {
         name: stocks.name,
         price: sales_order_lines.price,
         qty: sales_order_lines.qty,
-        return_qty:
-          sql<number>`COALESCE(SUM(${sales_return_lines.qty}), 0)`.mapWith(
-            Number,
-          ),
+        this_return_qty: sql<number>`COALESCE(${sales_return_lines.qty}, 0)`.mapWith(Number),
+        all_return_qty: sql<number>`(SELECT COALESCE(SUM(qty), 0) FROM ${sales_return_lines} WHERE sales_order_line_id = ${sales_order_lines.id})`.mapWith(Number),
       })
       .from(sales_order_lines)
       .leftJoin(
         sales_return_lines,
-        eq(sales_return_lines.sales_order_line_id, sales_order_lines.id),
-      )
-      .leftJoin(
-        sales_returns,
         and(
-          eq(sales_return_lines.sales_return_id, sales_returns.id),
-          eq(sales_returns.sales_order_id, header.sales_order_id),
+          eq(sales_return_lines.sales_order_line_id, sales_order_lines.id),
+          eq(sales_return_lines.sales_return_id, returnId),
         ),
       )
       .leftJoin(stocks, eq(sales_order_lines.stock_id, stocks.id))
-      .where(eq(sales_order_lines.sales_order_id, header.sales_order_id))
-      .groupBy(
-        sales_order_lines.id,
-        sales_order_lines.stock_id,
-        stocks.name,
-        sales_order_lines.price,
-        sales_order_lines.qty,
-      );
+      .where(eq(sales_order_lines.sales_order_id, header.sales_order_id));
 
     const lines = returnLines.map((line) => {
-      const original_qty = line.qty + line.return_qty;
+      const original_qty = line.qty + line.all_return_qty;
       const subtotal = line.price * line.qty;
 
       return {
@@ -142,7 +121,7 @@ export const salesReturnRepository = {
         price: line.price,
         original_qty,
         qty: line.qty,
-        return_qty: line.return_qty,
+        return_qty: line.this_return_qty,
         subtotal,
       };
     });
@@ -167,5 +146,17 @@ export const salesReturnRepository = {
         total: header.total,
       },
     };
+  },
+
+  getReturnHistoryBySalesOrderId(salesOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .select({
+        id: sales_returns.id,
+        return_date: sales_returns.return_date,
+      })
+      .from(sales_returns)
+      .where(eq(sales_returns.sales_order_id, salesOrderId))
+      .orderBy(desc(sales_returns.return_date));
   },
 };

@@ -24,6 +24,7 @@ export type SaleReturnTableRow = {
   qty: number;
   return_qty: number;
   subtotal: number;
+  _max_valid_qty?: number;
 };
 
 export type InsertSaleReturn = {
@@ -37,7 +38,7 @@ export type InsertSaleReturn = {
 };
 
 export type UpdateSaleReturn = {
-  invoice_number: string;
+  sales_return_id: number;
   return_date: string;
   lines: {
     sales_order_line_id: number;

@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getEditSaleReturnDetail,
   getEditSaleReturnInvoices,
+  getReturnHistory,
 } from "./sales-return.api";
 import {
   getEditSaleReturnDetailKey,
   getEditSaleReturnInvoicesKey,
+  getReturnHistoryKey,
 } from "./sales-return.keys";
 
 export const useGetEditSaleReturnInvoices = () => {
@@ -21,13 +23,29 @@ export const useGetEditSaleReturnInvoices = () => {
 };
 
 export const useGetEditSaleReturnDetail = (
-  invoiceNumber: string,
+  returnId: number,
   enabled: boolean,
 ) => {
   return useQuery({
-    queryKey: getEditSaleReturnDetailKey(invoiceNumber),
-    queryFn: () => getEditSaleReturnDetail(invoiceNumber),
+    queryKey: getEditSaleReturnDetailKey(returnId),
+    queryFn: () => getEditSaleReturnDetail(returnId),
     select: (data) => data.data,
+    enabled,
+  });
+};
+
+export const useGetReturnHistory = (
+  salesOrderId: number,
+  enabled: boolean = true,
+) => {
+  return useQuery({
+    queryKey: getReturnHistoryKey(salesOrderId),
+    queryFn: () => getReturnHistory(salesOrderId),
+    select: (data) =>
+      data.data.map((item) => ({
+        id: item.id,
+        name: new Date(item.return_date).toLocaleDateString("id-ID"),
+      })),
     enabled,
   });
 };
