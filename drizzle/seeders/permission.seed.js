@@ -244,6 +244,11 @@ async function seed() {
         display_name: "Hapus Cadangan",
         module: "settings",
       },
+      {
+        name: "system.cutoff",
+        display_name: "Tutup Buku",
+        module: "settings",
+      },
       { name: "user.view", display_name: "Lihat Pengguna", module: "settings" },
       {
         name: "user.create",
@@ -308,7 +313,8 @@ async function seed() {
         (p) =>
           !p.name.startsWith("user.") &&
           !p.name.startsWith("role.") &&
-          !p.name.startsWith("permission."),
+          !p.name.startsWith("permission.") &&
+          !p.name.startsWith("system."),
       );
 
       await db

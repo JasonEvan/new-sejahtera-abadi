@@ -14,8 +14,9 @@ import {
   stocks,
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { asc, eq, max, sql } from "drizzle-orm";
+import { and, asc, eq, gte, lte, max, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
+import { Tx } from "@/lib/common-types";
 
 export const reportRepository = {
   async getDashboardSnapshot() {
@@ -321,9 +322,16 @@ export const reportRepository = {
   //   );
   // },
 
-  getInventoryLedgers(stockId: number) {
+  getInventoryLedgers(
+    stockId: number,
+    startDate?: Date,
+    endDate?: Date,
+    tx?: Tx,
+  ) {
+    const database = tx ?? db;
+
     // 1. Ambil murni baris JUAL ("J")
-    const qSales = db
+    const qSales = database
       .select({
         invoice_date: sales_orders.invoice_date,
         invoice_number: sales_orders.invoice_number,
@@ -346,10 +354,16 @@ export const reportRepository = {
         eq(sales_order_lines.sales_order_id, sales_orders.id),
       )
       .leftJoin(clients, eq(sales_order_lines.client_id, clients.id))
-      .where(eq(sales_order_lines.stock_id, stockId));
+      .where(
+        and(
+          eq(sales_order_lines.stock_id, stockId),
+          startDate ? gte(sales_orders.invoice_date, startDate) : undefined,
+          endDate ? lte(sales_orders.invoice_date, endDate) : undefined,
+        ),
+      );
 
     // 2. Ambil murni baris RETUR JUAL ("JR")
-    const qSalesReturns = db
+    const qSalesReturns = database
       .select({
         // PERBAIKAN: Gunakan sales_orders.invoice_date sebagai fallback
         invoice_date:
@@ -377,10 +391,16 @@ export const reportRepository = {
         eq(sales_returns.sales_order_id, sales_orders.id),
       )
       .leftJoin(clients, eq(sales_returns.client_id, clients.id))
-      .where(eq(sales_order_lines.stock_id, stockId));
+      .where(
+        and(
+          eq(sales_order_lines.stock_id, stockId),
+          startDate ? gte(sales_returns.return_date, startDate) : undefined,
+          endDate ? lte(sales_returns.return_date, endDate) : undefined,
+        ),
+      );
 
     // 3. Ambil murni baris BELI ("B")
-    const qPurchases = db
+    const qPurchases = database
       .select({
         invoice_date: purchase_orders.invoice_date,
         invoice_number: purchase_orders.invoice_number,
@@ -403,10 +423,16 @@ export const reportRepository = {
         eq(purchase_order_lines.purchase_order_id, purchase_orders.id),
       )
       .leftJoin(clients, eq(purchase_order_lines.client_id, clients.id))
-      .where(eq(purchase_order_lines.stock_id, stockId));
+      .where(
+        and(
+          eq(purchase_order_lines.stock_id, stockId),
+          startDate ? gte(purchase_orders.invoice_date, startDate) : undefined,
+          endDate ? lte(purchase_orders.invoice_date, endDate) : undefined,
+        ),
+      );
 
     // 4. Ambil murni baris RETUR BELI ("BR")
-    const qPurchaseReturns = db
+    const qPurchaseReturns = database
       .select({
         // PERBAIKAN: Gunakan purchase_orders.invoice_date sebagai fallback
         invoice_date:
@@ -437,7 +463,13 @@ export const reportRepository = {
         eq(purchase_returns.purchase_order_id, purchase_orders.id),
       )
       .leftJoin(clients, eq(purchase_returns.client_id, clients.id))
-      .where(eq(purchase_order_lines.stock_id, stockId));
+      .where(
+        and(
+          eq(purchase_order_lines.stock_id, stockId),
+          startDate ? gte(purchase_returns.return_date, startDate) : undefined,
+          endDate ? lte(purchase_returns.return_date, endDate) : undefined,
+        ),
+      );
 
     // Gabungkan ke-4 nya, urutkan berdasarkan tanggal transaksi
     return unionAll(
