@@ -27,34 +27,31 @@ export const purchaseReturnRepository = {
       .returning({ id: purchase_returns.id });
   },
 
-  async hasReturnForPurchaseOrder(purchaseOrderId: number, tx?: Tx) {
+  getById(id: number, tx?: Tx) {
     const database = tx ?? db;
-    const [row] = await database
-      .select({ id: purchase_returns.id })
+    return database
+      .select()
       .from(purchase_returns)
-      .where(eq(purchase_returns.purchase_order_id, purchaseOrderId))
+      .where(eq(purchase_returns.id, id))
       .limit(1);
-
-    return !!row;
   },
 
-  getByPurchaseOrderId(purchaseOrderId: number, tx?: Tx) {
+  deleteById(id: number, tx?: Tx) {
     const database = tx ?? db;
 
+    return database.delete(purchase_returns).where(eq(purchase_returns.id, id));
+  },
+
+  getReturnHistoryByPurchaseOrderId(purchaseOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
     return database
       .select({
         id: purchase_returns.id,
+        return_date: purchase_returns.return_date,
       })
       .from(purchase_returns)
-      .where(eq(purchase_returns.purchase_order_id, purchaseOrderId));
-  },
-
-  deleteByPurchaseOrderId(purchaseOrderId: number, tx?: Tx) {
-    const database = tx ?? db;
-
-    return database
-      .delete(purchase_returns)
-      .where(eq(purchase_returns.purchase_order_id, purchaseOrderId));
+      .where(eq(purchase_returns.purchase_order_id, purchaseOrderId))
+      .orderBy(desc(purchase_returns.return_date));
   },
 
   getUnpaidReturnedInvoices() {
@@ -73,8 +70,8 @@ export const purchaseReturnRepository = {
       .orderBy(desc(purchase_orders.id));
   },
 
-  async getEditPurchaseReturnDetailByInvoice(
-    invoiceNumber: string,
+  async getEditPurchaseReturnDetailById(
+    returnId: number,
   ): Promise<EditPurchaseReturnDetail | null> {
     const [header] = await db
       .select({
@@ -91,13 +88,7 @@ export const purchaseReturnRepository = {
         purchase_orders,
         eq(purchase_returns.purchase_order_id, purchase_orders.id),
       )
-      .where(
-        and(
-          eq(purchase_orders.invoice_number, invoiceNumber),
-          eq(purchase_orders.paid_amount, 0),
-        ),
-      )
-      .orderBy(desc(purchase_returns.id))
+      .where(eq(purchase_returns.id, returnId))
       .limit(1);
 
     if (!header) return null;
@@ -109,40 +100,22 @@ export const purchaseReturnRepository = {
         name: stocks.name,
         price: purchase_order_lines.price,
         qty: purchase_order_lines.qty,
-        return_qty:
-          sql<number>`COALESCE(SUM(${purchase_return_lines.qty}), 0)`.mapWith(
-            Number,
-          ),
+        this_return_qty: sql<number>`COALESCE(${purchase_return_lines.qty}, 0)`.mapWith(Number),
+        all_return_qty: sql<number>`(SELECT COALESCE(SUM(qty), 0) FROM ${purchase_return_lines} WHERE purchase_order_line_id = ${purchase_order_lines.id})`.mapWith(Number),
       })
       .from(purchase_order_lines)
       .leftJoin(
         purchase_return_lines,
-        eq(
-          purchase_return_lines.purchase_order_line_id,
-          purchase_order_lines.id,
-        ),
-      )
-      .leftJoin(
-        purchase_returns,
         and(
-          eq(purchase_return_lines.purchase_return_id, purchase_returns.id),
-          eq(purchase_returns.purchase_order_id, header.purchase_order_id),
+          eq(purchase_return_lines.purchase_order_line_id, purchase_order_lines.id),
+          eq(purchase_return_lines.purchase_return_id, returnId),
         ),
       )
       .leftJoin(stocks, eq(purchase_order_lines.stock_id, stocks.id))
-      .where(
-        eq(purchase_order_lines.purchase_order_id, header.purchase_order_id),
-      )
-      .groupBy(
-        purchase_order_lines.id,
-        purchase_order_lines.stock_id,
-        stocks.name,
-        purchase_order_lines.price,
-        purchase_order_lines.qty,
-      );
+      .where(eq(purchase_order_lines.purchase_order_id, header.purchase_order_id));
 
     const lines = returnLines.map((line) => {
-      const original_qty = line.qty + line.return_qty;
+      const original_qty = line.qty + line.all_return_qty;
       const subtotal = line.price * line.qty;
 
       return {
@@ -152,7 +125,7 @@ export const purchaseReturnRepository = {
         price: line.price,
         original_qty,
         qty: line.qty,
-        return_qty: line.return_qty,
+        return_qty: line.this_return_qty,
         subtotal,
       };
     });

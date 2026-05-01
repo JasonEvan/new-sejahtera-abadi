@@ -11,13 +11,15 @@ export default function EditReturnQtyForm({
 }: {
   data: PurchaseReturnTableRow;
 }) {
+  const maxValidQty = data._max_valid_qty ?? data.qty + data.return_qty;
+
   const schema = z.object({
     return_qty: z
       .int()
       .min(0, "Jumlah retur tidak boleh negatif")
       .max(
-        data.original_qty,
-        `Jumlah retur tidak boleh melebihi jumlah asli (${data.original_qty})`,
+        maxValidQty,
+        `Jumlah retur tidak boleh melebihi sisa barang yang tersedia (${maxValidQty})`,
       ),
   });
 

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   useGetEditPurchaseReturnDetail,
   useGetEditPurchaseReturnInvoices,
+  useGetReturnHistory,
 } from "@/modules/purchase-return/purchase-return.queries";
 import { useEditPurchaseReturnStore } from "@/stores/transactions/useEditPurchaseReturnStore";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +15,8 @@ import { toast } from "sonner";
 import z from "zod";
 
 const invoiceInformationValidation = z.object({
-  purchase_order_id: z.int().min(1, "Pilih nomor nota"),
+  purchase_order_id: z.number().min(1, "Pilih nomor nota"),
+  purchase_return_id: z.number().min(1, "Pilih tanggal retur"),
 });
 
 type InvoiceInformationFormField = z.infer<typeof invoiceInformationValidation>;
@@ -28,6 +30,7 @@ export default function InvoiceInformation() {
   const methods = useForm<InvoiceInformationFormField>({
     defaultValues: {
       purchase_order_id: 0,
+      purchase_return_id: 0,
     },
     mode: "onBlur",
     reValidateMode: "onChange",
@@ -41,13 +44,19 @@ export default function InvoiceInformation() {
     name: "purchase_order_id",
   });
 
-  const selectedInvoiceNumber = invoices?.find(
-    (invoice) => invoice.id === watchedPurchaseOrderId,
-  )?.name;
+  const watchedPurchaseReturnId = useWatch({
+    control,
+    name: "purchase_return_id",
+  });
+
+  const { data: returnHistory } = useGetReturnHistory(
+    watchedPurchaseOrderId,
+    !!watchedPurchaseOrderId,
+  );
 
   const { data: detailData } = useGetEditPurchaseReturnDetail(
-    selectedInvoiceNumber ?? "",
-    !!selectedInvoiceNumber,
+    watchedPurchaseReturnId,
+    !!watchedPurchaseReturnId,
   );
 
   const onSubmit = () => {
@@ -69,6 +78,7 @@ export default function InvoiceInformation() {
     useEditPurchaseReturnStore.getState().clear();
     reset({
       purchase_order_id: 0,
+      purchase_return_id: 0,
     });
   };
 
@@ -76,6 +86,7 @@ export default function InvoiceInformation() {
     if (transactionInfo.purchase_order_id) {
       reset({
         purchase_order_id: transactionInfo.purchase_order_id,
+        purchase_return_id: transactionInfo.purchase_return_id,
       });
     }
   }, [transactionInfo, reset]);
@@ -93,6 +104,15 @@ export default function InvoiceInformation() {
             items={invoices || []}
             disabled={isLocked}
           />
+          {watchedPurchaseOrderId > 0 && (
+            <ComboboxField
+              name="purchase_return_id"
+              label="Tanggal Retur"
+              placeholder="Pilih tanggal retur"
+              items={returnHistory || []}
+              disabled={isLocked}
+            />
+          )}
         </div>
         <div className="flex justify-end gap-x-3">
           <Button

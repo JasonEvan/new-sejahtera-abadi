@@ -24,6 +24,7 @@ export type PurchaseReturnTableRow = {
   qty: number;
   return_qty: number;
   subtotal: number;
+  _max_valid_qty?: number;
 };
 
 export type InsertPurchaseReturn = {
@@ -37,7 +38,7 @@ export type InsertPurchaseReturn = {
 };
 
 export type UpdatePurchaseReturn = {
-  invoice_number: string;
+  purchase_return_id: number;
   return_date: string;
   lines: {
     purchase_order_line_id: number;

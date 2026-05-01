@@ -14,16 +14,6 @@ import { clientRepository } from "../client/client.repository";
 export const purchaseReturnService = {
   createPurchaseReturn(data: InsertPurchaseReturn) {
     return db.transaction(async (tx) => {
-      const hasReturn = await purchaseReturnRepository.hasReturnForPurchaseOrder(
-        data.purchase_order_id,
-        tx,
-      );
-      if (hasReturn) {
-        throw new AppError(
-          "Retur pembelian untuk nota ini sudah ada, gunakan menu edit retur",
-          400,
-        );
-      }
 
       const [insertedReturn] =
         await purchaseReturnRepository.createPurchaseReturn(data, tx);
@@ -112,14 +102,12 @@ export const purchaseReturnService = {
     return purchaseReturnRepository.getUnpaidReturnedInvoices();
   },
 
-  async getEditPurchaseReturnDetail(invoiceNumber: string) {
+  async getEditPurchaseReturnDetail(returnId: number) {
     const data =
-      await purchaseReturnRepository.getEditPurchaseReturnDetailByInvoice(
-        invoiceNumber,
-      );
+      await purchaseReturnRepository.getEditPurchaseReturnDetailById(returnId);
 
     if (!data) {
-      throw new AppError("Invoice retur tidak ditemukan", 404);
+      throw new AppError("Data retur tidak ditemukan", 404);
     }
 
     return data;
@@ -127,10 +115,16 @@ export const purchaseReturnService = {
 
   updatePurchaseReturn(data: UpdatePurchaseReturn) {
     return db.transaction(async (tx) => {
-      const normalizedInvoice = data.invoice_number.trim().toUpperCase();
+      const [existingReturn] = await purchaseReturnRepository.getById(
+        data.purchase_return_id,
+        tx,
+      );
+      if (!existingReturn) {
+        throw new AppError("Data retur pembelian tidak ditemukan", 404);
+      }
 
-      const order = await purchaseOrderRepository.getByInvoiceNumber(
-        normalizedInvoice,
+      const order = await purchaseOrderRepository.getById(
+        existingReturn.purchase_order_id,
         tx,
       );
       if (!order) {
@@ -144,21 +138,12 @@ export const purchaseReturnService = {
         );
       }
 
-      const existingReturns =
-        await purchaseReturnRepository.getByPurchaseOrderId(order.id, tx);
-      if (existingReturns.length === 0) {
-        throw new AppError("Data retur pembelian tidak ditemukan", 404);
-      }
-
-      const existingReturnIds = existingReturns.map((row) => row.id);
-
       const existingReturnLines =
         await purchaseReturnLineRepository.getByPurchaseReturnIds(
-          existingReturnIds,
+          [data.purchase_return_id],
           tx,
         );
 
-      // Revert process: restore order line qty and stock movements from previous return rows.
       const revertOrderLineUpdates = existingReturnLines.map((line) => ({
         id: line.purchase_order_line_id,
         quantity: line.return_qty,
@@ -180,10 +165,10 @@ export const purchaseReturnService = {
       );
 
       await purchaseReturnLineRepository.deleteByPurchaseReturnIds(
-        existingReturnIds,
+        [data.purchase_return_id],
         tx,
       );
-      await purchaseReturnRepository.deleteByPurchaseOrderId(order.id, tx);
+      await purchaseReturnRepository.deleteById(data.purchase_return_id, tx);
 
       const latestOrderLines =
         await purchaseOrderLineRepository.getByPurchaseOrderId(order.id, tx);
@@ -211,7 +196,35 @@ export const purchaseReturnService = {
 
       const returnableLines = data.lines.filter((line) => line.return_qty > 0);
       if (returnableLines.length === 0) {
-        throw new AppError("Pilih minimal 1 item untuk diretur", 400);
+        // Recalculate invoice value
+        const discount = await purchaseOrderRepository.getDiscountById(
+          order.id,
+          tx,
+        );
+        const rawTotal =
+          await purchaseOrderLineRepository.getSumTotalPriceByOrderId(
+            order.id,
+            tx,
+          );
+        const newInvoiceTotal = Math.floor(rawTotal * (1 - discount / 100));
+
+        await purchaseOrderRepository.updateInvoiceValue(
+          newInvoiceTotal,
+          order.id,
+          tx,
+        );
+
+        const payableDelta = newInvoiceTotal - order.invoice_value;
+        await clientRepository.incPayableBalance(
+          order.client_id,
+          payableDelta,
+          tx,
+        );
+
+        return {
+          message:
+            "Dokumen retur pembelian berhasil dibatalkan karena semua jumlah retur di-nol-kan",
+        };
       }
 
       const lineIds = returnableLines.map(
@@ -309,5 +322,11 @@ export const purchaseReturnService = {
         message: "Purchase return updated successfully",
       };
     });
+  },
+
+  getReturnHistory(purchaseOrderId: number) {
+    return purchaseReturnRepository.getReturnHistoryByPurchaseOrderId(
+      purchaseOrderId,
+    );
   },
 };
