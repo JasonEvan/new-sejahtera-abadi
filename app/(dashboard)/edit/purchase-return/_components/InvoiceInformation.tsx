@@ -83,12 +83,10 @@ export default function InvoiceInformation() {
   };
 
   useEffect(() => {
-    if (transactionInfo.purchase_order_id) {
-      reset({
-        purchase_order_id: transactionInfo.purchase_order_id,
-        purchase_return_id: transactionInfo.purchase_return_id,
-      });
-    }
+    reset({
+      purchase_order_id: transactionInfo.purchase_order_id,
+      purchase_return_id: transactionInfo.purchase_return_id,
+    });
   }, [transactionInfo, reset]);
 
   const isLocked = !!transactionInfo.purchase_order_id;

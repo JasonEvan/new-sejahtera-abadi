@@ -85,13 +85,13 @@ export default function TransactionInformation() {
   };
 
   useEffect(() => {
-    if (transactionInfo.sales_order_id) {
-      reset({
-        client: transactionInfo.client,
-        sales_order_id: transactionInfo.sales_order_id,
-        return_date: dayjs(transactionInfo.return_date).format("YYYY-MM-DD"),
-      });
-    }
+    reset({
+      client: transactionInfo.client,
+      sales_order_id: transactionInfo.sales_order_id,
+      return_date: transactionInfo.return_date
+        ? dayjs(transactionInfo.return_date).format("YYYY-MM-DD")
+        : dayjs().format("YYYY-MM-DD"),
+    });
   }, [transactionInfo, reset]);
 
   const isLocked = !!transactionInfo.sales_order_id;

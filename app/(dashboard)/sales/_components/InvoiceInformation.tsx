@@ -74,16 +74,14 @@ export default function InvoiceInformation() {
   }, [watchedSalesman, setValue, salespersons]);
 
   useEffect(() => {
-    if (invoiceInformation.client && invoiceInformation.invoice_date) {
-      reset({
-        client: invoiceInformation.client,
-        salesman: invoiceInformation.salesman,
-        invoice_date: dayjs(invoiceInformation.invoice_date).format(
-          "YYYY-MM-DD",
-        ),
-        invoice_number: invoiceInformation.invoice_number,
-      });
-    }
+    reset({
+      client: invoiceInformation.client,
+      salesman: invoiceInformation.salesman,
+      invoice_date: invoiceInformation.invoice_date
+        ? dayjs(invoiceInformation.invoice_date).format("YYYY-MM-DD")
+        : dayjs().format("YYYY-MM-DD"),
+      invoice_number: invoiceInformation.invoice_number,
+    });
   }, [invoiceInformation, reset]);
 
   return (
