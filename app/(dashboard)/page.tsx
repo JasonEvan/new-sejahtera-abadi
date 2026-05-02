@@ -179,10 +179,10 @@ export default function Home() {
 
   return (
     <div className="relative space-y-6 pb-4">
-      <div className="pointer-events-none absolute inset-x-0 -top-6 -z-10 h-44 rounded-3xl bg-linear-to-r from-orange-200/45 via-amber-100/20 to-lime-200/35 blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 -top-6 -z-10 h-44 rounded-3xl bg-linear-to-r from-orange-200/45 via-amber-100/20 to-lime-200/35 blur-3xl dark:from-orange-900/20 dark:via-amber-900/10 dark:to-lime-900/15" />
 
       <section className="overflow-hidden rounded-2xl border bg-card">
-        <div className="grid gap-5 bg-linear-to-br from-orange-50 via-background to-amber-50 p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr] lg:p-7">
+        <div className="grid gap-5 bg-linear-to-br from-orange-50 via-background to-amber-50 p-5 sm:p-6 lg:grid-cols-[1.2fr_1fr] lg:p-7 dark:from-orange-950/20 dark:via-background dark:to-amber-950/20">
           <div className="space-y-3 animate-in fade-in slide-in-from-left-1 duration-500">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Business Overview
