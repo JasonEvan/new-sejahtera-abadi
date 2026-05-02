@@ -1,4 +1,5 @@
 import {
+  index,
   integer,
   pgTable,
   primaryKey,
@@ -7,6 +8,7 @@ import {
   unique,
   varchar,
 } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 // --- Roles Table ---
 export const roles = pgTable("roles", {
@@ -43,6 +45,71 @@ export const users = pgTable("users", {
   password: varchar("password", { length: 255 }).notNull(),
   role_id: integer("role_id").references(() => roles.id),
 });
+
+// --- Trusted Devices Table ---
+export const trustedDevices = pgTable("trusted_devices", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  deviceFingerprint: varchar("device_fingerprint", { length: 255 }).notNull(),
+  deviceToken: varchar("device_token", { length: 255 }).notNull().unique(),
+  deviceLabel: varchar("device_label", { length: 255 }), // e.g. "Chrome · Windows"
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_trusted_devices_user_id").on(table.userId),
+  index("idx_trusted_devices_fingerprint").on(table.deviceFingerprint),
+  index("idx_trusted_devices_token").on(table.deviceToken),
+]);
+
+// --- Login Requests Table ---
+export const loginRequests = pgTable("login_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  deviceFingerprint: varchar("device_fingerprint", { length: 255 }).notNull(),
+  deviceLabel: varchar("device_label", { length: 255 }),
+  approvalToken: varchar("approval_token", { length: 255 }).notNull().unique(),
+  // status values: 'pending' | 'approved' | 'declined' | 'expired'
+  status: varchar("status", { length: 20 }).notNull().default("pending"),
+  expiresAt: timestamp("expires_at").notNull(), // set to now() + 1 hour on insert
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("idx_login_requests_user_id").on(table.userId),
+  index("idx_login_requests_approval_token").on(table.approvalToken),
+  index("idx_login_requests_status").on(table.status),
+]);
+
+// --- Relations ---
+
+export const rolesRelations = relations(roles, ({ many }) => ({
+  users: many(users),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  role: one(roles, {
+    fields: [users.role_id],
+    references: [roles.id],
+  }),
+  trustedDevices: many(trustedDevices),
+  loginRequests: many(loginRequests),
+}));
+
+export const trustedDevicesRelations = relations(trustedDevices, ({ one }) => ({
+  user: one(users, {
+    fields: [trustedDevices.userId],
+    references: [users.id],
+  }),
+}));
+
+export const loginRequestsRelations = relations(loginRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [loginRequests.userId],
+    references: [users.id],
+  }),
+}));
 
 // --- Clients Table ---
 export const clients = pgTable(

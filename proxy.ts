@@ -5,7 +5,16 @@ import { getRoutePermissions } from "@/lib/menu";
 const routePermissions = getRoutePermissions();
 
 // 1. Specify protected and public routes
-const publicRoutes = ["/login", "/api/auth/login", "/403"];
+const publicRoutes = [
+  "/login",
+  "/api/auth/login",
+  "/api/auth/login-request",
+  "/login/waiting-approval",
+  "/auth/action-result",
+  "/api/auth/approve",
+  "/api/auth/decline",
+  "/403",
+];
 
 export default async function proxy(req: NextRequest) {
   // 2. Check if the current route is protected or public

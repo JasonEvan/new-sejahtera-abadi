@@ -8,7 +8,7 @@ import { PassThrough, Readable } from "stream";
 export const GET = withErrorHandler(
   async (
     _request: NextRequest,
-    { params }: { params: { "invoice-number": string } },
+    { params }: { params: Promise<{ "invoice-number": string }> },
   ) => {
     const session = await getSession();
 

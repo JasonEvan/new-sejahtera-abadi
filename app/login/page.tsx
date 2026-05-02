@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import z from "zod";
@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMutation } from "@tanstack/react-query";
 import api from "@/lib/axios";
+import { useFingerprint } from "@/hooks/useFingerprint";
+import { getDeviceLabel } from "@/utils/deviceLabel";
 
 const loginSchema = z.object({
   email: z.email("Email tidak valid"),
@@ -20,9 +22,41 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const [isNavigating, startTransition] = useTransition();
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
   const [showPassword, setShowPassword] = useState(false);
+  const fingerprint = useFingerprint();
+
+  useEffect(() => {
+    // 1. Check for pending request cookie (if user is waiting for approval)
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(";").shift();
+    };
+
+    const pendingId = getCookie("pending_request_id");
+    if (pendingId) {
+      router.push(`/login/waiting-approval?id=${pendingId}`);
+      return;
+    }
+
+    // 2. Check if already authenticated (has active session)
+    const checkAuth = async () => {
+      try {
+        const { data } = await api.get("/auth/me");
+        if (data.authenticated) {
+          router.push("/");
+        }
+      } catch (error) {
+        // Not authenticated, stay on login page
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -34,13 +68,30 @@ export default function LoginPage() {
 
   const { mutate: login, isPending: isLoading } = useMutation({
     mutationFn: async (values: LoginFormValues) => {
-      const { data } = await api.post("/auth/login", values);
+      const { data } = await api.post("/auth/login", {
+        ...values,
+        deviceFingerprint: fingerprint,
+        deviceLabel: getDeviceLabel(),
+      });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data.status === "pending") {
+        toast.info(
+          "Login dari device baru terdeteksi. Menunggu persetujuan owner...",
+        );
+        if (fingerprint)
+          sessionStorage.setItem("temp_fingerprint", fingerprint);
+        startTransition(() => {
+          router.push(`/login/waiting-approval?id=${data.requestId}`);
+        });
+        return;
+      }
       toast.success("Login berhasil! Selamat datang kembali.");
-      router.push("/");
-      router.refresh();
+      startTransition(() => {
+        router.push("/");
+        router.refresh();
+      });
     },
   });
 
@@ -62,6 +113,12 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-3xl border bg-card p-8 shadow-xl shadow-primary/5 ring-1 ring-border/50">
+          {error === "invalid_token" && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium p-3 rounded-xl mb-6 text-center animate-in fade-in slide-in-from-top-2 duration-300">
+              Link persetujuan tidak valid, sudah kadaluarsa, atau sudah
+              digunakan.
+            </div>
+          )}
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -72,7 +129,7 @@ export default function LoginPage() {
                   placeholder="name@company.com"
                   type="email"
                   className="pl-10 h-12 rounded-xl transition-all focus:ring-2 focus:ring-primary/20"
-                  disabled={isLoading}
+                  disabled={isLoading || isNavigating}
                   {...form.register("email")}
                 />
               </div>
@@ -93,7 +150,7 @@ export default function LoginPage() {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   className="pl-10 pr-10 h-12 rounded-xl transition-all focus:ring-2 focus:ring-primary/20"
-                  disabled={isLoading}
+                  disabled={isLoading || isNavigating}
                   {...form.register("password")}
                 />
                 <button
@@ -118,12 +175,12 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full h-12 rounded-xl text-base font-semibold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-              disabled={isLoading}
+              disabled={isLoading || isNavigating || !fingerprint}
             >
-              {isLoading ? (
+              {isLoading || isNavigating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Memproses...
+                  {isNavigating ? "Mengalihkan..." : "Memproses..."}
                 </>
               ) : (
                 "Masuk"
@@ -138,5 +195,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
