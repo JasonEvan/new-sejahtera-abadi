@@ -53,6 +53,9 @@ export const useCreatePurchaseReturnMutation = () => {
       queryClient.invalidateQueries({ queryKey: getClientsKey() });
       queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
       queryClient.invalidateQueries({ queryKey: getAllPayablesKey() });
+      queryClient.invalidateQueries({
+        queryKey: invalidateInventoryLedgersKey(),
+      });
       queryClient.invalidateQueries({ queryKey: invalidateProfitReportKey() });
     },
   });
