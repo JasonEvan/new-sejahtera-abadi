@@ -37,7 +37,7 @@ export default function InvoiceInformation() {
     resolver: zodResolver(invoiceInformationValidation),
   });
 
-  const { reset, handleSubmit, control } = methods;
+  const { reset, handleSubmit, control, setValue } = methods;
 
   const watchedPurchaseOrderId = useWatch({
     control,
@@ -82,6 +82,8 @@ export default function InvoiceInformation() {
     });
   };
 
+  const isLocked = !!transactionInfo.purchase_order_id;
+
   useEffect(() => {
     reset({
       purchase_order_id: transactionInfo.purchase_order_id,
@@ -89,7 +91,17 @@ export default function InvoiceInformation() {
     });
   }, [transactionInfo, reset]);
 
-  const isLocked = !!transactionInfo.purchase_order_id;
+  useEffect(() => {
+    if (!isLocked) {
+      setValue("purchase_return_id", 0);
+    }
+  }, [watchedPurchaseOrderId, setValue, isLocked]);
+
+  useEffect(() => {
+    if (returnHistory?.length === 1 && watchedPurchaseReturnId === 0) {
+      setValue("purchase_return_id", returnHistory[0].id);
+    }
+  }, [returnHistory, watchedPurchaseReturnId, setValue]);
 
   return (
     <FormProvider {...methods}>
@@ -102,15 +114,16 @@ export default function InvoiceInformation() {
             items={invoices || []}
             disabled={isLocked}
           />
-          {watchedPurchaseOrderId > 0 && (
-            <ComboboxField
-              name="purchase_return_id"
-              label="Tanggal Retur"
-              placeholder="Pilih tanggal retur"
-              items={returnHistory || []}
-              disabled={isLocked}
-            />
-          )}
+          {watchedPurchaseOrderId > 0 &&
+            ((returnHistory?.length ?? 0) > 1 || isLocked) && (
+              <ComboboxField
+                name="purchase_return_id"
+                label="Tanggal Retur"
+                placeholder="Pilih tanggal retur"
+                items={returnHistory || []}
+                disabled={isLocked}
+              />
+            )}
         </div>
         <div className="flex justify-end gap-x-3">
           <Button

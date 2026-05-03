@@ -37,7 +37,7 @@ export default function InvoiceInformation() {
     resolver: zodResolver(invoiceInformationValidation),
   });
 
-  const { reset, handleSubmit, control } = methods;
+  const { reset, handleSubmit, control, setValue } = methods;
 
   const watchedSalesOrderId = useWatch({
     control,
@@ -82,6 +82,8 @@ export default function InvoiceInformation() {
     });
   };
 
+  const isLocked = !!transactionInfo.sales_order_id;
+
   useEffect(() => {
     reset({
       sales_order_id: transactionInfo.sales_order_id,
@@ -89,7 +91,17 @@ export default function InvoiceInformation() {
     });
   }, [transactionInfo, reset]);
 
-  const isLocked = !!transactionInfo.sales_order_id;
+  useEffect(() => {
+    if (!isLocked) {
+      setValue("sales_return_id", 0);
+    }
+  }, [watchedSalesOrderId, setValue, isLocked]);
+
+  useEffect(() => {
+    if (returnHistory?.length === 1 && watchedSalesReturnId === 0) {
+      setValue("sales_return_id", returnHistory[0].id);
+    }
+  }, [returnHistory, watchedSalesReturnId, setValue]);
 
   return (
     <FormProvider {...methods}>
@@ -102,15 +114,16 @@ export default function InvoiceInformation() {
             items={invoices || []}
             disabled={isLocked}
           />
-          {watchedSalesOrderId > 0 && (
-            <ComboboxField
-              name="sales_return_id"
-              label="Tanggal Retur"
-              placeholder="Pilih tanggal retur"
-              items={returnHistory || []}
-              disabled={isLocked}
-            />
-          )}
+          {watchedSalesOrderId > 0 &&
+            ((returnHistory?.length ?? 0) > 1 || isLocked) && (
+              <ComboboxField
+                name="sales_return_id"
+                label="Tanggal Retur"
+                placeholder="Pilih tanggal retur"
+                items={returnHistory || []}
+                disabled={isLocked}
+              />
+            )}
         </div>
         <div className="flex justify-end gap-x-3">
           <Button
