@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { usePerformCutoffMutation } from "@/modules/system/system.mutations";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,36 +22,15 @@ import { AlertCircle, CalendarDays, DatabaseZap } from "lucide-react";
 
 export default function CutOffPage() {
   const [endDate, setEndDate] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { mutate: performCutoff, isPending } = usePerformCutoffMutation();
 
-  const handleCutOff = async () => {
+  const handleCutOff = () => {
     if (!endDate) {
       toast.error("Silakan pilih tanggal cut-off yang valid.");
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await fetch("/api/cutoff", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endDate }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.error || "Terjadi kesalahan saat proses cut-off.",
-        );
-      }
-
-      toast.success("Proses Cut-Off berhasil diselesaikan!");
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setIsLoading(false);
-    }
+    performCutoff({ endDate });
   };
 
   return (
@@ -117,10 +97,10 @@ export default function CutOffPage() {
               <Button
                 variant="destructive"
                 size="lg"
-                disabled={!endDate || isLoading}
+                disabled={!endDate || isPending}
                 className="font-semibold shadow-lg shadow-destructive/20"
               >
-                {isLoading ? "Memproses..." : "Jalankan Proses Cut-Off"}
+                {isPending ? "Memproses..." : "Jalankan Proses Cut-Off"}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
