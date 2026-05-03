@@ -20,13 +20,12 @@ import {
 import { AlertCircle, CalendarDays, DatabaseZap } from "lucide-react";
 
 export default function CutOffPage() {
-  const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleCutOff = async () => {
-    if (!startDate || !endDate) {
-      toast.error("Silakan pilih rentang tanggal yang valid.");
+    if (!endDate) {
+      toast.error("Silakan pilih tanggal cut-off yang valid.");
       return;
     }
 
@@ -35,7 +34,7 @@ export default function CutOffPage() {
       const response = await fetch("/api/cutoff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ startDate, endDate }),
+        body: JSON.stringify({ endDate }),
       });
 
       const result = await response.json();
@@ -58,7 +57,7 @@ export default function CutOffPage() {
     <div className="space-y-6 max-w-4xl">
       <PageTitle
         title="Tutup Buku"
-        subtitle="Proses ini akan menghitung saldo awal baru untuk periode berikutnya dan menghapus transaksi yang sudah lunas dalam rentang tanggal terpilih."
+        subtitle="Proses ini akan menghitung saldo awal baru untuk periode berikutnya dan menghapus transaksi yang sudah lunas sampai tanggal terpilih."
       />
 
       <div className="bg-card border rounded-xl overflow-hidden shadow-sm">
@@ -69,8 +68,7 @@ export default function CutOffPage() {
           </div>
           <p className="text-muted-foreground mt-2">
             Proses ini akan menghitung saldo awal baru untuk periode berikutnya
-            dan menghapus transaksi yang sudah lunas dalam rentang tanggal
-            terpilih.
+            dan menghapus transaksi yang sudah lunas sampai tanggal terpilih.
           </p>
         </div>
 
@@ -97,22 +95,8 @@ export default function CutOffPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="start-date">Tanggal Mulai Periode</Label>
-              <div className="relative">
-                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="start-date"
-                  type="date"
-                  className="pl-10"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="end-date">Tanggal Akhir Periode</Label>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="end-date">Tanggal Cut-Off</Label>
               <div className="relative">
                 <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -133,7 +117,7 @@ export default function CutOffPage() {
               <Button
                 variant="destructive"
                 size="lg"
-                disabled={!startDate || !endDate || isLoading}
+                disabled={!endDate || isLoading}
                 className="font-semibold shadow-lg shadow-destructive/20"
               >
                 {isLoading ? "Memproses..." : "Jalankan Proses Cut-Off"}
@@ -146,8 +130,8 @@ export default function CutOffPage() {
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                   Proses ini akan memodifikasi data stok dan menghapus transaksi
-                  lunas dari tanggal {startDate} sampai {endDate}. Data yang
-                  dihapus tidak dapat dikembalikan tanpa backup.
+                  lunas sampai tanggal {endDate}. Data yang dihapus tidak dapat
+                  dikembalikan tanpa backup.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

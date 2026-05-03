@@ -4,14 +4,13 @@ import { withErrorHandler } from "@/lib/withErrorHandler";
 import { AppError } from "@/lib/errors";
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const { startDate, endDate } = await request.json();
+  const { endDate } = await request.json();
 
-  if (!startDate || !endDate) {
-    throw new AppError("Start date and end date are required", 400);
+  if (!endDate) {
+    throw new AppError("End date is required", 400);
   }
 
   await systemService.performYearlyCutoff(
-    new Date(startDate),
     new Date(endDate),
   );
 

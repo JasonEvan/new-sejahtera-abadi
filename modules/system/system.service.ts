@@ -2,16 +2,14 @@ import db from "@/lib/drizzle";
 import { systemRepository } from "./system.repository";
 
 export const systemService = {
-  async performYearlyCutoff(startDate: Date, endDate: Date) {
+  async performYearlyCutoff(endDate: Date) {
     return db.transaction(async (tx) => {
       // 1. Fetch paid sales orders and purchase orders
       const salesToDelete = await systemRepository.getPaidSalesOrders(
-        startDate,
         endDate,
         tx,
       );
       const purchasesToDelete = await systemRepository.getPaidPurchaseOrders(
-        startDate,
         endDate,
         tx,
       );

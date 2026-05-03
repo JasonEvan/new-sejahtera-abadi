@@ -12,7 +12,7 @@ import {
   stocks,
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, eq, inArray, lte, sql } from "drizzle-orm";
 import { Tx } from "@/lib/common-types";
 
 export const systemRepository = {
@@ -149,28 +149,26 @@ export const systemRepository = {
     );
   },
 
-  async getPaidSalesOrders(startDate: Date, endDate: Date, tx?: Tx) {
+  async getPaidSalesOrders(endDate: Date, tx?: Tx) {
     const database = tx ?? db;
     return database
       .select({ id: sales_orders.id })
       .from(sales_orders)
       .where(
         and(
-          gte(sales_orders.invoice_date, startDate),
           lte(sales_orders.invoice_date, endDate),
           eq(sales_orders.balance_due, 0),
         ),
       );
   },
 
-  async getPaidPurchaseOrders(startDate: Date, endDate: Date, tx?: Tx) {
+  async getPaidPurchaseOrders(endDate: Date, tx?: Tx) {
     const database = tx ?? db;
     return database
       .select({ id: purchase_orders.id })
       .from(purchase_orders)
       .where(
         and(
-          gte(purchase_orders.invoice_date, startDate),
           lte(purchase_orders.invoice_date, endDate),
           eq(purchase_orders.balance_due, 0),
         ),
