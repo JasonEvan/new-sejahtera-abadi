@@ -57,6 +57,13 @@
       "when": 1777713699230,
       "tag": "0007_tiresome_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777790988776,
+      "tag": "0008_opposite_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }
