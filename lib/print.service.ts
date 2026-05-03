@@ -284,7 +284,10 @@ export const printService = {
         width: 10,
         gapAfter: 2,
         align: "right",
-        getValue: (_, index) => String(index + 1),
+        getValue: (row, index) => {
+          if (row.name === "SALDO AWAL" || row.name === "TOTAL QTY") return "";
+          return String(index);
+        },
       },
       {
         header: "Nomor Nota",
@@ -340,7 +343,10 @@ export const printService = {
         width: 10,
         gapAfter: 2,
         align: "right",
-        getValue: (_, index) => String(index + 1),
+        getValue: (row, index) => {
+          if (row.invoice_number === "TOTAL") return "";
+          return String(index + 1);
+        },
       },
       { header: "Nama", width: 35, getValue: (row) => row.name },
       { header: "Kota", width: 22, getValue: (row) => row.city },
@@ -393,7 +399,10 @@ export const printService = {
         width: 10,
         gapAfter: 2,
         align: "right",
-        getValue: (_, index) => String(index + 1),
+        getValue: (row, index) => {
+          if (row.invoice_number === "TOTAL") return "";
+          return String(index + 1);
+        },
       },
       {
         header: "Nomor Nota",
@@ -446,7 +455,10 @@ export const printService = {
         width: 10,
         gapAfter: 2,
         align: "right",
-        getValue: (_, index) => String(index + 1),
+        getValue: (row, index) => {
+          if (row.invoice_number === "TOTAL") return "";
+          return String(index + 1);
+        },
       },
       { header: "Nama", width: 35, getValue: (row) => row.name },
       { header: "Kota", width: 22, getValue: (row) => row.city },
@@ -499,7 +511,10 @@ export const printService = {
         width: 10,
         gapAfter: 2,
         align: "right",
-        getValue: (_, index) => String(index + 1),
+        getValue: (row, index) => {
+          if (row.invoice_number === "TOTAL") return "";
+          return String(index + 1);
+        },
       },
       {
         header: "Nomor Nota",
