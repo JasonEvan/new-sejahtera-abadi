@@ -81,24 +81,21 @@ describe("purchaseReturnRepository", () => {
     expect(orderBy).toHaveBeenCalledTimes(1);
   });
 
-  it("getEditPurchaseReturnDetailByInvoice returns null when header is missing", async () => {
+  it("getEditPurchaseReturnDetailById returns null when header is missing", async () => {
     const limit = jest.fn().mockResolvedValue([]);
-    const orderBy = jest.fn().mockReturnValue({ limit });
-    const where = jest.fn().mockReturnValue({ orderBy });
+    const where = jest.fn().mockReturnValue({ limit });
     const innerJoin = jest.fn().mockReturnValue({ where });
     const from = jest.fn().mockReturnValue({ innerJoin });
     mockedDb.select.mockReturnValueOnce({ from });
 
     const result =
-      await purchaseReturnRepository.getEditPurchaseReturnDetailByInvoice(
-        "PB-404",
-      );
+      await purchaseReturnRepository.getEditPurchaseReturnDetailById(404);
 
     expect(result).toBeNull();
     expect(mockedDb.select).toHaveBeenCalledTimes(1);
   });
 
-  it("getEditPurchaseReturnDetailByInvoice maps header, lines and meta", async () => {
+  it("getEditPurchaseReturnDetailById maps header, lines and meta", async () => {
     const groupBy = jest.fn().mockResolvedValue([
       {
         id: 5,
@@ -134,8 +131,7 @@ describe("purchaseReturnRepository", () => {
         total: 40000,
       },
     ]);
-    const orderBy = jest.fn().mockReturnValue({ limit });
-    const where1 = jest.fn().mockReturnValue({ orderBy });
+    const where1 = jest.fn().mockReturnValue({ limit });
     const innerJoin = jest.fn().mockReturnValue({ where: where1 });
     const from1 = jest.fn().mockReturnValue({ innerJoin });
 
@@ -144,9 +140,7 @@ describe("purchaseReturnRepository", () => {
       .mockReturnValueOnce({ from: from2 });
 
     const result =
-      await purchaseReturnRepository.getEditPurchaseReturnDetailByInvoice(
-        "PB-90",
-      );
+      await purchaseReturnRepository.getEditPurchaseReturnDetailById(90);
 
     expect(result).toEqual({
       transaction_information: {

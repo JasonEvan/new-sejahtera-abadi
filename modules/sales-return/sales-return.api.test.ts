@@ -32,23 +32,23 @@ describe("sales-return.api", () => {
     expect(result).toEqual(apiData);
   });
 
-  it("getEditSaleReturnDetail encodes invoice number", async () => {
+  it("getEditSaleReturnDetail uses return_id query", async () => {
     const apiData = {
       data: { transaction_information: {}, lines: [], meta: {} },
     };
     mockedApi.get.mockResolvedValueOnce({ data: apiData } as never);
 
-    const result = await getEditSaleReturnDetail("SJ/2026 #A");
+    const result = await getEditSaleReturnDetail(41);
 
     expect(mockedApi.get).toHaveBeenCalledWith(
-      "/returns/sales?invoice_number=SJ%2F2026%20%23A",
+      "/returns/sales?return_id=41",
     );
     expect(result).toEqual(apiData);
   });
 
   it("updateSaleReturn sends PUT /returns/sales", async () => {
     const payload = {
-      invoice_number: "SJ-22",
+      sales_return_id: 22,
       return_date: "2026-04-14",
       lines: [{ sales_order_line_id: 10, return_qty: 2 }],
     };
@@ -66,7 +66,7 @@ describe("sales-return.api", () => {
 
     await expect(
       updateSaleReturn({
-        invoice_number: "SJ-1",
+        sales_return_id: 1,
         return_date: "2026-04-14",
         lines: [],
       }),

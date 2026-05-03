@@ -81,22 +81,21 @@ describe("salesReturnRepository", () => {
     expect(orderBy).toHaveBeenCalledTimes(1);
   });
 
-  it("getEditSaleReturnDetailByInvoice returns null when header is missing", async () => {
+  it("getEditSaleReturnDetailById returns null when header is missing", async () => {
     const limit = jest.fn().mockResolvedValue([]);
-    const orderBy = jest.fn().mockReturnValue({ limit });
-    const where = jest.fn().mockReturnValue({ orderBy });
+    const where = jest.fn().mockReturnValue({ limit });
     const innerJoin = jest.fn().mockReturnValue({ where });
     const from = jest.fn().mockReturnValue({ innerJoin });
     mockedDb.select.mockReturnValueOnce({ from });
 
     const result =
-      await salesReturnRepository.getEditSaleReturnDetailByInvoice("SJ-404");
+      await salesReturnRepository.getEditSaleReturnDetailById(404);
 
     expect(result).toBeNull();
     expect(mockedDb.select).toHaveBeenCalledTimes(1);
   });
 
-  it("getEditSaleReturnDetailByInvoice maps header, lines and meta", async () => {
+  it("getEditSaleReturnDetailById maps header, lines and meta", async () => {
     const groupBy = jest.fn().mockResolvedValue([
       {
         id: 5,
@@ -132,8 +131,7 @@ describe("salesReturnRepository", () => {
         total: 42000,
       },
     ]);
-    const orderBy = jest.fn().mockReturnValue({ limit });
-    const where1 = jest.fn().mockReturnValue({ orderBy });
+    const where1 = jest.fn().mockReturnValue({ limit });
     const innerJoin = jest.fn().mockReturnValue({ where: where1 });
     const from1 = jest.fn().mockReturnValue({ innerJoin });
 
@@ -142,7 +140,7 @@ describe("salesReturnRepository", () => {
       .mockReturnValueOnce({ from: from2 });
 
     const result =
-      await salesReturnRepository.getEditSaleReturnDetailByInvoice("SJ-77");
+      await salesReturnRepository.getEditSaleReturnDetailById(77);
 
     expect(result).toEqual({
       transaction_information: {

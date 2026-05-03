@@ -27,6 +27,17 @@ export const purchaseReturnRepository = {
       .returning({ id: purchase_returns.id });
   },
 
+  async hasReturnForPurchaseOrder(purchaseOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    const [row] = await database
+      .select({ id: purchase_returns.id })
+      .from(purchase_returns)
+      .where(eq(purchase_returns.purchase_order_id, purchaseOrderId))
+      .limit(1);
+
+    return !!row;
+  },
+
   getById(id: number, tx?: Tx) {
     const database = tx ?? db;
     return database

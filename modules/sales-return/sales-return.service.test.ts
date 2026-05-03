@@ -17,12 +17,12 @@ jest.mock("@/lib/drizzle", () => ({
 
 jest.mock("./sales-return.repository", () => ({
   salesReturnRepository: {
-    hasReturnForSalesOrder: jest.fn(),
     createSalesReturn: jest.fn(),
     getUnpaidReturnedInvoices: jest.fn(),
-    getEditSaleReturnDetailByInvoice: jest.fn(),
-    getBySalesOrderId: jest.fn(),
-    deleteBySalesOrderId: jest.fn(),
+    getEditSaleReturnDetailById: jest.fn(),
+    getById: jest.fn(),
+    deleteById: jest.fn(),
+    getReturnHistoryBySalesOrderId: jest.fn(),
   },
 }));
 
@@ -56,7 +56,7 @@ jest.mock("../sale/sale-order.repository", () => ({
     getDiscountById: jest.fn(),
     getInvoiceValueById: jest.fn(),
     updateInvoiceValue: jest.fn(),
-    getByInvoiceNumber: jest.fn(),
+    getById: jest.fn(),
   },
 }));
 
@@ -102,26 +102,7 @@ describe("sales-return.service", () => {
     );
   });
 
-  it("createSalesReturn throws when return already exists for invoice", async () => {
-    mockedReturnRepo.hasReturnForSalesOrder.mockResolvedValueOnce(
-      true as never,
-    );
-
-    await expect(
-      salesReturnService.createSalesReturn(createPayload),
-    ).rejects.toEqual(
-      expect.objectContaining({
-        message:
-          "Retur penjualan untuk nota ini sudah ada, gunakan menu edit retur",
-        statusCode: 400,
-      }) as AppError,
-    );
-  });
-
   it("createSalesReturn throws when insert result is empty", async () => {
-    mockedReturnRepo.hasReturnForSalesOrder.mockResolvedValueOnce(
-      false as never,
-    );
     mockedReturnRepo.createSalesReturn.mockResolvedValueOnce([] as never);
 
     await expect(
@@ -135,9 +116,6 @@ describe("sales-return.service", () => {
   });
 
   it("createSalesReturn throws when line detail cannot be found", async () => {
-    mockedReturnRepo.hasReturnForSalesOrder.mockResolvedValueOnce(
-      false as never,
-    );
     mockedReturnRepo.createSalesReturn.mockResolvedValueOnce([
       { id: 10 },
     ] as never);
@@ -154,9 +132,6 @@ describe("sales-return.service", () => {
   });
 
   it("createSalesReturn runs full create flow and updates receivable delta", async () => {
-    mockedReturnRepo.hasReturnForSalesOrder.mockResolvedValueOnce(
-      false as never,
-    );
     mockedReturnRepo.createSalesReturn.mockResolvedValueOnce([
       { id: 99 },
     ] as never);
@@ -212,75 +187,27 @@ describe("sales-return.service", () => {
     ).resolves.toEqual([{ id: 1, invoice_number: "SJ-1" }]);
   });
 
-  it("getEditSaleReturnDetail throws when invoice is missing", async () => {
-    mockedReturnRepo.getEditSaleReturnDetailByInvoice.mockResolvedValueOnce(
+  it("getEditSaleReturnDetail throws when return is missing", async () => {
+    mockedReturnRepo.getEditSaleReturnDetailById.mockResolvedValueOnce(
       null as never,
     );
 
     await expect(
-      salesReturnService.getEditSaleReturnDetail("SJ-404"),
+      salesReturnService.getEditSaleReturnDetail(404),
     ).rejects.toEqual(
       expect.objectContaining({
-        message: "Invoice retur tidak ditemukan",
+        message: "Data retur tidak ditemukan",
         statusCode: 404,
       }) as AppError,
     );
   });
 
-  it("updateSaleReturn throws when invoice is not found", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce(
-      undefined as never,
-    );
+  it("updateSaleReturn throws when return is not found", async () => {
+    mockedReturnRepo.getById.mockResolvedValueOnce([] as never);
 
     await expect(
       salesReturnService.updateSaleReturn({
-        invoice_number: " sj-10 ",
-        return_date: "2026-04-14",
-        lines: [],
-      }),
-    ).rejects.toEqual(
-      expect.objectContaining({
-        message: "Invoice not found",
-        statusCode: 404,
-      }) as AppError,
-    );
-
-    expect(mockedOrderRepo.getByInvoiceNumber).toHaveBeenCalledWith(
-      "SJ-10",
-      tx,
-    );
-  });
-
-  it("updateSaleReturn throws when invoice already has payment", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
-      id: 5,
-      paid_amount: 1,
-    } as never);
-
-    await expect(
-      salesReturnService.updateSaleReturn({
-        invoice_number: "SJ-5",
-        return_date: "2026-04-14",
-        lines: [],
-      }),
-    ).rejects.toEqual(
-      expect.objectContaining({
-        message: "Retur tidak bisa diedit karena nota sudah dibayar",
-        statusCode: 400,
-      }) as AppError,
-    );
-  });
-
-  it("updateSaleReturn throws when existing return rows are missing", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
-      id: 5,
-      paid_amount: 0,
-    } as never);
-    mockedReturnRepo.getBySalesOrderId.mockResolvedValueOnce([] as never);
-
-    await expect(
-      salesReturnService.updateSaleReturn({
-        invoice_number: "SJ-5",
+        sales_return_id: 10,
         return_date: "2026-04-14",
         lines: [],
       }),
@@ -292,16 +219,61 @@ describe("sales-return.service", () => {
     );
   });
 
+  it("updateSaleReturn throws when invoice is not found", async () => {
+    mockedReturnRepo.getById.mockResolvedValueOnce([
+      { sales_order_id: 5 },
+    ] as never);
+    mockedOrderRepo.getById.mockResolvedValueOnce(undefined as never);
+
+    await expect(
+      salesReturnService.updateSaleReturn({
+        sales_return_id: 10,
+        return_date: "2026-04-14",
+        lines: [],
+      }),
+    ).rejects.toEqual(
+      expect.objectContaining({
+        message: "Invoice not found",
+        statusCode: 404,
+      }) as AppError,
+    );
+
+    expect(mockedOrderRepo.getById).toHaveBeenCalledWith(5, tx);
+  });
+
+  it("updateSaleReturn throws when invoice already has payment", async () => {
+    mockedReturnRepo.getById.mockResolvedValueOnce([
+      { sales_order_id: 5 },
+    ] as never);
+    mockedOrderRepo.getById.mockResolvedValueOnce({
+      id: 5,
+      paid_amount: 1,
+    } as never);
+
+    await expect(
+      salesReturnService.updateSaleReturn({
+        sales_return_id: 10,
+        return_date: "2026-04-14",
+        lines: [],
+      }),
+    ).rejects.toEqual(
+      expect.objectContaining({
+        message: "Retur tidak bisa diedit karena nota sudah dibayar",
+        statusCode: 400,
+      }) as AppError,
+    );
+  });
+
   it("updateSaleReturn throws when line does not belong to selected invoice", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
+    mockedReturnRepo.getById.mockResolvedValueOnce([
+      { sales_order_id: 6 },
+    ] as never);
+    mockedOrderRepo.getById.mockResolvedValueOnce({
       id: 6,
       client_id: 1,
       invoice_value: 50000,
       paid_amount: 0,
     } as never);
-    mockedReturnRepo.getBySalesOrderId.mockResolvedValueOnce([
-      { id: 1 },
-    ] as never);
     mockedReturnLineRepo.getBySalesReturnIds.mockResolvedValueOnce([] as never);
     mockedOrderLineRepo.getBySalesOrderId.mockResolvedValueOnce([
       { id: 100, qty: 3 },
@@ -309,7 +281,7 @@ describe("sales-return.service", () => {
 
     await expect(
       salesReturnService.updateSaleReturn({
-        invoice_number: "SJ-6",
+        sales_return_id: 10,
         return_date: "2026-04-14",
         lines: [{ sales_order_line_id: 101, return_qty: 1 }],
       }),
@@ -322,15 +294,15 @@ describe("sales-return.service", () => {
   });
 
   it("updateSaleReturn throws when return qty exceeds current qty", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
+    mockedReturnRepo.getById.mockResolvedValueOnce([
+      { sales_order_id: 6 },
+    ] as never);
+    mockedOrderRepo.getById.mockResolvedValueOnce({
       id: 6,
       client_id: 1,
       invoice_value: 50000,
       paid_amount: 0,
     } as never);
-    mockedReturnRepo.getBySalesOrderId.mockResolvedValueOnce([
-      { id: 1 },
-    ] as never);
     mockedReturnLineRepo.getBySalesReturnIds.mockResolvedValueOnce([] as never);
     mockedOrderLineRepo.getBySalesOrderId.mockResolvedValueOnce([
       { id: 100, qty: 2 },
@@ -338,7 +310,7 @@ describe("sales-return.service", () => {
 
     await expect(
       salesReturnService.updateSaleReturn({
-        invoice_number: "SJ-6",
+        sales_return_id: 10,
         return_date: "2026-04-14",
         lines: [{ sales_order_line_id: 100, return_qty: 5 }],
       }),
@@ -350,46 +322,57 @@ describe("sales-return.service", () => {
     );
   });
 
-  it("updateSaleReturn throws when no positive return rows are selected", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
+  it("updateSaleReturn cancels when all return qty are zero", async () => {
+    mockedReturnRepo.getById.mockResolvedValueOnce([
+      { sales_order_id: 6 },
+    ] as never);
+    mockedOrderRepo.getById.mockResolvedValueOnce({
       id: 6,
       client_id: 1,
       invoice_value: 50000,
       paid_amount: 0,
     } as never);
-    mockedReturnRepo.getBySalesOrderId.mockResolvedValueOnce([
-      { id: 1 },
-    ] as never);
     mockedReturnLineRepo.getBySalesReturnIds.mockResolvedValueOnce([] as never);
     mockedOrderLineRepo.getBySalesOrderId.mockResolvedValueOnce([
       { id: 100, qty: 2 },
     ] as never);
-
-    await expect(
-      salesReturnService.updateSaleReturn({
-        invoice_number: "SJ-6",
-        return_date: "2026-04-14",
-        lines: [{ sales_order_line_id: 100, return_qty: 0 }],
-      }),
-    ).rejects.toEqual(
-      expect.objectContaining({
-        message: "Pilih minimal 1 item untuk diretur",
-        statusCode: 400,
-      }) as AppError,
+    mockedOrderRepo.getDiscountById.mockResolvedValueOnce(10 as never);
+    mockedOrderLineRepo.getSumTotalPriceByOrderId.mockResolvedValueOnce(
+      60000 as never,
     );
+
+    const result = await salesReturnService.updateSaleReturn({
+      sales_return_id: 10,
+      return_date: "2026-04-14",
+      lines: [{ sales_order_line_id: 100, return_qty: 0 }],
+    });
+
+    expect(mockedOrderRepo.updateInvoiceValue).toHaveBeenCalledWith(
+      54000,
+      6,
+      tx,
+    );
+    expect(mockedClientRepo.incReceivableBalance).toHaveBeenCalledWith(
+      1,
+      4000,
+      tx,
+    );
+    expect(result).toEqual({
+      message:
+        "Dokumen retur berhasil dibatalkan karena semua jumlah retur di-nol-kan",
+    });
   });
 
   it("updateSaleReturn runs full edit flow and returns success message", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
+    mockedReturnRepo.getById.mockResolvedValueOnce([
+      { sales_order_id: 10 },
+    ] as never);
+    mockedOrderRepo.getById.mockResolvedValueOnce({
       id: 10,
       client_id: 9,
       invoice_value: 100000,
       paid_amount: 0,
     } as never);
-    mockedReturnRepo.getBySalesOrderId.mockResolvedValueOnce([
-      { id: 50 },
-      { id: 51 },
-    ] as never);
     mockedReturnLineRepo.getBySalesReturnIds.mockResolvedValueOnce([
       { sales_order_line_id: 7, return_qty: 1, stock_id: 3 },
     ] as never);
@@ -408,7 +391,7 @@ describe("sales-return.service", () => {
     );
 
     const result = await salesReturnService.updateSaleReturn({
-      invoice_number: "sj-10",
+      sales_return_id: 50,
       return_date: "2026-04-16",
       lines: [{ sales_order_line_id: 7, return_qty: 2 }],
     });
@@ -421,10 +404,10 @@ describe("sales-return.service", () => {
       mockedStockRepo.bulkDecrementStockAndDecrementQtyIn,
     ).toHaveBeenCalledWith([{ id: 3, quantity: 1 }], tx);
     expect(mockedReturnLineRepo.deleteBySalesReturnIds).toHaveBeenCalledWith(
-      [50, 51],
+      [50],
       tx,
     );
-    expect(mockedReturnRepo.deleteBySalesOrderId).toHaveBeenCalledWith(10, tx);
+    expect(mockedReturnRepo.deleteById).toHaveBeenCalledWith(50, tx);
     expect(mockedReturnLineRepo.createSalesReturnLine).toHaveBeenCalledWith(
       [
         {

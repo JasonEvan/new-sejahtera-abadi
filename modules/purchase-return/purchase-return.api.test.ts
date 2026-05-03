@@ -34,23 +34,23 @@ describe("purchase-return.api", () => {
     expect(result).toEqual(apiData);
   });
 
-  it("getEditPurchaseReturnDetail encodes invoice number", async () => {
+  it("getEditPurchaseReturnDetail uses return_id query", async () => {
     const apiData = {
       data: { transaction_information: {}, lines: [], meta: {} },
     };
     mockedApi.get.mockResolvedValueOnce({ data: apiData } as never);
 
-    const result = await getEditPurchaseReturnDetail("PB/2026 #A");
+    const result = await getEditPurchaseReturnDetail(42);
 
     expect(mockedApi.get).toHaveBeenCalledWith(
-      "/returns/purchases?invoice_number=PB%2F2026%20%23A",
+      "/returns/purchases?return_id=42",
     );
     expect(result).toEqual(apiData);
   });
 
   it("updatePurchaseReturn sends PUT /returns/purchases", async () => {
     const payload = {
-      invoice_number: "PB-77",
+      purchase_return_id: 77,
       return_date: "2026-04-14",
       lines: [{ purchase_order_line_id: 8, return_qty: 3 }],
     };
