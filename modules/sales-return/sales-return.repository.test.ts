@@ -96,14 +96,15 @@ describe("salesReturnRepository", () => {
   });
 
   it("getEditSaleReturnDetailById maps header, lines and meta", async () => {
-    const groupBy = jest.fn().mockResolvedValue([
+    const where2 = jest.fn().mockResolvedValue([
       {
         id: 5,
         stock_id: 2,
         name: "Cable",
         price: 10000,
         qty: 3,
-        return_qty: 1,
+        this_return_qty: 1,
+        all_return_qty: 1,
       },
       {
         id: 6,
@@ -111,12 +112,11 @@ describe("salesReturnRepository", () => {
         name: null,
         price: 5000,
         qty: 2,
-        return_qty: 0,
+        this_return_qty: 0,
+        all_return_qty: 0,
       },
     ]);
-    const where2 = jest.fn().mockReturnValue({ groupBy });
-    const leftJoin3 = jest.fn().mockReturnValue({ where: where2 });
-    const leftJoin2 = jest.fn().mockReturnValue({ leftJoin: leftJoin3 });
+    const leftJoin2 = jest.fn().mockReturnValue({ where: where2 });
     const leftJoin1 = jest.fn().mockReturnValue({ leftJoin: leftJoin2 });
     const from2 = jest.fn().mockReturnValue({ leftJoin: leftJoin1 });
 

@@ -24,11 +24,13 @@ const mockedDb = db as unknown as {
 };
 const mockedUnionAll = unionAll as unknown as jest.Mock;
 
-function selectChainWhere(result: unknown) {
+function selectChainThen(result: unknown) {
   const chain = {
     innerJoin: jest.fn().mockReturnThis(),
     leftJoin: jest.fn().mockReturnThis(),
-    where: jest.fn().mockResolvedValue(result),
+    then: jest.fn((callback: (value: unknown) => unknown) =>
+      Promise.resolve(callback(result)),
+    ),
   };
 
   return {
@@ -43,23 +45,38 @@ describe("report.repository", () => {
 
   it("getDashboardSnapshot maps db metrics to snapshot with delta percentages", async () => {
     mockedDb.select
-      .mockReturnValueOnce(selectChainWhere([{ value: 100 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 50 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 40 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 0 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 70 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 20 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 10 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 3 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 4 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 2 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 1 }]))
-      .mockReturnValueOnce(selectChainWhere([{ value: 6 }]));
+      .mockReturnValueOnce(
+        selectChainThen([
+          {
+            todayRevenue: 100,
+            yesterdayRevenue: 50,
+            openReceivables: 70,
+            todayOpenReceivables: 20,
+            yesterdayOpenReceivables: 10,
+            salesOrdersToday: 4,
+            paidInvoicesThisWeek: 2,
+            pendingReceivables: 1,
+          },
+        ]),
+      )
+      .mockReturnValueOnce(
+        selectChainThen([
+          {
+            todayGrossProfit: 40,
+            yesterdayGrossProfit: 0,
+          },
+        ]),
+      );
 
     mockedDb.execute
-      .mockResolvedValueOnce([{ value: 5 }])
-      .mockResolvedValueOnce([{ value: 2 }])
-      .mockResolvedValueOnce([{ value: 3 }])
+      .mockResolvedValueOnce([{ active_30: 5, active_prev_30: 2 }])
+      .mockResolvedValueOnce([
+        {
+          purchase_orders_today: 1,
+          low_stock_alerts: 2,
+          return_requests_this_month: 3,
+        },
+      ])
       .mockResolvedValueOnce([
         {
           title: "Sale invoice created",
@@ -98,12 +115,16 @@ describe("report.repository", () => {
     const orderBy = jest.fn().mockReturnValue("ordered-result");
     mockedUnionAll.mockReturnValue({ orderBy });
 
+    const chain = {
+      innerJoin: jest.fn().mockReturnValue(undefined),
+      leftJoin: jest.fn().mockReturnValue(undefined),
+      where: jest.fn().mockReturnValue("query"),
+    };
+    chain.innerJoin.mockReturnValue(chain);
+    chain.leftJoin.mockReturnValue(chain);
+
     const queryStub = {
-      from: jest.fn().mockReturnValue({
-        innerJoin: jest.fn().mockReturnThis(),
-        leftJoin: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnValue("query"),
-      }),
+      from: jest.fn().mockReturnValue(chain),
     };
 
     mockedDb.select
@@ -123,9 +144,12 @@ describe("report.repository", () => {
   it("getAllPayables returns ordered query chain", () => {
     const orderBy = jest.fn().mockReturnValue("query-result");
     const groupBy = jest.fn().mockReturnValue({ orderBy });
-    const leftJoin = jest.fn().mockReturnValue({ groupBy });
-    const innerJoin = jest.fn().mockReturnValue({ leftJoin });
-    const from = jest.fn().mockReturnValue({ innerJoin });
+    const chain = {
+      innerJoin: jest.fn().mockReturnValue(undefined),
+      leftJoin: jest.fn().mockReturnValue({ groupBy }),
+    };
+    chain.innerJoin.mockReturnValue(chain);
+    const from = jest.fn().mockReturnValue(chain);
     mockedDb.select.mockReturnValue({ from });
 
     const result = reportRepository.getAllPayables();
