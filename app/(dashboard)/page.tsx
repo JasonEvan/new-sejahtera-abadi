@@ -131,12 +131,16 @@ const operationalStatsConfig = [
 ] as const;
 
 function formatCompactIdr(value: number) {
+  if (value >= 1_000_000_000_000) {
+    return `Rp ${(value / 1_000_000_000_000).toFixed(1)} T`;
+  }
+
   if (value >= 1_000_000_000) {
-    return `Rp ${(value / 1_000_000_000).toFixed(1)}B`;
+    return `Rp ${(value / 1_000_000_000).toFixed(1)} M`;
   }
 
   if (value >= 1_000_000) {
-    return `Rp ${(value / 1_000_000).toFixed(1)}M`;
+    return `Rp ${(value / 1_000_000).toFixed(1)} jt`;
   }
 
   return new Intl.NumberFormat("id-ID", {
