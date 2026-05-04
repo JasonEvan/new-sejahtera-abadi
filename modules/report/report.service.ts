@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { stockRepository } from "../stock/stock.repository";
+import { companyRepository } from "../company/company.repository";
 import { reportRepository } from "./report.repository";
 import {
   AllPayablesTableRow,
@@ -340,7 +341,12 @@ export const reportService = {
   },
 
   async getProfits(month: number, year: number) {
-    const queryResult = await reportRepository.getProfits(month, year);
+    const settings = await companyRepository.getSettings();
+    const queryResult = await reportRepository.getProfits(
+      month,
+      year,
+      settings.timezone,
+    );
     const results = queryResult as unknown as ProfitQueryResult[];
 
     // Grouped by sales_name
