@@ -6,9 +6,12 @@ import { invoiceInformationValidation } from "@/modules/purchase/purchase.valida
 import { usePurchaseStore } from "@/stores/transactions/usePurchaseStore";
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import z from "zod";
+import { toast } from "sonner";
+import { checkInvoiceExistence } from "@/modules/purchase/purchase.api";
+import { Loader2 } from "lucide-react";
 
 type InvoiceInformationFormField = z.infer<typeof invoiceInformationValidation>;
 
@@ -29,12 +32,25 @@ export default function InvoiceInformation() {
     resolver: zodResolver(invoiceInformationValidation),
   });
 
-  const onSubmit = (data: InvoiceInformationFormField) => {
-    usePurchaseStore.getState().setInvoiceInformation({
-      client: data.client,
-      invoice_date: data.invoice_date,
-      invoice_number: data.invoice_number,
-    });
+  const [isChecking, setIsChecking] = useState(false);
+  const onSubmit = async (data: InvoiceInformationFormField) => {
+    setIsChecking(true);
+    try {
+      const response = await checkInvoiceExistence(data.invoice_number);
+      if (response.data.exists) {
+        toast.error("Nomor nota sudah ada. Silakan gunakan nomor lain.");
+      } else {
+        usePurchaseStore.getState().setInvoiceInformation({
+          client: data.client,
+          invoice_date: data.invoice_date,
+          invoice_number: data.invoice_number,
+        });
+      }
+    } catch (error: any) {
+      toast.error("Terjadi kesalahan saat mengecek nomor nota.");
+    } finally {
+      setIsChecking(false);
+    }
   };
 
   const { reset, handleSubmit } = methods;
@@ -95,9 +111,10 @@ export default function InvoiceInformation() {
             </Button>
             <Button
               type="submit"
-              disabled={!!invoiceInformation.client}
+              disabled={!!invoiceInformation.client || isChecking}
               className="cursor-pointer"
             >
+              {isChecking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Next
             </Button>
           </div>

@@ -89,3 +89,10 @@ export async function getLatestSoldItemsByClient(
 
   return response.data;
 }
+
+export async function checkInvoiceExistence(invoiceNumber: string) {
+  const response = await api.get<{ data: { exists: boolean } }>(
+    `/sales?check_existence=${encodeURIComponent(invoiceNumber)}`,
+  );
+  return response.data;
+}

@@ -225,4 +225,8 @@ export const purchaseService = {
       namePrefix,
     );
   },
+
+  checkInvoiceExistence(invoiceNumber: string) {
+    return purchaseOrderRepository.checkInvoiceExistence(invoiceNumber);
+  },
 };

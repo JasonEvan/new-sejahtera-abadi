@@ -231,4 +231,8 @@ export const saleService = {
   getLatestSoldItemsByClient(clientId: number, namePrefix: string) {
     return saleOrderRepository.getLatestSoldItemsByClient(clientId, namePrefix);
   },
+
+  checkInvoiceExistence(invoiceNumber: string) {
+    return saleOrderRepository.checkInvoiceExistence(invoiceNumber);
+  },
 };

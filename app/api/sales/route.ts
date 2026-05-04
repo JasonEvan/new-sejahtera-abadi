@@ -18,6 +18,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     return NextResponse.json({ data });
   }
 
+  const invoiceNumberToCheck =
+    request.nextUrl.searchParams.get("check_existence");
+  if (invoiceNumberToCheck) {
+    const exists =
+      await saleService.checkInvoiceExistence(invoiceNumberToCheck);
+    return NextResponse.json({ data: { exists } });
+  }
+
   const clientId = request.nextUrl.searchParams.get("client_id");
   const isPaidOff = request.nextUrl.searchParams.get("is_paid_off") === "true";
   const forMenu = request.nextUrl.searchParams.get("for_menu") === "true";

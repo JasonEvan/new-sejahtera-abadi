@@ -357,4 +357,14 @@ export const saleOrderRepository = {
       sold_at: item.sold_at.toISOString(),
     }));
   },
+
+  async checkInvoiceExistence(invoiceNumber: string) {
+    const [order] = await db
+      .select({ id: sales_orders.id })
+      .from(sales_orders)
+      .where(eq(sales_orders.invoice_number, invoiceNumber))
+      .limit(1);
+
+    return !!order;
+  },
 };

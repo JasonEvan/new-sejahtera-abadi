@@ -360,4 +360,14 @@ export const purchaseOrderRepository = {
       bought_at: item.bought_at.toISOString(),
     }));
   },
+
+  async checkInvoiceExistence(invoiceNumber: string) {
+    const [order] = await db
+      .select({ id: purchase_orders.id })
+      .from(purchase_orders)
+      .where(eq(purchase_orders.invoice_number, invoiceNumber))
+      .limit(1);
+
+    return !!order;
+  },
 };
