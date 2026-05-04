@@ -64,7 +64,9 @@ export const invoiceMetaValidation = z
   .refine(
     (data) =>
       data.total ===
-      data.invoice_value - (data.discount * data.invoice_value) / 100,
+      Math.round(
+        data.invoice_value - (data.discount * data.invoice_value) / 100,
+      ),
     {
       error: "Total tidak sesuai dengan nilai faktur dan diskon",
       path: ["total"],
@@ -132,8 +134,9 @@ export const backendSaleValidation = z
     }
 
     // Validasi total setelah diskon
-    const expectedTotal =
-      data.invoice_value - (data.discount * data.invoice_value) / 100;
+    const expectedTotal = Math.round(
+      data.invoice_value - (data.discount * data.invoice_value) / 100,
+    );
     if (data.total !== expectedTotal) {
       ctx.addIssue({
         code: "custom",
@@ -193,8 +196,9 @@ export const backendEditSaleValidation = z
       });
     }
 
-    const expectedTotal =
-      data.invoice_value - (data.discount * data.invoice_value) / 100;
+    const expectedTotal = Math.round(
+      data.invoice_value - (data.discount * data.invoice_value) / 100,
+    );
     if (data.total !== expectedTotal) {
       ctx.addIssue({
         code: "custom",
