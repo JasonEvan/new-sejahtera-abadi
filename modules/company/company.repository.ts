@@ -13,6 +13,7 @@ export const companyRepository = {
         .values({
           name: "Sejahtera Abadi",
           address: "",
+          timezone: "Asia/Jakarta",
         })
         .returning();
       return newSettings;

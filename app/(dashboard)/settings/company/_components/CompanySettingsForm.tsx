@@ -30,6 +30,7 @@ export default function CompanySettingsForm() {
     defaultValues: {
       name: "",
       address: "",
+      timezone: "Asia/Jakarta",
     },
   });
 
@@ -38,6 +39,7 @@ export default function CompanySettingsForm() {
       reset({
         name: settings.name,
         address: settings.address,
+        timezone: settings.timezone,
       });
     }
   }, [settings, reset]);
@@ -80,6 +82,21 @@ export default function CompanySettingsForm() {
             />
             {errors.address && (
               <FieldError>{errors.address.message}</FieldError>
+            )}
+          </Field>
+
+          <Field>
+            <FieldLabel>Zona Waktu</FieldLabel>
+            <select
+              {...register("timezone")}
+              className="flex h-12 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all focus:ring-primary/20"
+            >
+              <option value="Asia/Jakarta">Asia/Jakarta (WIB)</option>
+              <option value="Asia/Makassar">Asia/Makassar (WITA)</option>
+              <option value="Asia/Jayapura">Asia/Jayapura (WIT)</option>
+            </select>
+            {errors.timezone && (
+              <FieldError>{errors.timezone.message}</FieldError>
             )}
           </Field>
 

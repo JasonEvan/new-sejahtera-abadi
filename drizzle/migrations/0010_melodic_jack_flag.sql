@@ -1,0 +1,1 @@
+ALTER TABLE "company_settings" ADD COLUMN "timezone" varchar(50) DEFAULT 'Asia/Jakarta' NOT NULL;

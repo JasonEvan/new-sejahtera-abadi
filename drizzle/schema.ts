@@ -184,6 +184,7 @@ export const company_settings = pgTable("company_settings", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().default("Sejahtera Abadi"),
   address: varchar("address", { length: 500 }).notNull().default(""),
+  timezone: varchar("timezone", { length: 50 }).notNull().default("Asia/Jakarta"),
 });
 
 // ==========================================
