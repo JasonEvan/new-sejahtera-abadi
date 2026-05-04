@@ -366,6 +366,7 @@ export const reportService = {
 
     const tableRows: ProfitTableRow[] = [];
     let grandTotalProfit = 0;
+    let grandTotalValue = 0;
     Object.keys(formattedResults).forEach((salesName) => {
       tableRows.push({
         invoice_number: salesName,
@@ -392,6 +393,7 @@ export const reportService = {
         });
       });
       grandTotalProfit += totalInvoiceProfit;
+      grandTotalValue += totalInvoiceValue;
 
       tableRows.push({
         invoice_number: "TOTAL",
@@ -417,7 +419,7 @@ export const reportService = {
       invoice_date: "GRAND TOTAL",
       client_name: "",
       client_city: "",
-      invoice_value: null,
+      invoice_value: grandTotalValue,
       invoice_profit: grandTotalProfit,
     });
 
