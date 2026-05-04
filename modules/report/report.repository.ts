@@ -17,9 +17,15 @@ import db from "@/lib/drizzle";
 import { and, asc, eq, gte, lte, max, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 import { Tx } from "@/lib/common-types";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export const reportRepository = {
-  async getDashboardSnapshot() {
+  async getDashboardSnapshot(timezone: string = "Asia/Jakarta") {
     /**
      * REFACTOR NOTE:
      * We have consolidated 16 queries into 5 optimized database calls to prevent connection pool exhaustion.
@@ -38,11 +44,11 @@ export const reportRepository = {
       db
         .select({
           todayRevenue:
-            sql<number>`COALESCE(SUM(${sales_orders.invoice_value}) FILTER (WHERE DATE(${sales_orders.invoice_date}) = CURRENT_DATE), 0)`.mapWith(
+            sql<number>`COALESCE(SUM(${sales_orders.invoice_value}) FILTER (WHERE DATE(${sales_orders.invoice_date} AT TIME ZONE ${timezone}) = (now() AT TIME ZONE ${timezone})::date), 0)`.mapWith(
               Number,
             ),
           yesterdayRevenue:
-            sql<number>`COALESCE(SUM(${sales_orders.invoice_value}) FILTER (WHERE DATE(${sales_orders.invoice_date}) = CURRENT_DATE - INTERVAL '1 day'), 0)`.mapWith(
+            sql<number>`COALESCE(SUM(${sales_orders.invoice_value}) FILTER (WHERE DATE(${sales_orders.invoice_date} AT TIME ZONE ${timezone}) = (now() AT TIME ZONE ${timezone})::date - INTERVAL '1 day'), 0)`.mapWith(
               Number,
             ),
           openReceivables:
@@ -50,19 +56,19 @@ export const reportRepository = {
               Number,
             ),
           todayOpenReceivables:
-            sql<number>`COALESCE(SUM(${sales_orders.balance_due}) FILTER (WHERE ${sales_orders.balance_due} > 0 AND DATE(${sales_orders.invoice_date}) = CURRENT_DATE), 0)`.mapWith(
+            sql<number>`COALESCE(SUM(${sales_orders.balance_due}) FILTER (WHERE ${sales_orders.balance_due} > 0 AND DATE(${sales_orders.invoice_date} AT TIME ZONE ${timezone}) = (now() AT TIME ZONE ${timezone})::date), 0)`.mapWith(
               Number,
             ),
           yesterdayOpenReceivables:
-            sql<number>`COALESCE(SUM(${sales_orders.balance_due}) FILTER (WHERE ${sales_orders.balance_due} > 0 AND DATE(${sales_orders.invoice_date}) = CURRENT_DATE - INTERVAL '1 day'), 0)`.mapWith(
+            sql<number>`COALESCE(SUM(${sales_orders.balance_due}) FILTER (WHERE ${sales_orders.balance_due} > 0 AND DATE(${sales_orders.invoice_date} AT TIME ZONE ${timezone}) = (now() AT TIME ZONE ${timezone})::date - INTERVAL '1 day'), 0)`.mapWith(
               Number,
             ),
           salesOrdersToday:
-            sql<number>`COUNT(*) FILTER (WHERE DATE(${sales_orders.invoice_date}) = CURRENT_DATE)`.mapWith(
+            sql<number>`COUNT(*) FILTER (WHERE DATE(${sales_orders.invoice_date} AT TIME ZONE ${timezone}) = (now() AT TIME ZONE ${timezone})::date)`.mapWith(
               Number,
             ),
           paidInvoicesThisWeek:
-            sql<number>`COUNT(*) FILTER (WHERE ${sales_orders.balance_due} <= 0 AND ${sales_orders.invoice_date} >= date_trunc('week', now()))`.mapWith(
+            sql<number>`COUNT(*) FILTER (WHERE ${sales_orders.balance_due} <= 0 AND ${sales_orders.invoice_date} AT TIME ZONE ${timezone} >= date_trunc('week', now() AT TIME ZONE ${timezone}))`.mapWith(
               Number,
             ),
           pendingReceivables:
@@ -77,11 +83,11 @@ export const reportRepository = {
       db
         .select({
           todayGrossProfit:
-            sql<number>`COALESCE(SUM((${sales_order_lines.price} - COALESCE(${stocks.product_price}, 0)) * ${sales_order_lines.qty}) FILTER (WHERE DATE(${sales_orders.invoice_date}) = CURRENT_DATE), 0)`.mapWith(
+            sql<number>`COALESCE(SUM((${sales_order_lines.price} - COALESCE(${stocks.product_price}, 0)) * ${sales_order_lines.qty}) FILTER (WHERE DATE(${sales_orders.invoice_date} AT TIME ZONE ${timezone}) = (now() AT TIME ZONE ${timezone})::date), 0)`.mapWith(
               Number,
             ),
           yesterdayGrossProfit:
-            sql<number>`COALESCE(SUM((${sales_order_lines.price} - COALESCE(${stocks.product_price}, 0)) * ${sales_order_lines.qty}) FILTER (WHERE DATE(${sales_orders.invoice_date}) = CURRENT_DATE - INTERVAL '1 day'), 0)`.mapWith(
+            sql<number>`COALESCE(SUM((${sales_order_lines.price} - COALESCE(${stocks.product_price}, 0)) * ${sales_order_lines.qty}) FILTER (WHERE DATE(${sales_orders.invoice_date} AT TIME ZONE ${timezone}) = (now() AT TIME ZONE ${timezone})::date - INTERVAL '1 day'), 0)`.mapWith(
               Number,
             ),
         })
@@ -101,19 +107,19 @@ export const reportRepository = {
           SELECT client_id, invoice_date FROM ${purchase_orders}
         )
         SELECT
-          COUNT(DISTINCT client_id) FILTER (WHERE invoice_date >= CURRENT_DATE - INTERVAL '30 days') AS active_30,
-          COUNT(DISTINCT client_id) FILTER (WHERE invoice_date >= CURRENT_DATE - INTERVAL '60 days' AND invoice_date < CURRENT_DATE - INTERVAL '30 days') AS active_prev_30
+          COUNT(DISTINCT client_id) FILTER (WHERE invoice_date AT TIME ZONE ${timezone} >= (now() AT TIME ZONE ${timezone}) - INTERVAL '30 days') AS active_30,
+          COUNT(DISTINCT client_id) FILTER (WHERE invoice_date AT TIME ZONE ${timezone} >= (now() AT TIME ZONE ${timezone}) - INTERVAL '60 days' AND invoice_date AT TIME ZONE ${timezone} < (now() AT TIME ZONE ${timezone}) - INTERVAL '30 days') AS active_prev_30
         FROM activity
       `),
 
       // 4. Other Operational Metrics
       db.execute(sql`
         SELECT
-          (SELECT COUNT(*) FROM ${purchase_orders} WHERE DATE(invoice_date) = CURRENT_DATE)::int AS purchase_orders_today,
+          (SELECT COUNT(*) FROM ${purchase_orders} WHERE DATE(invoice_date AT TIME ZONE ${timezone}) = (now() AT TIME ZONE ${timezone})::date)::int AS purchase_orders_today,
           (SELECT COUNT(*) FROM ${stocks} WHERE ending_stock <= 5)::int AS low_stock_alerts,
           (
-            (SELECT COUNT(*) FROM ${sales_returns} WHERE date_trunc('month', return_date) = date_trunc('month', now())) +
-            (SELECT COUNT(*) FROM ${purchase_returns} WHERE date_trunc('month', return_date) = date_trunc('month', now()))
+            (SELECT COUNT(*) FROM ${sales_returns} WHERE date_trunc('month', return_date AT TIME ZONE ${timezone}) = date_trunc('month', now() AT TIME ZONE ${timezone})) +
+            (SELECT COUNT(*) FROM ${purchase_returns} WHERE date_trunc('month', return_date AT TIME ZONE ${timezone}) = date_trunc('month', now() AT TIME ZONE ${timezone}))
           )::int AS return_requests_this_month
       `),
 
@@ -127,7 +133,7 @@ export const reportRepository = {
             ${sales_orders.invoice_date} AS occurred_at
           FROM ${sales_orders}
           LEFT JOIN ${clients} ON ${sales_orders.client_id} = ${clients.id}
-          WHERE ${sales_orders.invoice_date} >= CURRENT_DATE - INTERVAL '7 days'
+          WHERE ${sales_orders.invoice_date} AT TIME ZONE ${timezone} >= (now() AT TIME ZONE ${timezone}) - INTERVAL '7 days'
 
           UNION ALL
 
@@ -137,7 +143,7 @@ export const reportRepository = {
             ${purchase_orders.invoice_date} AS occurred_at
           FROM ${purchase_orders}
           LEFT JOIN ${clients} ON ${purchase_orders.client_id} = ${clients.id}
-          WHERE ${purchase_orders.invoice_date} >= CURRENT_DATE - INTERVAL '7 days'
+          WHERE ${purchase_orders.invoice_date} AT TIME ZONE ${timezone} >= (now() AT TIME ZONE ${timezone}) - INTERVAL '7 days'
 
           UNION ALL
 
@@ -147,7 +153,7 @@ export const reportRepository = {
             ${sales_payments.payment_date} AS occurred_at
           FROM ${sales_payments}
           INNER JOIN ${sales_orders} ON ${sales_payments.sales_order_id} = ${sales_orders.id}
-          WHERE ${sales_payments.payment_date} >= CURRENT_DATE - INTERVAL '7 days'
+          WHERE ${sales_payments.payment_date} AT TIME ZONE ${timezone} >= (now() AT TIME ZONE ${timezone}) - INTERVAL '7 days'
 
           UNION ALL
 
@@ -157,7 +163,7 @@ export const reportRepository = {
             ${purchase_payments.payment_date} AS occurred_at
           FROM ${purchase_payments}
           INNER JOIN ${purchase_orders} ON ${purchase_payments.purchase_order_id} = ${purchase_orders.id}
-          WHERE ${purchase_payments.payment_date} >= CURRENT_DATE - INTERVAL '7 days'
+          WHERE ${purchase_payments.payment_date} AT TIME ZONE ${timezone} >= (now() AT TIME ZONE ${timezone}) - INTERVAL '7 days'
 
           UNION ALL
 
@@ -168,7 +174,7 @@ export const reportRepository = {
           FROM ${sales_returns}
           INNER JOIN ${sales_orders} ON ${sales_returns.sales_order_id} = ${sales_orders.id}
           LEFT JOIN ${clients} ON ${sales_returns.client_id} = ${clients.id}
-          WHERE ${sales_returns.return_date} >= CURRENT_DATE - INTERVAL '7 days'
+          WHERE ${sales_returns.return_date} AT TIME ZONE ${timezone} >= (now() AT TIME ZONE ${timezone}) - INTERVAL '7 days'
 
           UNION ALL
 
@@ -179,7 +185,7 @@ export const reportRepository = {
           FROM ${purchase_returns}
           INNER JOIN ${purchase_orders} ON ${purchase_returns.purchase_order_id} = ${purchase_orders.id}
           LEFT JOIN ${clients} ON ${purchase_returns.client_id} = ${clients.id}
-          WHERE ${purchase_returns.return_date} >= CURRENT_DATE - INTERVAL '7 days'
+          WHERE ${purchase_returns.return_date} AT TIME ZONE ${timezone} >= (now() AT TIME ZONE ${timezone}) - INTERVAL '7 days'
         ) AS activity
         WHERE activity.occurred_at IS NOT NULL
         ORDER BY activity.occurred_at DESC
@@ -249,9 +255,7 @@ export const reportRepository = {
       recentActivity: (recentActivityRaw as any[]).map((activity) => ({
         title: String(activity.title || ""),
         subtitle: String(activity.subtitle || ""),
-        occurredAt: new Date(
-          String(activity.occurred_at || new Date()),
-        ).toISOString(),
+        occurredAt: dayjs.tz(activity.occurred_at, timezone).toISOString(),
       })),
     };
   },

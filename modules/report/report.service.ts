@@ -15,7 +15,8 @@ import {
 
 export const reportService = {
   async getDashboardSnapshot(): Promise<DashboardSnapshot> {
-    return reportRepository.getDashboardSnapshot();
+    const settings = await companyRepository.getSettings();
+    return reportRepository.getDashboardSnapshot(settings.timezone);
   },
 
   // async getInventoryLedgers(stockId: number) {

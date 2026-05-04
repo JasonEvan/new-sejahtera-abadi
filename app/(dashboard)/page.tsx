@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -21,6 +25,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetDashboardSnapshot } from "@/modules/report/report.queries";
 import { DashboardSnapshot } from "@/modules/report/report.types";
+import { useCompanySettings } from "@/modules/company/company.queries";
+
+dayjs.extend(relativeTime);
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const quickActions = [
   {
@@ -150,14 +159,14 @@ function formatDeltaPercentage(delta: number | null) {
   return `${prefix}${delta.toFixed(1)}% vs previous period`;
 }
 
-function formatRelativeTime(isoDate: string) {
-  const parsed = new Date(isoDate);
-  if (Number.isNaN(parsed.getTime())) {
+function formatRelativeTime(isoDate: string, tz: string = "Asia/Jakarta") {
+  const parsed = dayjs(isoDate).tz(tz);
+  if (!parsed.isValid()) {
     return "Unknown time";
   }
 
-  const now = new Date();
-  const diffMs = now.getTime() - parsed.getTime();
+  const now = dayjs().tz(tz);
+  const diffMs = now.diff(parsed);
   const diffMinutes = Math.floor(diffMs / 60000);
 
   if (diffMinutes < 1) return "just now";
@@ -173,9 +182,12 @@ function formatRelativeTime(isoDate: string) {
 export default function Home() {
   const { data, isLoading, isFetching, isError, refetch } =
     useGetDashboardSnapshot();
+  const { data: settings, isLoading: isLoadingSettings } = useCompanySettings();
 
   const snapshot = data as DashboardSnapshot | undefined;
-  const showSkeleton = isLoading && !snapshot;
+  const showSkeleton = (isLoading || isLoadingSettings) && !snapshot;
+
+  const companyTimezone = settings?.timezone ?? "Asia/Jakarta";
 
   return (
     <div className="relative space-y-6 pb-4">
@@ -396,7 +408,7 @@ export default function Home() {
                       {activity.subtitle}
                     </p>
                     <p className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground/80">
-                      {formatRelativeTime(activity.occurredAt)}
+                      {formatRelativeTime(activity.occurredAt, companyTimezone)}
                     </p>
                   </li>
                 ))
