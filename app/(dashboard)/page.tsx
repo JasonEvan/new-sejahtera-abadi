@@ -175,8 +175,9 @@ function formatRelativeTime(isoDate: string, tz: string = "Asia/Jakarta") {
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) return `${diffHours} hr ago`;
 
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} day ago`;
+  // Count by calendar not by 24 hours
+  const diffDays = now.startOf("day").diff(parsed.startOf("day"), "day");
+  return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
 }
 
 export default function Home() {
