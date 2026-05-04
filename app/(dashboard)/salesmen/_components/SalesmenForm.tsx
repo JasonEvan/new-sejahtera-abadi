@@ -37,7 +37,7 @@ export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
     defaultValues: {
       name: salesman?.name || "",
       front_number: salesman?.front_number ?? undefined,
-      invoice_number: salesman?.invoice_number ?? undefined,
+      invoice_number: salesman ? salesman.invoice_number + 1 : undefined,
       phone_number: salesman?.phone_number ?? undefined,
       sales_code: salesman?.sales_code || "",
     },
@@ -53,7 +53,10 @@ export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
     if (isEdit) {
       editSalespersonMutation.mutate({
         id: salesman.id,
-        data: data as EditSalesperson,
+        data: {
+          ...data,
+          invoice_number: data.invoice_number ? data.invoice_number - 1 : 0,
+        } as EditSalesperson,
       });
     } else {
       addSalespersonMutation.mutate(data as InsertSalesperson);

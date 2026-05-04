@@ -63,9 +63,7 @@ export default function InvoiceInformation() {
 
       if (selectedSalesman) {
         const frontNumber = selectedSalesman.front_number;
-        const lastNum = (selectedSalesman.invoice_number + 1)
-          .toString()
-          .padStart(5, "0");
+        const lastNum = selectedSalesman.invoice_number + 1;
         setValue("invoice_number", `${frontNumber}${lastNum}`, {
           shouldValidate: true,
         });

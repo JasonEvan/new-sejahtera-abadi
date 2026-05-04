@@ -50,9 +50,19 @@ export const useColumns = () => {
         header: "Nama",
       }),
 
-      columnHelper.accessor("invoice_number", {
+      columnHelper.display({
+        id: "invoice_number",
         header: () => <div className="text-right">Nomor Nota</div>,
-        cell: (info) => <div className="text-right">{info.getValue()}</div>,
+        cell: ({ row }) => {
+          const frontNumber = row.original.front_number;
+          const nextInvoiceNumber = row.original.invoice_number + 1;
+          return (
+            <div className="text-right">
+              {frontNumber}
+              {nextInvoiceNumber}
+            </div>
+          );
+        },
       }),
 
       columnHelper.accessor("phone_number", {
