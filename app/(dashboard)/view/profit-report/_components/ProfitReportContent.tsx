@@ -57,7 +57,7 @@ export default function ProfitReportContent() {
       });
       return;
     }
-    setParams({ ...data, month: data.month - 1 }); // Sesuaikan bulan untuk query (0-11)
+    setParams({ ...data, month: data.month }); // Backend expects 1-12 for EXTRACT(MONTH FROM ...)
   };
 
   useEffect(() => {

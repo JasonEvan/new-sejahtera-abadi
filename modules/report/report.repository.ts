@@ -644,8 +644,8 @@ export const reportRepository = {
     LEFT JOIN
       ${clients} c ON so.client_id = c.id
     WHERE
-      EXTRACT(YEAR FROM so.invoice_date) = ${year} 
-      AND EXTRACT(MONTH FROM so.invoice_date) = ${month}
+      EXTRACT(YEAR FROM so.invoice_date AT TIME ZONE 'Asia/Jakarta') = ${year} 
+      AND EXTRACT(MONTH FROM so.invoice_date AT TIME ZONE 'Asia/Jakarta') = ${month}
       AND cogs.sales_name IS NOT NULL
     ORDER BY
       cogs.sales_name, so.invoice_date;
