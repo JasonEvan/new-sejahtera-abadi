@@ -55,11 +55,11 @@ export const useColumns = () => {
         header: () => <div className="text-right">Nomor Nota</div>,
         cell: ({ row }) => {
           const frontNumber = row.original.front_number;
-          const nextInvoiceNumber = row.original.invoice_number + 1;
+          const invoiceNumber = row.original.invoice_number;
           return (
             <div className="text-right">
               {frontNumber}
-              {nextInvoiceNumber}
+              {invoiceNumber}
             </div>
           );
         },

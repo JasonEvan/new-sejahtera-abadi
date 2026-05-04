@@ -22,7 +22,7 @@ export const salespersonRepository = {
   },
 
   addSalesperson(data: InsertSalesperson) {
-    return db.insert(salespersons).values({ ...data, invoice_number: 0 });
+    return db.insert(salespersons).values({ ...data, invoice_number: 1 });
   },
 
   updateSalesperson(id: number, data: EditSalesperson) {
