@@ -179,6 +179,13 @@ export const salespersons = pgTable("salespersons", {
   sales_code: varchar("sales_code", { length: 20 }).notNull(),
 });
 
+// --- Company Settings Table ---
+export const company_settings = pgTable("company_settings", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull().default("Sejahtera Abadi"),
+  address: varchar("address", { length: 500 }).notNull().default(""),
+});
+
 // ==========================================
 // SALES MODULE
 // ==========================================

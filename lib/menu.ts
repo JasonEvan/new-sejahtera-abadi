@@ -197,8 +197,13 @@ export const sidebarItems: SidebarItem[] = [
   {
     title: "Settings",
     icon: Settings,
-    permission: ["user.view", "role.view"],
+    permission: ["user.view", "role.view", "company.view"],
     children: [
+      {
+        title: "Company",
+        url: "/settings/company",
+        permission: "company.view",
+      },
       { title: "User", url: "/settings/users", permission: "user.view" },
       { title: "Role", url: "/settings/roles", permission: "role.view" },
     ],

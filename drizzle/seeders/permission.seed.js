@@ -279,6 +279,16 @@ async function seed() {
         display_name: "Edit Izin",
         module: "settings",
       },
+      {
+        name: "company.view",
+        display_name: "Lihat Profil Perusahaan",
+        module: "settings",
+      },
+      {
+        name: "company.update",
+        display_name: "Edit Profil Perusahaan",
+        module: "settings",
+      },
     ];
 
     await db
