@@ -75,7 +75,19 @@ export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
           <Input {...register("name")} placeholder="John Doe" />
           {errors.name && <FieldError>{errors.name.message}</FieldError>}
         </Field>
-        {isEdit ? (
+        <Field>
+          <FieldLabel>Nomor Depan</FieldLabel>
+          <Input
+            type="number"
+            {...register("front_number", { valueAsNumber: true })}
+          />
+          {errors.front_number && (
+            <FieldError>{errors.front_number.message}</FieldError>
+          )}
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-x-2">
+        {isEdit && (
           <Field>
             <FieldLabel>Nomor Nota</FieldLabel>
             <Input
@@ -86,20 +98,7 @@ export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
               <FieldError>{errors.invoice_number.message}</FieldError>
             )}
           </Field>
-        ) : (
-          <Field>
-            <FieldLabel>Nomor Depan</FieldLabel>
-            <Input
-              type="number"
-              {...register("front_number", { valueAsNumber: true })}
-            />
-            {errors.front_number && (
-              <FieldError>{errors.front_number.message}</FieldError>
-            )}
-          </Field>
         )}
-      </div>
-      <div className="grid grid-cols-2 gap-x-2">
         <Field>
           <FieldLabel>Nomor Telepon</FieldLabel>
           <Input {...register("phone_number")} placeholder="089..." />
@@ -107,14 +106,14 @@ export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
             <FieldError>{errors.phone_number.message}</FieldError>
           )}
         </Field>
-        <Field>
-          <FieldLabel>Kode Sales</FieldLabel>
-          <Input {...register("sales_code")} />
-          {errors.sales_code && (
-            <FieldError>{errors.sales_code.message}</FieldError>
-          )}
-        </Field>
       </div>
+      <Field>
+        <FieldLabel>Kode Sales</FieldLabel>
+        <Input {...register("sales_code")} />
+        {errors.sales_code && (
+          <FieldError>{errors.sales_code.message}</FieldError>
+        )}
+      </Field>
     </form>
   );
 }

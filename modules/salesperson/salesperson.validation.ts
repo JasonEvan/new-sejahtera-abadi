@@ -9,6 +9,7 @@ export const addSalespersonValidation = z.object({
 
 export const editSalespersonValidation = z.object({
   name: z.string().nonempty("Nama tidak boleh kosong"),
+  front_number: z.int().min(0, "Front number harus bernilai positif"),
   invoice_number: z.int().min(0, "Invoice number harus bernilai positif"),
   phone_number: z.string().optional(),
   sales_code: z.string().nonempty("Sales code tidak boleh kosong"),
