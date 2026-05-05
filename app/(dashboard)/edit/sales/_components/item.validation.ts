@@ -25,7 +25,7 @@ export const createEditSaleItemValidation = ({
       selling_price: z
         .number()
         .min(0, "Harga harus lebih dari atau sama dengan 0"),
-      quantity: z.int().min(1, "Jumlah harus lebih dari 0"),
+      quantity: z.int().min(0, "Jumlah tidak boleh negatif"),
     })
     .refine(
       (data) => {

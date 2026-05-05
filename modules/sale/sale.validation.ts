@@ -22,7 +22,7 @@ export const createItemValidation = (
   z
     .object({
       stock_id: z.int().min(1, "Pilih produk"),
-      quantity: z.int().min(1, "Jumlah harus lebih dari 1"),
+      quantity: z.int().min(0, "Jumlah tidak boleh negatif"),
       capital_cost: z
         .number()
         .min(0, "Harga pokok harus lebih dari atau sama dengan 0"),
@@ -89,7 +89,7 @@ export const backendSaleValidation = z
         z.object({
           stock_id: z.int().min(1, "Pilih produk"),
           name: z.string().min(1, "Nama produk tidak boleh kosong"),
-          quantity: z.int().min(1, "Jumlah harus lebih dari 1"),
+          quantity: z.int().min(0, "Jumlah tidak boleh negatif"),
           selling_price: z
             .int()
             .min(0, "Harga jual harus lebih dari atau sama dengan 0"),
@@ -154,7 +154,7 @@ export const backendEditSaleValidation = z
         z.object({
           stock_id: z.int().min(1, "Pilih produk"),
           name: z.string().min(1, "Nama produk tidak boleh kosong"),
-          quantity: z.int().min(1, "Jumlah harus lebih dari 1"),
+          quantity: z.int().min(0, "Jumlah tidak boleh negatif"),
           selling_price: z
             .int()
             .min(0, "Harga jual harus lebih dari atau sama dengan 0"),
