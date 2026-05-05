@@ -652,7 +652,7 @@ export const reportRepository = {
       AND EXTRACT(MONTH FROM so.invoice_date AT TIME ZONE ${timezone}) = ${month}
       AND cogs.sales_name IS NOT NULL
     ORDER BY
-      cogs.sales_name, so.invoice_date;
+      cogs.sales_name, so.invoice_number, so.invoice_date;
     `;
 
     return db.execute(query);
