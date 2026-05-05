@@ -5,7 +5,11 @@ import { InsertStock } from "./stock.types";
 import { Tx } from "@/lib/common-types";
 
 type StockQtyItem = { id: number; quantity: number };
-type StockQtyPriceItem = { id: number; quantity: number; product_price?: number };
+type StockQtyPriceItem = {
+  id: number;
+  quantity: number;
+  product_price?: number;
+};
 
 function aggregateStockItems(items: StockQtyItem[]): StockQtyItem[] {
   const aggregated = new Map<number, number>();
@@ -20,7 +24,10 @@ function aggregateStockItems(items: StockQtyItem[]): StockQtyItem[] {
 function aggregateStockItemsWithPrice(
   items: StockQtyPriceItem[],
 ): StockQtyPriceItem[] {
-  const aggregated = new Map<number, { quantity: number; product_price?: number }>();
+  const aggregated = new Map<
+    number,
+    { quantity: number; product_price?: number }
+  >();
 
   for (const item of items) {
     const current = aggregated.get(item.id);
@@ -71,8 +78,14 @@ export const stockRepository = {
     });
   },
 
-  updateStock(id: number, data: InsertStock) {
-    return db.update(stocks).set(data).where(eq(stocks.id, id));
+  updateStock(id: number, data: Partial<InsertStock>) {
+    return db
+      .update(stocks)
+      .set({
+        ...data,
+        ending_stock: sql`${data.initial_stock ?? stocks.initial_stock} + ${stocks.qty_in} - ${stocks.qty_out}`,
+      })
+      .where(eq(stocks.id, id));
   },
 
   deleteStock(id: number) {
@@ -111,7 +124,9 @@ export const stockRepository = {
     const database = tx ?? db;
 
     const values = sql.join(
-      aggregatedItems.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      aggregatedItems.map(
+        (item) => sql`(${item.id}::int, ${item.quantity}::int)`,
+      ),
       sql`, `,
     );
 
@@ -172,7 +187,9 @@ export const stockRepository = {
     const database = tx ?? db;
 
     const values = sql.join(
-      aggregatedItems.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      aggregatedItems.map(
+        (item) => sql`(${item.id}::int, ${item.quantity}::int)`,
+      ),
       sql`, `,
     );
 
@@ -199,7 +216,9 @@ export const stockRepository = {
     const database = tx ?? db;
 
     const values = sql.join(
-      aggregatedItems.map((item) => sql`(${item.id}::int, ${item.quantity}::int)`),
+      aggregatedItems.map(
+        (item) => sql`(${item.id}::int, ${item.quantity}::int)`,
+      ),
       sql`, `,
     );
 

@@ -10,7 +10,7 @@ export const stockService = {
     return stockRepository.addStock(data);
   },
 
-  updateStock(id: number, data: InsertStock) {
+  updateStock(id: number, data: Partial<InsertStock>) {
     return stockRepository.updateStock(id, data);
   },
 
