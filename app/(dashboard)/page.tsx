@@ -401,9 +401,9 @@ export default function Home() {
 
             {!showSkeleton &&
               (snapshot?.recentActivity.length ? (
-                snapshot.recentActivity.map((activity) => (
+                snapshot.recentActivity.map((activity, index) => (
                   <li
-                    key={`${activity.title}-${activity.occurredAt}`}
+                    key={`${activity.title}-${activity.occurredAt}-${index}`}
                     className="rounded-lg border bg-background p-3"
                   >
                     <p className="text-sm font-semibold tracking-tight">
