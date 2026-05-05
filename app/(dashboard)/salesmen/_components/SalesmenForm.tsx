@@ -20,7 +20,7 @@ type BaseSalespersonForm = Omit<InsertSalesperson, "front_number">;
 
 type SalespersonFormField = BaseSalespersonForm & {
   front_number?: number;
-  invoice_number?: number;
+  invoice_number?: string;
 };
 
 export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
@@ -37,7 +37,7 @@ export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
     defaultValues: {
       name: salesman?.name || "",
       front_number: salesman?.front_number ?? undefined,
-      invoice_number: salesman ? salesman.invoice_number : undefined,
+      invoice_number: salesman ? salesman.invoice_number : "",
       phone_number: salesman?.phone_number ?? undefined,
       sales_code: salesman?.sales_code || "",
     },
@@ -53,10 +53,7 @@ export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
     if (isEdit) {
       editSalespersonMutation.mutate({
         id: salesman.id,
-        data: {
-          ...data,
-          invoice_number: data.invoice_number || 1,
-        } as EditSalesperson,
+        data: data as EditSalesperson,
       });
     } else {
       addSalespersonMutation.mutate(data as InsertSalesperson);
@@ -87,18 +84,13 @@ export default function SalesmenForm({ salesman }: { salesman?: Salesperson }) {
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-x-2">
-        {isEdit && (
-          <Field>
-            <FieldLabel>Nomor Nota</FieldLabel>
-            <Input
-              type="number"
-              {...register("invoice_number", { valueAsNumber: true })}
-            />
-            {errors.invoice_number && (
-              <FieldError>{errors.invoice_number.message}</FieldError>
-            )}
-          </Field>
-        )}
+        <Field>
+          <FieldLabel>Nomor Nota</FieldLabel>
+          <Input {...register("invoice_number")} />
+          {errors.invoice_number && (
+            <FieldError>{errors.invoice_number.message}</FieldError>
+          )}
+        </Field>
         <Field>
           <FieldLabel>Nomor Telepon</FieldLabel>
           <Input {...register("phone_number")} placeholder="089..." />

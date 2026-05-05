@@ -174,7 +174,7 @@ export const salespersons = pgTable("salespersons", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).unique().notNull(),
   front_number: integer("front_number").notNull(),
-  invoice_number: integer("invoice_number").notNull(),
+  invoice_number: varchar("invoice_number", { length: 20 }).notNull(),
   phone_number: varchar("phone_number", { length: 20 }),
   sales_code: varchar("sales_code", { length: 20 }).notNull(),
 });

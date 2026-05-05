@@ -22,7 +22,9 @@ export const salespersonRepository = {
   },
 
   addSalesperson(data: InsertSalesperson) {
-    return db.insert(salespersons).values({ ...data, invoice_number: 1 });
+    return db
+      .insert(salespersons)
+      .values({ ...data, invoice_number: data.invoice_number || "1" });
   },
 
   updateSalesperson(id: number, data: EditSalesperson) {
@@ -33,12 +35,26 @@ export const salespersonRepository = {
     return db.delete(salespersons).where(eq(salespersons.id, id));
   },
 
-  incInvoiceNumber(id: number, tx?: Tx) {
+  async incInvoiceNumber(id: number, tx?: Tx) {
     const database = tx ?? db;
+    const [salesperson] = await database
+      .select({ invoice_number: salespersons.invoice_number })
+      .from(salespersons)
+      .where(eq(salespersons.id, id));
+
+    if (!salesperson) return;
+
+    const currentInvoice = salesperson.invoice_number;
+    const originalLength = currentInvoice.length;
+    const nextInvoice = String(Number(currentInvoice) + 1).padStart(
+      originalLength,
+      "0",
+    );
+
     return database
       .update(salespersons)
       .set({
-        invoice_number: sql`${salespersons.invoice_number} + 1`,
+        invoice_number: nextInvoice,
       })
       .where(eq(salespersons.id, id));
   },
