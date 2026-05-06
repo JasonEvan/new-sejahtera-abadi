@@ -71,6 +71,14 @@ export const stockRepository = {
       .orderBy(asc(stocks.name));
   },
 
+  getStockById(id: number) {
+    return db
+      .select()
+      .from(stocks)
+      .where(eq(stocks.id, id))
+      .then((res) => res[0]);
+  },
+
   addStock(data: InsertStock) {
     return db.insert(stocks).values({
       ...data,

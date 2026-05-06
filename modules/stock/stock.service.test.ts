@@ -7,6 +7,7 @@ jest.mock("./stock.repository", () => ({
     addStock: jest.fn(),
     updateStock: jest.fn(),
     deleteStock: jest.fn(),
+    getStockById: jest.fn(),
   },
 }));
 
@@ -58,22 +59,60 @@ describe("stock.service CRUD", () => {
     expect(result).toEqual(expected);
   });
 
-  it("deleteStock should pass id as-is to repository", async () => {
-    const expected = { rowCount: 1 };
-    mockedRepository.deleteStock.mockResolvedValueOnce(expected as never);
+  it("deleteStock should throw error if stock not found", async () => {
+    mockedRepository.getStockById.mockResolvedValueOnce(undefined as never);
 
-    const result = await stockService.deleteStock(2);
+    await expect(stockService.deleteStock(1)).rejects.toThrow(
+      "Data stok tidak ditemukan",
+    );
+  });
 
-    expect(mockedRepository.deleteStock).toHaveBeenCalledTimes(1);
-    expect(mockedRepository.deleteStock).toHaveBeenCalledWith(2);
-    expect(result).toEqual(expected);
+  it("deleteStock should throw error if initial_stock is not 0", async () => {
+    mockedRepository.getStockById.mockResolvedValueOnce({
+      initial_stock: 10,
+      ending_stock: 0,
+      qty_in: 0,
+      qty_out: 0,
+    } as never);
+
+    await expect(stockService.deleteStock(1)).rejects.toThrow(
+      "Stok awal dan stok akhir harus 0",
+    );
+  });
+
+  it("deleteStock should throw error if qty_in is not 0", async () => {
+    mockedRepository.getStockById.mockResolvedValueOnce({
+      initial_stock: 0,
+      ending_stock: 0,
+      qty_in: 5,
+      qty_out: 0,
+    } as never);
+
+    await expect(stockService.deleteStock(1)).rejects.toThrow(
+      "Barang masuk dan barang keluar harus 0",
+    );
+  });
+
+  it("deleteStock should call repository.deleteStock if validation passes", async () => {
+    mockedRepository.getStockById.mockResolvedValueOnce({
+      initial_stock: 0,
+      ending_stock: 0,
+      qty_in: 0,
+      qty_out: 0,
+    } as never);
+    mockedRepository.deleteStock.mockResolvedValueOnce({ rowCount: 1 } as never);
+
+    const result = await stockService.deleteStock(1);
+
+    expect(mockedRepository.deleteStock).toHaveBeenCalledWith(1);
+    expect(result).toEqual({ rowCount: 1 });
   });
 
   it("should propagate repository errors for stock service methods", async () => {
     const err = new Error("db failed");
-    mockedRepository.deleteStock.mockRejectedValueOnce(err);
+    mockedRepository.getAllStocks.mockRejectedValueOnce(err);
 
-    await expect(stockService.deleteStock(99)).rejects.toThrow("db failed");
-    expect(mockedRepository.deleteStock).toHaveBeenCalledTimes(1);
+    await expect(stockService.getAllStocks()).rejects.toThrow("db failed");
+    expect(mockedRepository.getAllStocks).toHaveBeenCalledTimes(1);
   });
 });
