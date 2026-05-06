@@ -1,4 +1,5 @@
 import { stockRepository } from "../stock/stock.repository";
+import { companyRepository } from "../company/company.repository";
 import { reportRepository } from "./report.repository";
 import { reportService } from "./report.service";
 
@@ -20,14 +21,29 @@ jest.mock("../stock/stock.repository", () => ({
   },
 }));
 
+jest.mock("../company/company.repository", () => ({
+  companyRepository: {
+    getSettings: jest.fn(),
+  },
+}));
+
 const mockedReportRepo = reportRepository as jest.Mocked<
   typeof reportRepository
 >;
 const mockedStockRepo = stockRepository as jest.Mocked<typeof stockRepository>;
+const mockedCompanyRepo = companyRepository as jest.Mocked<
+  typeof companyRepository
+>;
 
 describe("report.service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedCompanyRepo.getSettings.mockResolvedValue({
+      id: 1,
+      name: "Test Company",
+      address: "Test Address",
+      timezone: "Asia/Jakarta",
+    });
   });
 
   it("getDashboardSnapshot proxies repository response", async () => {

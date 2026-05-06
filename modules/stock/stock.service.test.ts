@@ -89,7 +89,7 @@ describe("stock.service CRUD", () => {
     } as never);
 
     await expect(stockService.deleteStock(1)).rejects.toThrow(
-      "Barang masuk dan barang keluar harus 0",
+      "Masih ada transaksi dengan barang ini",
     );
   });
 
@@ -100,7 +100,9 @@ describe("stock.service CRUD", () => {
       qty_in: 0,
       qty_out: 0,
     } as never);
-    mockedRepository.deleteStock.mockResolvedValueOnce({ rowCount: 1 } as never);
+    mockedRepository.deleteStock.mockResolvedValueOnce({
+      rowCount: 1,
+    } as never);
 
     const result = await stockService.deleteStock(1);
 
