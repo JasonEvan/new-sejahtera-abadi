@@ -7,29 +7,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import z from "zod";
-import { createEditPurchaseItemValidation } from "./item.validation";
+import { editPurchaseItemSchema } from "./item.validation";
 
-type AddItemFormField = z.infer<
-  ReturnType<typeof createEditPurchaseItemValidation>
->;
+type AddItemFormField = z.infer<typeof editPurchaseItemSchema>;
 
 export default function AddItemForm() {
   const { data: stocks } = useGetStocks();
-  const items = useEditPurchaseStore((state) => state.items);
-  const baseQuantitiesByStock = useEditPurchaseStore(
-    (state) => state.base_quantities_by_stock,
-  );
-
-  const schema = useMemo(
-    () =>
-      createEditPurchaseItemValidation({
-        stocks: stocks || [],
-        items,
-        baseQuantitiesByStock,
-      }),
-    [stocks, items, baseQuantitiesByStock],
-  );
-
   const methods = useForm<AddItemFormField>({
     defaultValues: {
       stock_id: 0,
@@ -38,7 +21,7 @@ export default function AddItemForm() {
     },
     mode: "onBlur",
     reValidateMode: "onChange",
-    resolver: zodResolver(schema),
+    resolver: zodResolver(editPurchaseItemSchema),
   });
 
   const { control, setValue, handleSubmit, reset } = methods;
