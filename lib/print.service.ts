@@ -98,17 +98,38 @@ export const printService = {
     const header = details[0];
 
     pdf.text("SA", 5, y);
-    pdf.text(header.tanggal_nota, 80, y);
-    pdf.text("KEPADA YTH", 105, y);
-    pdf.text(header.nomor_nota, 80, y + 3);
-    pdf.text(header.nama_client, 105, y + 3);
-    pdf.text(header.kode_sales, 80, y + 6);
+    const clientInfoX = 135; // Target right margin
+    const kepadaYth = "KEPADA YTH";
+    const namaClient = header.nama_client;
     const address = header.alamat_client
       ? `${header.alamat_client}${
           header.kota_client ? ", " + header.kota_client : ""
         }`
       : header.kota_client || "";
-    pdf.text(address, 105, y + 6);
+
+    const maxClientInfoWidth = Math.max(
+      pdf.getTextWidth(kepadaYth),
+      pdf.getTextWidth(namaClient),
+      pdf.getTextWidth(address),
+    );
+
+    const dynamicX = clientInfoX - maxClientInfoWidth;
+
+    // Calculate dynamic x for the left block to prevent overlap
+    const gap = 5;
+    const maxLeftBlockWidth = Math.max(
+      pdf.getTextWidth(header.tanggal_nota),
+      pdf.getTextWidth(header.nomor_nota),
+      pdf.getTextWidth(header.kode_sales),
+    );
+    const leftBlockX = dynamicX - gap - maxLeftBlockWidth;
+
+    pdf.text(header.tanggal_nota, leftBlockX, y);
+    pdf.text(kepadaYth, dynamicX, y);
+    pdf.text(header.nomor_nota, leftBlockX, y + 3);
+    pdf.text(namaClient, dynamicX, y + 3);
+    pdf.text(header.kode_sales, leftBlockX, y + 6);
+    pdf.text(address, dynamicX, y + 6);
 
     return y + 16; // Return new y position after header
   },
