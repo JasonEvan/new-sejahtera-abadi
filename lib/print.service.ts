@@ -213,18 +213,32 @@ export const printService = {
         y += 5;
       }
     });
+    y += 2;
 
-    // Total row
-    pdf.text("TOTAL", colX[4], y);
-    pdf.text(
-      totalText,
-      colX[5] + columnWidths[5] - pdf.getTextWidth(totalText) - 1,
-      y,
-    );
-    y += 10;
+    // Total row and Bottom text
+    const bottomText = `${rupiahToString(parseTotalToNumber(total))} rupiah`;
+    const bottomTextWidth = pdf.getTextWidth(bottomText);
+    const totalLabelX = colX[4];
+    const canBeOnSameLine = 5 + bottomTextWidth + 5 < totalLabelX;
 
-    // Bottom text
-    pdf.text(`${rupiahToString(parseTotalToNumber(total))} rupiah`, 5, y);
+    if (canBeOnSameLine) {
+      pdf.text(bottomText, 5, y);
+      pdf.text("TOTAL", totalLabelX, y);
+      pdf.text(
+        totalText,
+        colX[5] + columnWidths[5] - pdf.getTextWidth(totalText) - 1,
+        y,
+      );
+    } else {
+      pdf.text("TOTAL", totalLabelX, y);
+      pdf.text(
+        totalText,
+        colX[5] + columnWidths[5] - pdf.getTextWidth(totalText) - 1,
+        y,
+      );
+      y += 10;
+      pdf.text(bottomText, 5, y);
+    }
 
     openPdfForPrint(pdf, "nota.pdf");
   },
