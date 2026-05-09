@@ -12,6 +12,7 @@ import { useColumns } from "./columns";
 export default function InvoiceItems() {
   const columns = useColumns();
   const items = useEditPurchaseStore((state) => state.items);
+  const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
   const invoiceInformation = useEditPurchaseStore(
     (state) => state.invoice_information,
   );
@@ -52,7 +53,7 @@ export default function InvoiceItems() {
           Add
         </Button>
       </div>
-      <DataTable columns={columns} data={items} maxHeight="500px" />
+      <DataTable columns={columns} data={sortedItems} maxHeight="500px" />
     </div>
   );
 }
