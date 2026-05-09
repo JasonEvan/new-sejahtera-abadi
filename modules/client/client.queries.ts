@@ -17,7 +17,7 @@ export const useGetClientNames = () => {
     select: (data) =>
       data.data.map((client) => ({
         id: client.id,
-        name: client.city ? `${client.name}/${client.city}` : client.name,
+        name: client.name,
       })),
   });
 };
