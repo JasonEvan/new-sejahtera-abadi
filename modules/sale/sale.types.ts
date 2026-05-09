@@ -45,6 +45,8 @@ export type SalesInvoiceHeader = {
   invoice_value: number;
   client_name: string;
   client_city: string;
+  client_address: string | null;
+  sales_code: string;
 };
 
 export type LatestSoldItem = {

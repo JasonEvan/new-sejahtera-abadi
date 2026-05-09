@@ -212,6 +212,8 @@ export const saleService = {
         invoice_value: header.invoice_value,
         client_name: header.client_name,
         client_city: header.client_city,
+        client_address: header.client_address,
+        sales_code: header.sales_code ?? "",
       } as SalesInvoiceHeader,
       lines: formattedLines,
     };

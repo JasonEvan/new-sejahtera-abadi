@@ -4,6 +4,7 @@ import {
   clients,
   sales_order_lines,
   sales_orders,
+  salespersons,
   stocks,
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
@@ -156,10 +157,21 @@ export const saleOrderRepository = {
         invoice_value: sales_orders.invoice_value,
         client_name: clients.name,
         client_city: clients.city,
+        client_address: clients.address,
+        sales_code: salespersons.sales_code,
       })
       .from(sales_orders)
       .innerJoin(clients, eq(sales_orders.client_id, clients.id))
-      .where(eq(sales_orders.invoice_number, invoiceNumber));
+      .leftJoin(
+        sales_order_lines,
+        eq(sales_orders.id, sales_order_lines.sales_order_id),
+      )
+      .leftJoin(
+        salespersons,
+        eq(sales_order_lines.salesperson_id, salespersons.id),
+      )
+      .where(eq(sales_orders.invoice_number, invoiceNumber))
+      .limit(1);
 
     if (!header)
       return {
