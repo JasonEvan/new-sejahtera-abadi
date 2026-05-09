@@ -87,17 +87,15 @@ export default function AddItemForm() {
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-3"
       >
-        <div className="grid grid-cols-2 gap-x-2">
-          <ComboboxField
-            name="stock_id"
-            label="Nama Barang"
-            items={stocks || []}
-            isInDialog
-          />
-          <InputField name="selling_price" label="Harga" type="number" />
-        </div>
+        <ComboboxField
+          name="stock_id"
+          label="Nama Barang"
+          items={stocks || []}
+          isInDialog
+        />
         <div className="grid grid-cols-2 gap-x-2">
           <InputField name="quantity" label="Jumlah" type="number" />
+          <InputField name="selling_price" label="Harga" type="number" />
         </div>
       </form>
     </FormProvider>
