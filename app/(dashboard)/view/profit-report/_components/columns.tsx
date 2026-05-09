@@ -12,14 +12,18 @@ const isSalesHeader = (row: ProfitTableRow) =>
 const isTotalRow = (row: ProfitTableRow) => row.invoice_number === "TOTAL";
 
 export const columns = [
+  columnHelper.display({
+    id: "number",
+    header: "No.",
+    cell: ({ row }) => row.original.row_number ?? "",
+  }),
+
   columnHelper.accessor("invoice_number", {
     header: "Nomor Nota",
     cell: (info) => {
       const row = info.row.original;
       if (isSalesHeader(row)) {
-        return (
-          <span className="font-bold text-base">{info.getValue()}</span>
-        );
+        return <span className="font-bold text-base">{info.getValue()}</span>;
       }
       if (isTotalRow(row)) {
         return <span className="font-semibold">{info.getValue()}</span>;
@@ -48,7 +52,9 @@ export const columns = [
       const value = info.getValue();
       if (value === null) return "";
       return (
-        <div className={`text-right ${isTotalRow(info.row.original) ? "font-semibold" : ""}`}>
+        <div
+          className={`text-right ${isTotalRow(info.row.original) ? "font-semibold" : ""}`}
+        >
           {value.toLocaleString("id-ID")}
         </div>
       );
@@ -61,7 +67,9 @@ export const columns = [
       const value = info.getValue();
       if (value === null) return "";
       return (
-        <div className={`text-right ${isTotalRow(info.row.original) ? "font-semibold" : ""}`}>
+        <div
+          className={`text-right ${isTotalRow(info.row.original) ? "font-semibold" : ""}`}
+        >
           {value.toLocaleString("id-ID")}
         </div>
       );

@@ -4,6 +4,15 @@ import { createColumnHelper } from "@tanstack/react-table";
 const columnHelper = createColumnHelper<ClientReceivablesTableRow>();
 
 export const columns = [
+  columnHelper.display({
+    id: "number",
+    header: "No.",
+    cell: ({ row }) => {
+      if (row.original.invoice_number === "TOTAL") return "";
+      return row.index + 1;
+    },
+  }),
+
   columnHelper.accessor("invoice_number", {
     header: "Nomor Nota",
   }),

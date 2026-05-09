@@ -1,4 +1,5 @@
 export interface InventoryLedgerTableRow {
+  row_number?: number;
   invoice_number: string | null;
   invoice_date: string | null;
   name: string | null;
@@ -61,6 +62,7 @@ export interface ProfitQueryResult {
 }
 
 export interface ProfitTableRow {
+  row_number?: number;
   invoice_number: string;
   invoice_date: string;
   client_name: string;

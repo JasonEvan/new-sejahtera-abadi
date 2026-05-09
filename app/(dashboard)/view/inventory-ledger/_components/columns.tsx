@@ -4,6 +4,12 @@ import { createColumnHelper } from "@tanstack/react-table";
 const columnHelper = createColumnHelper<InventoryLedgerTableRow>();
 
 export const columns = [
+  columnHelper.display({
+    id: "number",
+    header: "No.",
+    cell: ({ row }) => row.original.row_number ?? "",
+  }),
+
   columnHelper.accessor("invoice_number", {
     header: "Nomor Nota",
   }),

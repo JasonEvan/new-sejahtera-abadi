@@ -34,6 +34,11 @@ export const useColumns = () => {
 
   const columns = useMemo(
     () => [
+      columnHelper.display({
+        id: "number",
+        header: "No.",
+        cell: ({ row }) => row.index + 1,
+      }),
       columnHelper.accessor("name", {
         header: "Nama Barang",
       }),

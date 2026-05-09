@@ -6,8 +6,8 @@ const columnHelper = createColumnHelper<SalesInvoiceRow>();
 
 export const columns = [
   columnHelper.display({
-    id: "no",
-    header: "No",
+    id: "number",
+    header: "No.",
     cell: (info) => info.row.index + 1,
   }),
 

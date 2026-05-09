@@ -56,6 +56,11 @@ export const useRoleColumns = () => {
   const columns: ColumnDef<Role>[] = useMemo(
     () => [
       {
+        id: "number",
+        header: "No.",
+        cell: ({ row }) => row.index + 1,
+      },
+      {
         accessorKey: "name",
         header: "Nama Role",
         cell: ({ row }) => (
