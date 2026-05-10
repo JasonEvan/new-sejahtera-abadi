@@ -260,72 +260,6 @@ export const reportRepository = {
     };
   },
 
-  // getInventoryLedgers(stockId: number) {
-  //   const subquerySales = db
-  //     .select({
-  //       invoice_number: sales_orders.invoice_number,
-  //       invoice_date: sales_orders.invoice_date,
-  //       name: clients.name,
-  //       city: clients.city,
-  //       type: sales_order_lines.type,
-  //       price: sales_order_lines.price,
-  //       qty: sales_order_lines.qty,
-  //       return_qty: sales_return_lines.qty,
-  //       return_date: sales_returns.return_date,
-  //     })
-  //     .from(sales_order_lines)
-  //     .innerJoin(
-  //       sales_orders,
-  //       eq(sales_order_lines.sales_order_id, sales_orders.id),
-  //     )
-  //     .leftJoin(clients, eq(sales_order_lines.client_id, clients.id))
-  //     .leftJoin(
-  //       sales_return_lines,
-  //       eq(sales_order_lines.id, sales_return_lines.sales_order_line_id),
-  //     )
-  //     .leftJoin(
-  //       sales_returns,
-  //       eq(sales_return_lines.sales_return_id, sales_returns.id),
-  //     )
-  //     .where(eq(sales_order_lines.stock_id, stockId));
-
-  //   const subqueryPurchases = db
-  //     .select({
-  //       invoice_number: purchase_orders.invoice_number,
-  //       invoice_date: purchase_orders.invoice_date,
-  //       name: clients.name,
-  //       city: clients.city,
-  //       type: purchase_order_lines.type,
-  //       price: purchase_order_lines.price,
-  //       qty: purchase_order_lines.qty,
-  //       return_qty: purchase_return_lines.qty,
-  //       return_date: purchase_returns.return_date,
-  //     })
-  //     .from(purchase_order_lines)
-  //     .innerJoin(
-  //       purchase_orders,
-  //       eq(purchase_order_lines.purchase_order_id, purchase_orders.id),
-  //     )
-  //     .leftJoin(clients, eq(purchase_order_lines.client_id, clients.id))
-  //     .leftJoin(
-  //       purchase_return_lines,
-  //       eq(
-  //         purchase_order_lines.id,
-  //         purchase_return_lines.purchase_order_line_id,
-  //       ),
-  //     )
-  //     .leftJoin(
-  //       purchase_returns,
-  //       eq(purchase_return_lines.purchase_return_id, purchase_returns.id),
-  //     )
-  //     .where(eq(purchase_order_lines.stock_id, stockId));
-
-  //   return unionAll(subquerySales, subqueryPurchases).orderBy(
-  //     asc(sql`invoice_date`),
-  //     asc(sql`invoice_number`),
-  //   );
-  // },
-
   getInventoryLedgers(
     stockId: number,
     startDate?: Date,
@@ -485,131 +419,171 @@ export const reportRepository = {
   },
 
   getAllPayables() {
+    // PRE-AGGREGATION: Calculate total balance due per client first to avoid Cartesian products
+    const balanceSubquery = db
+      .select({
+        client_id: purchase_orders.client_id,
+        total_balance: sql<number>`SUM(${purchase_orders.balance_due})`.as(
+          "total_balance",
+        ),
+        total_invoice_value: sql<number>`SUM(${purchase_orders.invoice_value})`.as(
+          "total_invoice_value",
+        ),
+      })
+      .from(purchase_orders)
+      .groupBy(purchase_orders.client_id)
+      .as("bs");
+
+    // PRE-AGGREGATION: Calculate total paid amount per client first
+    const paymentsSubquery = db
+      .select({
+        client_id: purchase_orders.client_id,
+        total_paid: sql<number>`SUM(${purchase_payments.paid_amount})`.as(
+          "total_paid",
+        ),
+      })
+      .from(purchase_payments)
+      .innerJoin(
+        purchase_orders,
+        eq(purchase_payments.purchase_order_id, purchase_orders.id),
+      )
+      .groupBy(purchase_orders.client_id)
+      .as("ps");
+
+    // FINAL JOIN: Combining pre-aggregated data with clients metadata
     return db
       .select({
         name: clients.name,
-        invoice_number: purchase_orders.invoice_number,
-        invoice_date: purchase_orders.invoice_date,
-        invoice_value: purchase_orders.invoice_value,
-        paid_amount:
-          sql<number>`COALESCE(SUM(${purchase_payments.paid_amount}), 0)`.mapWith(
+        invoice_value:
+          sql<number>`COALESCE(${balanceSubquery.total_invoice_value}, 0)`.mapWith(
             Number,
           ),
-        payment_date: max(purchase_payments.payment_date),
-        balance_due: purchase_orders.balance_due,
+        paid_amount:
+          sql<number>`COALESCE(${paymentsSubquery.total_paid}, 0)`.mapWith(
+            Number,
+          ),
+        balance_due:
+          sql<number>`COALESCE(${balanceSubquery.total_balance}, 0)`.mapWith(
+            Number,
+          ),
       })
-      .from(purchase_orders)
-      .innerJoin(clients, eq(purchase_orders.client_id, clients.id))
-      .leftJoin(
-        purchase_payments,
-        eq(purchase_orders.id, purchase_payments.purchase_order_id),
-      )
-      .groupBy(
-        clients.name,
-        purchase_orders.invoice_number,
-        purchase_orders.invoice_date,
-        purchase_orders.invoice_value,
-        purchase_orders.balance_due,
-      )
-      .orderBy(
-        asc(purchase_orders.invoice_date),
-        asc(purchase_orders.invoice_number),
-      );
+      .from(clients)
+      .innerJoin(balanceSubquery, eq(clients.id, balanceSubquery.client_id))
+      .leftJoin(paymentsSubquery, eq(clients.id, paymentsSubquery.client_id))
+      .orderBy(asc(clients.name));
   },
 
   getPayablesByClient(clientId: number) {
-    return db
-      .select({
-        invoice_number: purchase_orders.invoice_number,
-        invoice_date: purchase_orders.invoice_date,
-        invoice_value: purchase_orders.invoice_value,
-        paid_amount:
-          sql<number>`COALESCE(SUM(${purchase_payments.paid_amount}), 0)`.mapWith(
-            Number,
-          ),
-        payment_date: max(purchase_payments.payment_date),
-        balance_due: purchase_orders.balance_due,
-      })
-      .from(purchase_orders)
-      .leftJoin(
-        purchase_payments,
-        eq(purchase_orders.id, purchase_payments.purchase_order_id),
-      )
-      .where(eq(purchase_orders.client_id, clientId))
-      .groupBy(
-        purchase_orders.invoice_number,
-        purchase_orders.invoice_date,
-        purchase_orders.invoice_value,
-        purchase_orders.balance_due,
-      )
-      .orderBy(
-        asc(purchase_orders.invoice_date),
-        asc(purchase_orders.invoice_number),
-      );
+    return (
+      db
+        .select({
+          invoice_number: purchase_orders.invoice_number,
+          invoice_date: purchase_orders.invoice_date,
+          invoice_value: purchase_orders.invoice_value,
+          paid_amount:
+            sql<number>`COALESCE(SUM(${purchase_payments.paid_amount}), 0)`.mapWith(
+              Number,
+            ),
+          payment_date: max(purchase_payments.payment_date),
+          balance_due: purchase_orders.balance_due,
+        })
+        .from(purchase_orders)
+        .leftJoin(
+          purchase_payments,
+          eq(purchase_orders.id, purchase_payments.purchase_order_id),
+        )
+        .where(eq(purchase_orders.client_id, clientId))
+        // OPTIMIZATION: Grouping by PK reduces load on the sorting engine and is sufficient in PostgreSQL
+        .groupBy(purchase_orders.id)
+        .orderBy(
+          asc(purchase_orders.invoice_date),
+          asc(purchase_orders.invoice_number),
+        )
+    );
   },
 
   getAllReceivables() {
+    // PRE-AGGREGATION: Calculate total balance due per client
+    const balanceSubquery = db
+      .select({
+        client_id: sales_orders.client_id,
+        total_balance: sql<number>`SUM(${sales_orders.balance_due})`.as(
+          "total_balance",
+        ),
+        total_invoice_value: sql<number>`SUM(${sales_orders.invoice_value})`.as(
+          "total_invoice_value",
+        ),
+      })
+      .from(sales_orders)
+      .groupBy(sales_orders.client_id)
+      .as("bs");
+
+    // PRE-AGGREGATION: Calculate total paid amount per client
+    const paymentsSubquery = db
+      .select({
+        client_id: sales_orders.client_id,
+        total_paid: sql<number>`SUM(${sales_payments.paid_amount})`.as(
+          "total_paid",
+        ),
+      })
+      .from(sales_payments)
+      .innerJoin(
+        sales_orders,
+        eq(sales_payments.sales_order_id, sales_orders.id),
+      )
+      .groupBy(sales_orders.client_id)
+      .as("ps");
+
+    // FINAL JOIN: Combining pre-aggregated data with clients metadata
     return db
       .select({
         name: clients.name,
-        invoice_number: sales_orders.invoice_number,
-        invoice_date: sales_orders.invoice_date,
-        invoice_value: sales_orders.invoice_value,
-        paid_amount:
-          sql<number>`COALESCE(SUM(${sales_payments.paid_amount}), 0)`.mapWith(
+        invoice_value:
+          sql<number>`COALESCE(${balanceSubquery.total_invoice_value}, 0)`.mapWith(
             Number,
           ),
-        payment_date: max(sales_payments.payment_date),
-        balance_due: sales_orders.balance_due,
+        paid_amount:
+          sql<number>`COALESCE(${paymentsSubquery.total_paid}, 0)`.mapWith(
+            Number,
+          ),
+        balance_due:
+          sql<number>`COALESCE(${balanceSubquery.total_balance}, 0)`.mapWith(
+            Number,
+          ),
       })
-      .from(sales_orders)
-      .innerJoin(clients, eq(sales_orders.client_id, clients.id))
-      .leftJoin(
-        sales_payments,
-        eq(sales_orders.id, sales_payments.sales_order_id),
-      )
-      .groupBy(
-        clients.name,
-        sales_orders.invoice_number,
-        sales_orders.invoice_date,
-        sales_orders.invoice_value,
-        sales_orders.balance_due,
-      )
-      .orderBy(
-        asc(sales_orders.invoice_date),
-        asc(sales_orders.invoice_number),
-      );
+      .from(clients)
+      .innerJoin(balanceSubquery, eq(clients.id, balanceSubquery.client_id))
+      .leftJoin(paymentsSubquery, eq(clients.id, paymentsSubquery.client_id))
+      .orderBy(asc(clients.name));
   },
 
   getReceivablesByClient(clientId: number) {
-    return db
-      .select({
-        invoice_number: sales_orders.invoice_number,
-        invoice_date: sales_orders.invoice_date,
-        invoice_value: sales_orders.invoice_value,
-        paid_amount:
-          sql<number>`COALESCE(SUM(${sales_payments.paid_amount}), 0)`.mapWith(
-            Number,
-          ),
-        payment_date: max(sales_payments.payment_date),
-        balance_due: sales_orders.balance_due,
-      })
-      .from(sales_orders)
-      .leftJoin(
-        sales_payments,
-        eq(sales_orders.id, sales_payments.sales_order_id),
-      )
-      .where(eq(sales_orders.client_id, clientId))
-      .groupBy(
-        sales_orders.invoice_number,
-        sales_orders.invoice_date,
-        sales_orders.invoice_value,
-        sales_orders.balance_due,
-      )
-      .orderBy(
-        asc(sales_orders.invoice_date),
-        asc(sales_orders.invoice_number),
-      );
+    return (
+      db
+        .select({
+          invoice_number: sales_orders.invoice_number,
+          invoice_date: sales_orders.invoice_date,
+          invoice_value: sales_orders.invoice_value,
+          paid_amount:
+            sql<number>`COALESCE(SUM(${sales_payments.paid_amount}), 0)`.mapWith(
+              Number,
+            ),
+          payment_date: max(sales_payments.payment_date),
+          balance_due: sales_orders.balance_due,
+        })
+        .from(sales_orders)
+        .leftJoin(
+          sales_payments,
+          eq(sales_orders.id, sales_payments.sales_order_id),
+        )
+        .where(eq(sales_orders.client_id, clientId))
+        // OPTIMIZATION: Grouping by PK is sufficient and more efficient
+        .groupBy(sales_orders.id)
+        .orderBy(
+          asc(sales_orders.invoice_date),
+          asc(sales_orders.invoice_number),
+        )
+    );
   },
 
   getProfits(month: number, year: number, timezone: string = "Asia/Jakarta") {

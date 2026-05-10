@@ -375,48 +375,32 @@ export const printService = {
     const columns: ReportColumn<AllReceivablesTableRow>[] = [
       {
         header: "No",
-        width: 10,
+        width: 15,
         gapAfter: 2,
         align: "right",
         getValue: (row, index) => {
-          if (row.invoice_number === "TOTAL") return "";
+          if (row.name === "TOTAL") return "";
           return String(index + 1);
         },
       },
-      { header: "Nama", width: 35, getValue: (row) => row.name },
+      { header: "Nama Client", width: 40, getValue: (row) => row.name },
       {
-        header: "Nomor Nota",
-        width: 28,
-        getValue: (row) => row.invoice_number,
-      },
-      {
-        header: "Tanggal",
-        width: 25,
-        getValue: (row) => toPrintable(row.invoice_date),
-      },
-      {
-        header: "Nilai Nota",
-        width: 18,
+        header: "Total Nilai Nota",
+        width: 40,
         align: "right",
-        getValue: (row) => toPrintable(row.invoice_value),
+        getValue: (row) => formatNumber(row.invoice_value),
       },
       {
-        header: "Lunas",
-        width: 18,
-        gapAfter: 2,
+        header: "Total Lunas",
+        width: 40,
         align: "right",
-        getValue: (row) => toPrintable(row.paid_amount),
+        getValue: (row) => formatNumber(row.paid_amount),
       },
       {
-        header: "Tgl Bayar",
-        width: 18,
-        getValue: (row) => toPrintable(row.payment_date),
-      },
-      {
-        header: "Saldo",
-        width: 16,
+        header: "Total Saldo",
+        width: 40,
         align: "right",
-        getValue: (row) => toPrintable(row.balance_due),
+        getValue: (row) => formatNumber(row.balance_due),
       },
     ];
 
@@ -486,48 +470,32 @@ export const printService = {
     const columns: ReportColumn<AllPayablesTableRow>[] = [
       {
         header: "No",
-        width: 10,
+        width: 15,
         gapAfter: 2,
         align: "right",
         getValue: (row, index) => {
-          if (row.invoice_number === "TOTAL") return "";
+          if (row.name === "TOTAL") return "";
           return String(index + 1);
         },
       },
-      { header: "Nama", width: 35, getValue: (row) => row.name },
+      { header: "Nama Client", width: 40, getValue: (row) => row.name },
       {
-        header: "Nomor Nota",
-        width: 28,
-        getValue: (row) => row.invoice_number,
-      },
-      {
-        header: "Tanggal",
-        width: 25,
-        getValue: (row) => toPrintable(row.invoice_date),
-      },
-      {
-        header: "Nilai Nota",
-        width: 18,
+        header: "Total Nilai Nota",
+        width: 40,
         align: "right",
-        getValue: (row) => toPrintable(row.invoice_value),
+        getValue: (row) => formatNumber(row.invoice_value),
       },
       {
-        header: "Lunas",
-        width: 18,
-        gapAfter: 2,
+        header: "Total Lunas",
+        width: 40,
         align: "right",
-        getValue: (row) => toPrintable(row.paid_amount),
+        getValue: (row) => formatNumber(row.paid_amount),
       },
       {
-        header: "Tgl Bayar",
-        width: 18,
-        getValue: (row) => toPrintable(row.payment_date),
-      },
-      {
-        header: "Saldo",
-        width: 16,
+        header: "Total Saldo",
+        width: 40,
         align: "right",
-        getValue: (row) => toPrintable(row.balance_due),
+        getValue: (row) => formatNumber(row.balance_due),
       },
     ];
 

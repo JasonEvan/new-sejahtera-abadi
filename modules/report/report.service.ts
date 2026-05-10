@@ -106,25 +106,15 @@ export const reportService = {
 
         return {
           name: row.name,
-          city: row.city,
-          invoice_number: row.invoice_number,
-          invoice_date: dayjs(row.invoice_date).format("DD/MM/YYYY"),
           invoice_value: row.invoice_value,
           paid_amount: row.paid_amount,
-          payment_date: row.payment_date
-            ? dayjs(row.payment_date).format("DD/MM/YYYY")
-            : null,
           balance_due: row.balance_due,
         };
       }),
       {
-        name: "",
-        city: "",
-        invoice_number: "TOTAL",
-        invoice_date: null,
+        name: "TOTAL",
         invoice_value: totalInvoiceValue,
         paid_amount: totalPaidAmount,
-        payment_date: null,
         balance_due: totalRemainingAmount,
       },
     ];
@@ -184,25 +174,15 @@ export const reportService = {
 
         return {
           name: row.name,
-          city: row.city,
-          invoice_number: row.invoice_number,
-          invoice_date: dayjs(row.invoice_date).format("DD/MM/YYYY"),
           invoice_value: row.invoice_value,
           paid_amount: row.paid_amount,
-          payment_date: row.payment_date
-            ? dayjs(row.payment_date).format("DD/MM/YYYY")
-            : null,
           balance_due: row.balance_due,
         };
       }),
       {
-        name: "",
-        city: "",
-        invoice_number: "TOTAL",
-        invoice_date: null,
+        name: "TOTAL",
         invoice_value: totalInvoiceValue,
         paid_amount: totalPaidAmount,
-        payment_date: null,
         balance_due: totalRemainingAmount,
       },
     ];
