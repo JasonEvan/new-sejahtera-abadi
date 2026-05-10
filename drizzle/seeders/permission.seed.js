@@ -225,6 +225,11 @@ async function seed() {
         module: "reports",
       },
       {
+        name: "asset-value.view",
+        display_name: "Lihat Nilai Aset",
+        module: "reports",
+      },
+      {
         name: "profit-loss.view",
         display_name: "Lihat Laba Rugi",
         module: "reports",
@@ -324,7 +329,8 @@ async function seed() {
           !p.name.startsWith("user.") &&
           !p.name.startsWith("role.") &&
           !p.name.startsWith("permission.") &&
-          !p.name.startsWith("system."),
+          !p.name.startsWith("system.") &&
+          !p.name.startsWith("asset-value."),
       );
 
       await db

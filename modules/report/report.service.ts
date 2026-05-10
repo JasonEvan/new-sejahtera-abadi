@@ -313,4 +313,8 @@ export const reportService = {
 
     return tableRows;
   },
+
+  getAssetValues() {
+    return reportRepository.getAssetValues();
+  },
 };

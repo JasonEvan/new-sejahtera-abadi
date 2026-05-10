@@ -426,9 +426,10 @@ export const reportRepository = {
         total_balance: sql<number>`SUM(${purchase_orders.balance_due})`.as(
           "total_balance",
         ),
-        total_invoice_value: sql<number>`SUM(${purchase_orders.invoice_value})`.as(
-          "total_invoice_value",
-        ),
+        total_invoice_value:
+          sql<number>`SUM(${purchase_orders.invoice_value})`.as(
+            "total_invoice_value",
+          ),
       })
       .from(purchase_orders)
       .groupBy(purchase_orders.client_id)
@@ -626,5 +627,30 @@ export const reportRepository = {
     `;
 
     return db.execute(query);
+  },
+
+  async getAssetValues() {
+    const assetItems = await db
+      .select({
+        itemName: stocks.name,
+        quantity: stocks.ending_stock,
+        capitalCost: stocks.capital_cost,
+        totalValue:
+          sql<number>`${stocks.ending_stock} * ${stocks.capital_cost}`.mapWith(
+            Number,
+          ),
+      })
+      .from(stocks)
+      .orderBy(asc(stocks.name));
+
+    const grandTotalAssetValue = assetItems.reduce(
+      (sum, item) => sum + item.totalValue,
+      0,
+    );
+
+    return {
+      items: assetItems,
+      grandTotalAssetValue,
+    };
   },
 };

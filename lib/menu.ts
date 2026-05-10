@@ -126,6 +126,11 @@ export const sidebarItems: SidebarItem[] = [
         permission: "inventory-ledger.view",
       },
       {
+        title: "Nilai Aset",
+        url: "/view/asset-value",
+        permission: "asset-value.view",
+      },
+      {
         title: "Semua Utang",
         url: "/view/all-payables",
         permission: "purchase.payment.view",

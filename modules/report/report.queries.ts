@@ -7,6 +7,7 @@ import {
   getPayablesByClientKey,
   getProfitReportKey,
   getReceivablesByClientKey,
+  getAssetValueKey,
 } from "./report.keys";
 import {
   getAllPayables,
@@ -16,6 +17,7 @@ import {
   getPayablesByClient,
   getProfitReport,
   getReceivablesByClient,
+  getAssetValues,
 } from "./report.api";
 
 export const useGetInventoryLedgers = (stockId: number, enabled: boolean) => {
@@ -83,5 +85,13 @@ export const useGetDashboardSnapshot = () => {
     queryFn: getDashboardSnapshot,
     select: (data) => data.data,
     staleTime: 60_000,
+  });
+};
+
+export const useGetAssetValues = () => {
+  return useQuery({
+    queryKey: getAssetValueKey(),
+    queryFn: getAssetValues,
+    select: (data) => data.data,
   });
 };

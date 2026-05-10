@@ -7,6 +7,7 @@ import {
   DashboardSnapshot,
   InventoryLedgerTableRow,
   ProfitTableRow,
+  AssetValueResponse,
 } from "./report.types";
 
 export async function getInventoryLedgers(stockId: number) {
@@ -54,6 +55,13 @@ export async function getProfitReport(month: number, year: number) {
 export async function getDashboardSnapshot() {
   const response = await api.get<{ data: DashboardSnapshot }>(
     "/reports/dashboard",
+  );
+  return response.data;
+}
+
+export async function getAssetValues() {
+  const response = await api.get<{ data: AssetValueResponse }>(
+    "/reports/asset-value",
   );
   return response.data;
 }

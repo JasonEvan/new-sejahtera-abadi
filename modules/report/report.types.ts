@@ -93,3 +93,15 @@ export interface DashboardSnapshot {
   operational: DashboardOperationalStats;
   recentActivity: DashboardActivityItem[];
 }
+
+export interface AssetValueTableRow {
+  itemName: string;
+  quantity: number;
+  capitalCost: number;
+  totalValue: number;
+}
+
+export interface AssetValueResponse {
+  items: AssetValueTableRow[];
+  grandTotalAssetValue: number;
+}
