@@ -384,7 +384,6 @@ export const printService = {
         },
       },
       { header: "Nama", width: 35, getValue: (row) => row.name },
-      { header: "Kota", width: 22, getValue: (row) => row.city },
       {
         header: "Nomor Nota",
         width: 28,
@@ -496,7 +495,6 @@ export const printService = {
         },
       },
       { header: "Nama", width: 35, getValue: (row) => row.name },
-      { header: "Kota", width: 22, getValue: (row) => row.city },
       {
         header: "Nomor Nota",
         width: 28,

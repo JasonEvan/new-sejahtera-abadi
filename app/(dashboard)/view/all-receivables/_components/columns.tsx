@@ -17,10 +17,6 @@ export const columns = [
     header: "Nama",
   }),
 
-  columnHelper.accessor("city", {
-    header: "Kota",
-  }),
-
   columnHelper.accessor("invoice_number", {
     header: "Nomor Nota",
   }),

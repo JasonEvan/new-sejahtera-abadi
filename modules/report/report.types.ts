@@ -13,7 +13,6 @@ export interface InventoryLedgerTableRow {
 
 export interface AllPayablesTableRow {
   name: string;
-  city: string;
   invoice_number: string;
   invoice_date: string | null;
   invoice_value: number;
@@ -33,7 +32,6 @@ export interface ClientPayablesTableRow {
 
 export interface AllReceivablesTableRow {
   name: string;
-  city: string;
   invoice_number: string;
   invoice_date: string | null;
   invoice_value: number;

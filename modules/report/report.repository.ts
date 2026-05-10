@@ -488,7 +488,6 @@ export const reportRepository = {
     return db
       .select({
         name: clients.name,
-        city: clients.city,
         invoice_number: purchase_orders.invoice_number,
         invoice_date: purchase_orders.invoice_date,
         invoice_value: purchase_orders.invoice_value,
@@ -507,7 +506,6 @@ export const reportRepository = {
       )
       .groupBy(
         clients.name,
-        clients.city,
         purchase_orders.invoice_number,
         purchase_orders.invoice_date,
         purchase_orders.invoice_value,
@@ -554,7 +552,6 @@ export const reportRepository = {
     return db
       .select({
         name: clients.name,
-        city: clients.city,
         invoice_number: sales_orders.invoice_number,
         invoice_date: sales_orders.invoice_date,
         invoice_value: sales_orders.invoice_value,
@@ -573,7 +570,6 @@ export const reportRepository = {
       )
       .groupBy(
         clients.name,
-        clients.city,
         sales_orders.invoice_number,
         sales_orders.invoice_date,
         sales_orders.invoice_value,
