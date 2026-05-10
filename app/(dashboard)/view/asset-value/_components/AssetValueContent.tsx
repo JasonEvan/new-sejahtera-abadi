@@ -69,6 +69,7 @@ export default function AssetValueContent() {
           data={data?.items ?? []}
           withFiltering
           searchKey="itemName"
+          maxHeight="500px"
         />
       </div>
     </div>
