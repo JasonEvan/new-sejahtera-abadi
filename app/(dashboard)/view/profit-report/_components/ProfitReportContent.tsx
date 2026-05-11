@@ -4,6 +4,7 @@ import ComboboxField from "@/components/shared/ComboboxField";
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Search } from "lucide-react";
 import { useGetProfitReport } from "@/modules/report/report.queries";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
@@ -84,6 +85,19 @@ export default function ProfitReportContent() {
           <Button type="submit">Cari</Button>
         </form>
       </FormProvider>
+      {params && (
+        <div className="bg-muted/50 p-4 rounded-xl border-l-4 border-primary flex items-center gap-x-3 shadow-sm">
+          <div className="bg-primary/10 p-2 rounded-lg">
+            <Search className="w-4 h-4 text-primary" />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Menampilkan hasil untuk:{" "}
+            <span className="font-bold text-foreground">
+              {MONTHS.find((m) => m.id === params.month)?.name} {params.year}
+            </span>
+          </p>
+        </div>
+      )}
       {isLoading ? (
         <div className="flex justify-center">
           <Spinner />

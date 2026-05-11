@@ -4,6 +4,7 @@ import ComboboxField from "@/components/shared/ComboboxField";
 import { DataTable } from "@/components/shared/DataTable";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Search } from "lucide-react";
 import { printService } from "@/lib/print.service";
 import { useGetClientNames } from "@/modules/client/client.queries";
 import { useGetPayablesByClient } from "@/modules/report/report.queries";
@@ -79,6 +80,17 @@ export default function PayablesPerClientContent() {
           </div>
         </form>
       </FormProvider>
+      {clientId !== 0 && (
+        <div className="bg-muted/50 p-4 rounded-xl border-l-4 border-primary flex items-center gap-x-3 shadow-sm">
+          <div className="bg-primary/10 p-2 rounded-lg">
+            <Search className="w-4 h-4 text-primary" />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Menampilkan hasil untuk:{" "}
+            <span className="font-bold text-foreground">{selectedClientName}</span>
+          </p>
+        </div>
+      )}
       {isLoading ? (
         <div className="flex justify-center">
           <Spinner />
