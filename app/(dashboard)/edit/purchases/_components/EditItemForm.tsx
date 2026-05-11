@@ -82,7 +82,7 @@ export default function EditItemForm({ data }: { data: EditPurchaseItemRow }) {
         />
         <div className="grid grid-cols-2 gap-x-2">
           <InputField name="quantity" label="Jumlah" type="number" />
-          <InputField name="product_price" label="Harga" type="number" />
+          <InputField name="product_price" label="Harga Beli" type="number" />
         </div>
       </form>
     </FormProvider>

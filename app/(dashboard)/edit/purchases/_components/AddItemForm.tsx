@@ -1,6 +1,6 @@
 import ComboboxField from "@/components/shared/ComboboxField";
 import InputField from "@/components/shared/InputField";
-import { dialogs } from "@/lib/dialogs";
+import { Button } from "@/components/ui/button";
 import { useGetStocks } from "@/modules/stock/stock.queries";
 import { useEditPurchaseStore } from "@/stores/transactions/useEditPurchaseStore";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,7 +24,7 @@ export default function AddItemForm() {
     resolver: zodResolver(editPurchaseItemSchema),
   });
 
-  const { control, setValue, handleSubmit, reset } = methods;
+  const { control, setValue, handleSubmit, reset, setFocus } = methods;
 
   const watchedStockId = useWatch({
     control,
@@ -54,31 +54,24 @@ export default function AddItemForm() {
       subtotal: data.quantity * data.product_price,
     });
 
-    reset({
-      stock_id: 0,
-      product_price: undefined,
-      quantity: undefined,
-    });
-
-    dialogs.close();
+    setFocus("stock_id");
+    reset();
   };
 
   return (
     <FormProvider {...methods}>
-      <form
-        id="add-edit-purchase-item-form"
-        onSubmit={handleSubmit(onSubmit)}
-        className="space-y-3"
-      >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <ComboboxField
           name="stock_id"
           label="Nama Barang"
           items={stocks || []}
-          isInDialog
         />
         <div className="grid grid-cols-2 gap-x-2">
           <InputField name="quantity" label="Jumlah" type="number" />
-          <InputField name="product_price" label="Harga" type="number" />
+          <InputField name="product_price" label="Harga Beli" type="number" />
+        </div>
+        <div className="flex justify-end">
+          <Button type="submit">Add</Button>
         </div>
       </form>
     </FormProvider>
