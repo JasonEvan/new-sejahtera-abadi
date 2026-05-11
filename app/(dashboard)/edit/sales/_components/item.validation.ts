@@ -26,6 +26,9 @@ export const createEditSaleItemValidation = ({
         .number()
         .min(0, "Harga harus lebih dari atau sama dengan 0"),
       quantity: z.int().min(0, "Jumlah tidak boleh negatif"),
+      capital_cost: z
+        .number()
+        .min(0, "Harga pokok harus lebih dari atau sama dengan 0"),
     })
     .refine(
       (data) => {

@@ -39,6 +39,7 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
       stock_id: data.stock_id,
       selling_price: data.selling_price,
       quantity: data.quantity,
+      capital_cost: data.capital_cost,
     },
     mode: "onBlur",
     reValidateMode: "onChange",
@@ -63,6 +64,9 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
     if (watchedStockId && hasUserChangedStockId.current) {
       const selected = stocks?.find((stock) => stock.id === watchedStockId);
       if (selected) {
+        setValue("capital_cost", selected.capital_cost, {
+          shouldValidate: true,
+        });
         setValue("selling_price", selected.selling_price || 0, {
           shouldValidate: true,
         });
@@ -78,6 +82,7 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
       stock_id: value.stock_id,
       name: selectedStock?.name.split(" || ")[0].trim() || "",
       quantity: value.quantity,
+      capital_cost: value.capital_cost,
       selling_price: value.selling_price,
       subtotal: value.quantity * value.selling_price,
     });
@@ -100,7 +105,7 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
         />
         <div className="grid grid-cols-2 gap-x-2">
           <InputField name="quantity" label="Jumlah" type="number" />
-          <InputField name="selling_price" label="Harga" type="number" />
+          <InputField name="selling_price" label="Harga Jual" type="number" />
         </div>
       </form>
     </FormProvider>

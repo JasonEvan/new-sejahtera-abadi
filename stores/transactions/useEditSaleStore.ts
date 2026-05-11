@@ -7,6 +7,7 @@ export type EditSaleItemRow = {
   stock_id: number;
   name: string;
   quantity: number;
+  capital_cost: number;
   selling_price: number;
   subtotal: number;
 };
@@ -53,6 +54,7 @@ export const useEditSaleStore = create<EditSaleStore>((set) => ({
       stock_id: line.stock_id,
       name: line.name,
       quantity: line.qty,
+      capital_cost: 0,
       selling_price: line.price,
       subtotal: line.price * line.qty,
     }));

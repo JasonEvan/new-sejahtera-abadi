@@ -17,16 +17,6 @@ export default function InvoiceItems() {
     (state) => state.invoice_information,
   );
 
-  const handleAddItem = () => {
-    dialogs.open({
-      title: "Tambah Item",
-      description: "Tambahkan item untuk nota",
-      type: "form",
-      formId: "add-edit-sale-item-form",
-      children: <AddItemForm />,
-    });
-  };
-
   const handleCheckPrice = () => {
     if (!invoiceInformation.client) {
       toast.error("Pilih client dan nota terlebih dahulu", {
@@ -49,10 +39,8 @@ export default function InvoiceItems() {
         <Button type="button" variant="outline" onClick={handleCheckPrice}>
           Check Harga
         </Button>
-        <Button type="button" onClick={handleAddItem}>
-          Add
-        </Button>
       </div>
+      <AddItemForm />
       <DataTable columns={columns} data={sortedItems} maxHeight="500px" />
     </div>
   );
