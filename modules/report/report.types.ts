@@ -83,6 +83,11 @@ export interface DashboardActivityItem {
   occurredAt: string;
 }
 
+export interface SalespersonPerformance {
+  name: string;
+  totalRevenue: number;
+}
+
 export interface DashboardSnapshot {
   headline: {
     todayRevenue: DashboardHeadlineStat;
@@ -92,6 +97,7 @@ export interface DashboardSnapshot {
   };
   operational: DashboardOperationalStats;
   recentActivity: DashboardActivityItem[];
+  salespersonPerformance: SalespersonPerformance[];
 }
 
 export interface AssetValueTableRow {

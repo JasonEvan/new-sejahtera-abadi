@@ -336,8 +336,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <article className="rounded-2xl border bg-card p-4 sm:p-5">
+      <section className="grid gap-4 xl:grid-cols-3">
+        <article className="rounded-2xl border bg-card p-4 sm:p-5 xl:col-span-1">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight">
               Operational Numbers
@@ -345,7 +345,7 @@ export default function Home() {
             <p className="text-xs text-muted-foreground">Live snapshot</p>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             {operationalStatsConfig.map((stat) => {
               const value = snapshot?.operational[stat.key];
 
@@ -374,16 +374,61 @@ export default function Home() {
         <article className="rounded-2xl border bg-card p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight">
+              Sales Performance
+            </h2>
+            <p className="text-xs text-muted-foreground">Monthly revenue</p>
+          </div>
+
+          <ul className="space-y-2.5">
+            {showSkeleton &&
+              Array.from({ length: 3 }).map((_, index) => (
+                <li
+                  key={`sales-skeleton-${index}`}
+                  className="flex items-center justify-between rounded-lg border bg-background p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton className="h-4 w-16" />
+                </li>
+              ))}
+
+            {!showSkeleton &&
+              (snapshot?.salespersonPerformance.length ? (
+                snapshot.salespersonPerformance.map((sp) => (
+                  <li
+                    key={sp.name}
+                    className="flex items-center justify-between rounded-lg border bg-background p-3 hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        <UserRound className="h-4 w-4" />
+                      </div>
+                      <p className="text-sm font-semibold tracking-tight">
+                        {sp.name}
+                      </p>
+                    </div>
+                    <p className="text-sm font-black text-primary">
+                      {formatCompactIdr(sp.totalRevenue)}
+                    </p>
+                  </li>
+                ))
+              ) : (
+                <li className="rounded-lg border bg-background p-3 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    No salesperson data this month
+                  </p>
+                </li>
+              ))}
+          </ul>
+        </article>
+
+        <article className="rounded-2xl border bg-card p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold tracking-tight">
               Recent Activity
             </h2>
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="cursor-pointer"
-            >
-              <Link href="/view">Open All</Link>
-            </Button>
           </div>
 
           <ul className="space-y-2.5">
