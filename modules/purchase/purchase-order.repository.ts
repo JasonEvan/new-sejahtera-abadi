@@ -370,4 +370,11 @@ export const purchaseOrderRepository = {
 
     return !!order;
   },
+
+  deleteByPurchaseOrderId(purchaseOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .delete(purchase_orders)
+      .where(eq(purchase_orders.id, purchaseOrderId));
+  },
 };

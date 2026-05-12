@@ -33,3 +33,28 @@ export const PUT = withErrorHandler(
     );
   },
 );
+
+export const DELETE = withErrorHandler(
+  async (
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+  ) => {
+    const session = await getSession();
+
+    if (!session || !session.permissions?.includes("purchase.delete")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
+    const purchaseOrderId = Number((await params).id);
+    if (isNaN(purchaseOrderId)) {
+      throw new AppError("Invalid purchase order ID", 400);
+    }
+
+    await purchaseService.deletePurchase(purchaseOrderId);
+
+    return NextResponse.json(
+      { message: "Purchase deleted successfully" },
+      { status: 200 },
+    );
+  },
+);

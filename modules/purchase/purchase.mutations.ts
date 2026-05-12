@@ -3,10 +3,12 @@ import {
   createPurchase,
   createPurchaseReturn,
   updatePurchase,
+  deletePurchase,
 } from "./purchase.api";
 import { toast } from "sonner";
 import { usePurchaseStore } from "@/stores/transactions/usePurchaseStore";
 import { useEditPurchaseStore } from "@/stores/transactions/useEditPurchaseStore";
+import { useDeletePurchaseStore } from "@/stores/transactions/useDeletePurchaseStore";
 import { getClientsKey } from "../client/client.keys";
 import { getStocksKey } from "../stock/stock.keys";
 import { invalidateOrdersMenuKey } from "./purchase.keys";
@@ -77,6 +79,29 @@ export const useUpdatePurchaseMutation = () => {
       });
 
       useEditPurchaseStore.getState().clear();
+
+      queryClient.invalidateQueries({ queryKey: getClientsKey() });
+      queryClient.invalidateQueries({ queryKey: getStocksKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
+      queryClient.invalidateQueries({ queryKey: getAllPayablesKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateProfitReportKey() });
+      queryClient.invalidateQueries({
+        queryKey: invalidateInventoryLedgersKey(),
+      });
+    },
+  });
+};
+
+export const useDeletePurchaseMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (purchaseOrderId: number) => deletePurchase(purchaseOrderId),
+    onSuccess: (response) => {
+      toast.success(response.message || "Nota pembelian berhasil dihapus", {
+        position: "bottom-right",
+      });
+
+      useDeletePurchaseStore.getState().clear();
 
       queryClient.invalidateQueries({ queryKey: getClientsKey() });
       queryClient.invalidateQueries({ queryKey: getStocksKey() });

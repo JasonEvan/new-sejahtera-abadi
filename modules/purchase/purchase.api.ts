@@ -102,3 +102,10 @@ export async function checkInvoiceExistence(invoiceNumber: string) {
   );
   return response.data;
 }
+
+export async function deletePurchase(purchaseOrderId: number) {
+  const response = await api.delete<{ message: string }>(
+    `/purchases/${purchaseOrderId}`,
+  );
+  return response.data;
+}

@@ -112,9 +112,14 @@ export const sidebarItems: SidebarItem[] = [
   {
     title: "Hapus",
     icon: Trash2,
-    permission: ["sales.delete"],
+    permission: ["sales.delete", "purchase.delete"],
     children: [
       { title: "Hapus Jual", url: "/delete/sales", permission: "sales.delete" },
+      {
+        title: "Hapus Beli",
+        url: "/delete/purchases",
+        permission: "purchase.delete",
+      },
     ],
   },
   {

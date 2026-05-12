@@ -158,6 +158,71 @@ export const purchaseService = {
     });
   },
 
+  deletePurchase(purchaseOrderId: number) {
+    return db.transaction(async (tx) => {
+      // 1. Get order and check existence
+      const order = await purchaseOrderRepository.getById(purchaseOrderId, tx);
+      if (!order) {
+        throw new AppError("Purchase order not found", 404);
+      }
+
+      // 2. Validate paid_amount === 0
+      if (order.paid_amount !== 0) {
+        throw new AppError("Nota tidak bisa dihapus karena sudah dibayar", 400);
+      }
+
+      // 3. Validate no returns
+      const hasReturn = await purchaseReturnRepository.hasReturnForPurchaseOrder(
+        purchaseOrderId,
+        tx,
+      );
+      if (hasReturn) {
+        throw new AppError(
+          "Nota tidak bisa dihapus karena sudah memiliki retur pembelian",
+          400,
+        );
+      }
+
+      // 4. Revert stocks
+      const existingLines = await purchaseOrderLineRepository.getByPurchaseOrderId(
+        purchaseOrderId,
+        tx,
+      );
+
+      // Validate if we can reduce the stock (some might have been sold)
+      await this.validateStockReductionAvailability(existingLines, tx);
+
+      const revertedStocks = existingLines
+        .filter((line) => line.stock_id !== null)
+        .map((line) => ({
+          id: line.stock_id as number,
+          quantity: line.qty,
+        }));
+
+      await stockRepository.bulkDecrementStockAndDecrementQtyIn(
+        revertedStocks,
+        tx,
+      );
+
+      // 5. Revert client payables
+      await clientRepository.decPayableBalance(
+        order.client_id,
+        order.invoice_value,
+        tx,
+      );
+
+      // 6. Delete lines and order
+      await purchaseOrderLineRepository.deleteByPurchaseOrderId(
+        purchaseOrderId,
+        tx,
+      );
+      await purchaseOrderRepository.deleteByPurchaseOrderId(
+        purchaseOrderId,
+        tx,
+      );
+    });
+  },
+
   getOrdersMenu(clientId: number, isPaidOff: boolean) {
     return purchaseOrderRepository.getOrdersMenu(clientId, isPaidOff);
   },
