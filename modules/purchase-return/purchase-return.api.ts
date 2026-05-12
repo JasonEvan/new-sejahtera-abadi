@@ -37,3 +37,11 @@ export async function updatePurchaseReturn(data: UpdatePurchaseReturn) {
 
   return response.data;
 }
+
+export async function deletePurchaseReturn(returnId: number) {
+  const response = await api.delete<{ message: string }>(
+    `/returns/purchases?return_id=${returnId}`,
+  );
+
+  return response.data;
+}

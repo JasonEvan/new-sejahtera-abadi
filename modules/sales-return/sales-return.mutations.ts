@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateSaleReturn } from "./sales-return.api";
+import { deleteSalesReturn, updateSaleReturn } from "./sales-return.api";
 import { toast } from "sonner";
 import { useEditSaleReturnStore } from "@/stores/transactions/useEditSaleReturnStore";
+import { useDeleteSalesReturnStore } from "@/stores/returns/useDeleteSalesReturnStore";
 import { getClientsKey } from "../client/client.keys";
 import { getStocksKey } from "../stock/stock.keys";
 import { invalidateOrdersMenuKey } from "../sale/sale.keys";
@@ -23,6 +24,34 @@ export const useUpdateSaleReturnMutation = () => {
       });
 
       useEditSaleReturnStore.getState().clear();
+
+      queryClient.invalidateQueries({ queryKey: getClientsKey() });
+      queryClient.invalidateQueries({ queryKey: getStocksKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
+      queryClient.invalidateQueries({ queryKey: getAllReceivablesKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateProfitReportKey() });
+      queryClient.invalidateQueries({
+        queryKey: invalidateInventoryLedgersKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: getEditSaleReturnInvoicesKey(),
+      });
+      queryClient.invalidateQueries({ queryKey: ["edit-sale-return-detail"] });
+    },
+  });
+};
+
+export const useDeleteSaleReturnMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteSalesReturn,
+    onSuccess: (data) => {
+      toast.success(data.message || "Retur jual berhasil dihapus", {
+        position: "bottom-right",
+      });
+
+      useDeleteSalesReturnStore.getState().clear();
 
       queryClient.invalidateQueries({ queryKey: getClientsKey() });
       queryClient.invalidateQueries({ queryKey: getStocksKey() });

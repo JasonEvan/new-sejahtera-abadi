@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updatePurchaseReturn } from "./purchase-return.api";
+import { deletePurchaseReturn, updatePurchaseReturn } from "./purchase-return.api";
 import { toast } from "sonner";
 import { useEditPurchaseReturnStore } from "@/stores/transactions/useEditPurchaseReturnStore";
+import { useDeletePurchaseReturnStore } from "@/stores/returns/useDeletePurchaseReturnStore";
 import { getClientsKey } from "../client/client.keys";
 import { getStocksKey } from "../stock/stock.keys";
 import { invalidateOrdersMenuKey } from "../purchase/purchase.keys";
@@ -23,6 +24,36 @@ export const useUpdatePurchaseReturnMutation = () => {
       });
 
       useEditPurchaseReturnStore.getState().clear();
+
+      queryClient.invalidateQueries({ queryKey: getClientsKey() });
+      queryClient.invalidateQueries({ queryKey: getStocksKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
+      queryClient.invalidateQueries({ queryKey: getAllPayablesKey() });
+      queryClient.invalidateQueries({ queryKey: invalidateProfitReportKey() });
+      queryClient.invalidateQueries({
+        queryKey: invalidateInventoryLedgersKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: getEditPurchaseReturnInvoicesKey(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["edit-purchase-return-detail"],
+      });
+    },
+  });
+};
+
+export const useDeletePurchaseReturnMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deletePurchaseReturn,
+    onSuccess: (data) => {
+      toast.success(data.message || "Retur beli berhasil dihapus", {
+        position: "bottom-right",
+      });
+
+      useDeletePurchaseReturnStore.getState().clear();
 
       queryClient.invalidateQueries({ queryKey: getClientsKey() });
       queryClient.invalidateQueries({ queryKey: getStocksKey() });

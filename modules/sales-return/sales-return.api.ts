@@ -34,3 +34,11 @@ export async function updateSaleReturn(data: UpdateSaleReturn) {
 
   return response.data;
 }
+
+export async function deleteSalesReturn(returnId: number) {
+  const response = await api.delete<{ message: string }>(
+    `/returns/sales?return_id=${returnId}`,
+  );
+
+  return response.data;
+}

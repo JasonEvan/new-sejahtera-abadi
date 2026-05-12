@@ -117,6 +117,8 @@ export const sidebarItems: SidebarItem[] = [
       "purchase.delete",
       "sales.payment.delete",
       "purchase.payment.delete",
+      "sales.return.delete",
+      "purchase.return.delete",
     ],
     children: [
       { title: "Hapus Jual", url: "/delete/sales", permission: "sales.delete" },
@@ -134,6 +136,16 @@ export const sidebarItems: SidebarItem[] = [
         title: "Hapus Utang",
         url: "/delete/purchase-payment",
         permission: "purchase.payment.delete",
+      },
+      {
+        title: "Hapus Retur Jual",
+        url: "/delete/sales-return",
+        permission: "sales.return.delete",
+      },
+      {
+        title: "Hapus Retur Beli",
+        url: "/delete/purchase-return",
+        permission: "purchase.return.delete",
       },
     ],
   },

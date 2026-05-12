@@ -329,4 +329,96 @@ export const purchaseReturnService = {
       purchaseOrderId,
     );
   },
+
+  deletePurchaseReturn(returnId: number) {
+    return db.transaction(async (tx) => {
+      const [existingReturn] = await purchaseReturnRepository.getById(
+        returnId,
+        tx,
+      );
+      if (!existingReturn) {
+        throw new AppError("Data retur pembelian tidak ditemukan", 404);
+      }
+
+      const order = await purchaseOrderRepository.getById(
+        existingReturn.purchase_order_id,
+        tx,
+      );
+      if (!order) {
+        throw new AppError("Invoice not found", 404);
+      }
+
+      if (order.paid_amount > 0) {
+        throw new AppError(
+          "Retur tidak bisa dihapus karena nota sudah ada pembayaran",
+          400,
+        );
+      }
+
+      const existingReturnLines =
+        await purchaseReturnLineRepository.getByPurchaseReturnIds(
+          [returnId],
+          tx,
+        );
+
+      // Revert order line quantities
+      const revertOrderLineUpdates = existingReturnLines.map((line) => ({
+        id: line.purchase_order_line_id,
+        quantity: line.return_qty,
+      }));
+      await purchaseOrderLineRepository.bulkIncrementQuantity(
+        revertOrderLineUpdates,
+        tx,
+      );
+
+      // Revert stock quantities (increase stock back)
+      const revertStocks = existingReturnLines
+        .filter((line) => (line.stock_id ?? 0) > 0)
+        .map((line) => ({
+          id: line.stock_id as number,
+          quantity: line.return_qty,
+        }));
+      await stockRepository.bulkIncrementStockAndDecrementQtyOut(
+        revertStocks,
+        tx,
+      );
+
+      // Delete return lines and document
+      await purchaseReturnLineRepository.deleteByPurchaseReturnIds(
+        [returnId],
+        tx,
+      );
+      await purchaseReturnRepository.deleteById(returnId, tx);
+
+      // Recalculate invoice total
+      const discount = await purchaseOrderRepository.getDiscountById(
+        order.id,
+        tx,
+      );
+      const rawTotal =
+        await purchaseOrderLineRepository.getSumTotalPriceByOrderId(
+          order.id,
+          tx,
+        );
+      const newInvoiceTotal = Math.floor(rawTotal * (1 - discount / 100));
+
+      await purchaseOrderRepository.updateInvoiceValue(
+        newInvoiceTotal,
+        order.id,
+        tx,
+      );
+
+      // Update client balance (increase payable/debt)
+      const payableDelta = newInvoiceTotal - order.invoice_value;
+      await clientRepository.incPayableBalance(
+        order.client_id,
+        payableDelta,
+        tx,
+      );
+
+      return {
+        message: "Retur pembelian berhasil dihapus",
+      };
+    });
+  },
 };

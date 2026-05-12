@@ -78,3 +78,23 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
 
   return NextResponse.json(result);
 });
+
+export const DELETE = withErrorHandler(async (request: NextRequest) => {
+  const session = await getSession();
+
+  if (!session || !session.permissions?.includes("purchase.return.delete")) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
+  const returnId = request.nextUrl.searchParams.get("return_id");
+
+  if (!returnId) {
+    throw new AppError("Return ID is required", 400);
+  }
+
+  const result = await purchaseReturnService.deletePurchaseReturn(
+    Number(returnId),
+  );
+
+  return NextResponse.json(result);
+});

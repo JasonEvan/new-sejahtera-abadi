@@ -318,4 +318,86 @@ export const salesReturnService = {
   getReturnHistory(salesOrderId: number) {
     return salesReturnRepository.getReturnHistoryBySalesOrderId(salesOrderId);
   },
+
+  deleteSalesReturn(returnId: number) {
+    return db.transaction(async (tx) => {
+      const [existingReturn] = await salesReturnRepository.getById(
+        returnId,
+        tx,
+      );
+      if (!existingReturn) {
+        throw new AppError("Data retur penjualan tidak ditemukan", 404);
+      }
+
+      const order = await saleOrderRepository.getById(
+        existingReturn.sales_order_id,
+        tx,
+      );
+      if (!order) {
+        throw new AppError("Invoice not found", 404);
+      }
+
+      if (order.paid_amount > 0) {
+        throw new AppError(
+          "Retur tidak bisa dihapus karena nota sudah ada pembayaran",
+          400,
+        );
+      }
+
+      const existingReturnLines =
+        await salesReturnLineRepository.getBySalesReturnIds([returnId], tx);
+
+      // Revert order line quantities (add back the returned qty)
+      const revertOrderLineUpdates = existingReturnLines.map((line) => ({
+        id: line.sales_order_line_id,
+        quantity: line.return_qty,
+      }));
+      await saleOrderLineRepository.bulkIncrementQuantity(
+        revertOrderLineUpdates,
+        tx,
+      );
+
+      // Revert stock quantities (decrease stock since it's no longer returned)
+      const revertStocks = existingReturnLines
+        .filter((line) => (line.stock_id ?? 0) > 0)
+        .map((line) => ({
+          id: line.stock_id as number,
+          quantity: line.return_qty,
+        }));
+      await stockRepository.bulkDecrementStockAndDecrementQtyIn(
+        revertStocks,
+        tx,
+      );
+
+      // Delete return lines and the return document
+      await salesReturnLineRepository.deleteBySalesReturnIds([returnId], tx);
+      await salesReturnRepository.deleteById(returnId, tx);
+
+      // Recalculate invoice total
+      const discount = await saleOrderRepository.getDiscountById(order.id, tx);
+      const rawTotal = await saleOrderLineRepository.getSumTotalPriceByOrderId(
+        order.id,
+        tx,
+      );
+      const newInvoiceTotal = Math.floor(rawTotal * (1 - discount / 100));
+
+      await saleOrderRepository.updateInvoiceValue(
+        newInvoiceTotal,
+        order.id,
+        tx,
+      );
+
+      // Update client balance (increase debt because items are back in the invoice)
+      const receivableDelta = newInvoiceTotal - order.invoice_value;
+      await clientRepository.incReceivableBalance(
+        order.client_id,
+        receivableDelta,
+        tx,
+      );
+
+      return {
+        message: "Retur penjualan berhasil dihapus",
+      };
+    });
+  },
 };
