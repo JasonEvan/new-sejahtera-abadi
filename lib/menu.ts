@@ -7,6 +7,7 @@ import {
   RotateCcw,
   Settings,
   ShoppingCart,
+  Trash2,
   Wallet,
   LucideIcon,
 } from "lucide-react";
@@ -106,6 +107,14 @@ export const sidebarItems: SidebarItem[] = [
         url: "/edit/sales-return",
         permission: "sales.return.update",
       },
+    ],
+  },
+  {
+    title: "Hapus",
+    icon: Trash2,
+    permission: ["sales.delete"],
+    children: [
+      { title: "Hapus Jual", url: "/delete/sales", permission: "sales.delete" },
     ],
   },
   {

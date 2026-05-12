@@ -33,3 +33,28 @@ export const PUT = withErrorHandler(
     );
   },
 );
+
+export const DELETE = withErrorHandler(
+  async (
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+  ) => {
+    const session = await getSession();
+
+    if (!session || !session.permissions?.includes("sales.delete")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
+    const salesOrderId = Number((await params).id);
+    if (isNaN(salesOrderId)) {
+      throw new AppError("Invalid sales order ID", 400);
+    }
+
+    await saleService.deleteSale(salesOrderId);
+
+    return NextResponse.json(
+      { message: "Sale deleted successfully" },
+      { status: 200 },
+    );
+  },
+);

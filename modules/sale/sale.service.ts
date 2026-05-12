@@ -169,6 +169,60 @@ export const saleService = {
     });
   },
 
+  deleteSale(salesOrderId: number) {
+    return db.transaction(async (tx) => {
+      // 1. Get order and check existence
+      const order = await saleOrderRepository.getById(salesOrderId, tx);
+      if (!order) {
+        throw new AppError("Sales order not found", 404);
+      }
+
+      // 2. Validate paid_amount === 0
+      if (order.paid_amount !== 0) {
+        throw new AppError("Nota tidak bisa dihapus karena sudah dibayar", 400);
+      }
+
+      // 3. Validate no returns
+      const hasReturn = await salesReturnRepository.hasReturnForSalesOrder(
+        salesOrderId,
+        tx,
+      );
+      if (hasReturn) {
+        throw new AppError(
+          "Nota tidak bisa dihapus karena sudah memiliki retur penjualan",
+          400,
+        );
+      }
+
+      // 4. Revert stocks
+      const existingLines = await saleOrderLineRepository.getBySalesOrderId(
+        salesOrderId,
+        tx,
+      );
+      const revertedStocks = existingLines
+        .filter((line) => line.stock_id !== null)
+        .map((line) => ({
+          id: line.stock_id as number,
+          quantity: line.qty,
+        }));
+      await stockRepository.bulkIncrementStockAndDecrementQtyOut(
+        revertedStocks,
+        tx,
+      );
+
+      // 5. Revert client receivables (Total was added to receivables when created)
+      await clientRepository.decReceivableBalance(
+        order.client_id,
+        order.invoice_value,
+        tx,
+      );
+
+      // 6. Delete lines and order
+      await saleOrderLineRepository.deleteBySalesOrderId(salesOrderId, tx);
+      await saleOrderRepository.deleteBySalesOrderId(salesOrderId, tx);
+    });
+  },
+
   getOrdersMenu(clientId: number, isPaidOff: boolean) {
     return saleOrderRepository.getOrdersMenu(clientId, isPaidOff);
   },

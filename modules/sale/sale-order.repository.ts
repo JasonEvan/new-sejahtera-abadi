@@ -379,4 +379,9 @@ export const saleOrderRepository = {
 
     return !!order;
   },
+
+  deleteBySalesOrderId(salesOrderId: number, tx?: Tx) {
+    const database = tx ?? db;
+    return database.delete(sales_orders).where(eq(sales_orders.id, salesOrderId));
+  },
 };

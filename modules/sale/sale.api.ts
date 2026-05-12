@@ -96,3 +96,8 @@ export async function checkInvoiceExistence(invoiceNumber: string) {
   );
   return response.data;
 }
+
+export async function deleteSale(salesOrderId: number) {
+  const response = await api.delete<{ message: string }>(`/sales/${salesOrderId}`);
+  return response.data;
+}
