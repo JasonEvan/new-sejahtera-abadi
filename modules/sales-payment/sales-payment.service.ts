@@ -9,6 +9,8 @@ import { saleOrderRepository } from "../sale/sale-order.repository";
 import { clientRepository } from "../client/client.repository";
 import dayjs from "dayjs";
 import { AppError } from "@/lib/errors";
+import { eq } from "drizzle-orm";
+import { sales_orders, sales_payments } from "@/drizzle/schema";
 
 export const salesPaymentService = {
   createSalesPayment(data: InsertSalesPayment) {
@@ -171,6 +173,58 @@ export const salesPaymentService = {
       return {
         message: "Payments updated successfully",
       };
+    });
+  },
+
+  getTransactionsByClientId(clientId: number) {
+    return salesPaymentRepository.getTransactionsByClientId(clientId);
+  },
+
+  getTransactionSummary(transactionNumber: string) {
+    return salesPaymentRepository.getTransactionSummary(transactionNumber);
+  },
+
+  deletePaymentTransaction(transactionNumber: string) {
+    return db.transaction(async (tx) => {
+      const payments = await tx
+        .select({
+          sales_order_id: sales_payments.sales_order_id,
+          paid_amount: sales_payments.paid_amount,
+          client_id: sales_payments.client_id,
+        })
+        .from(sales_payments)
+        .where(eq(sales_payments.transaction_number, transactionNumber));
+
+      if (payments.length === 0) {
+        throw new AppError("Transaction not found", 404);
+      }
+
+      const totalPaidAmount = payments.reduce(
+        (sum, p) => sum + p.paid_amount,
+        0,
+      );
+      const clientId = payments[0].client_id;
+
+      // Update invoices
+      await saleOrderRepository.bulkDecPaidAmountAndIncBalanceDue(
+        payments,
+        tx,
+      );
+
+      // Update client balance
+      await clientRepository.incReceivableBalance(
+        clientId,
+        totalPaidAmount,
+        tx,
+      );
+
+      // Delete payments
+      await salesPaymentRepository.deleteByTransactionNumber(
+        transactionNumber,
+        tx,
+      );
+
+      return { message: "Payment transaction deleted successfully" };
     });
   },
 };

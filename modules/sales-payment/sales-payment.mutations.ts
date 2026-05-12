@@ -2,13 +2,18 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createSalesPayment,
   deleteEditReceivablesByInvoice,
+  deleteSalesPaymentTransaction,
   updateEditReceivablesByInvoice,
 } from "./sales-payment.api";
 import { toast } from "sonner";
 import { useSalesPaymentStore } from "@/stores/payments/useSalesPaymentStore";
 import { invalidateOrdersMenuKey } from "../sale/sale.keys";
 import { getAllReceivablesKey } from "../report/report.keys";
-import { getEditReceivablesByInvoiceKey } from "./sales-payment.keys";
+import {
+  getEditReceivablesByInvoiceKey,
+  getSalesPaymentTransactionsKey,
+} from "./sales-payment.keys";
+import { useDeleteSalesPaymentStore } from "@/stores/payments/useDeleteSalesPaymentStore";
 
 export const useSalesPaymentMutation = () => {
   const queryClient = useQueryClient();
@@ -55,6 +60,29 @@ export const useUpdateEditReceivablesMutation = () => {
       queryClient.invalidateQueries({
         queryKey: getEditReceivablesByInvoiceKey(variables.invoice_number),
       });
+    },
+  });
+};
+
+export const useDeleteSalesPaymentTransactionMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteSalesPaymentTransaction,
+    onSuccess: (data) => {
+      toast.success(
+        data.message || "Payment transaction deleted successfully",
+        {
+          position: "bottom-right",
+        },
+      );
+      const clientId =
+        useDeleteSalesPaymentStore.getState().transaction_information.client;
+      queryClient.invalidateQueries({
+        queryKey: getSalesPaymentTransactionsKey(clientId),
+      });
+      queryClient.invalidateQueries({ queryKey: getAllReceivablesKey() });
+      useDeleteSalesPaymentStore.getState().clear();
     },
   });
 };

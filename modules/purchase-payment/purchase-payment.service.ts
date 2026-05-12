@@ -9,6 +9,8 @@ import { purchaseOrderRepository } from "../purchase/purchase-order.repository";
 import { clientRepository } from "../client/client.repository";
 import dayjs from "dayjs";
 import { AppError } from "@/lib/errors";
+import { eq } from "drizzle-orm";
+import { purchase_orders, purchase_payments } from "@/drizzle/schema";
 
 export const purchasePaymentService = {
   createPurchasePayment(data: InsertPurchasePayment) {
@@ -167,6 +169,58 @@ export const purchasePaymentService = {
       return {
         message: "Payments updated successfully",
       };
+    });
+  },
+
+  getTransactionsByClientId(clientId: number) {
+    return purchasePaymentRepository.getTransactionsByClientId(clientId);
+  },
+
+  getTransactionSummary(transactionNumber: string) {
+    return purchasePaymentRepository.getTransactionSummary(transactionNumber);
+  },
+
+  deletePaymentTransaction(transactionNumber: string) {
+    return db.transaction(async (tx) => {
+      const payments = await tx
+        .select({
+          purchase_order_id: purchase_payments.purchase_order_id,
+          paid_amount: purchase_payments.paid_amount,
+          client_id: purchase_payments.client_id,
+        })
+        .from(purchase_payments)
+        .where(eq(purchase_payments.transaction_number, transactionNumber));
+
+      if (payments.length === 0) {
+        throw new AppError("Transaction not found", 404);
+      }
+
+      const totalPaidAmount = payments.reduce(
+        (sum, p) => sum + p.paid_amount,
+        0,
+      );
+      const clientId = payments[0].client_id;
+
+      // Update invoices
+      await purchaseOrderRepository.bulkDecPaidAmountAndIncBalanceDue(
+        payments,
+        tx,
+      );
+
+      // Update client balance
+      await clientRepository.incPayableBalance(
+        clientId,
+        totalPaidAmount,
+        tx,
+      );
+
+      // Delete payments
+      await purchasePaymentRepository.deleteByTransactionNumber(
+        transactionNumber,
+        tx,
+      );
+
+      return { message: "Payment transaction deleted successfully" };
     });
   },
 };

@@ -41,3 +41,31 @@ export async function updateEditReceivablesByInvoice(data: {
 
   return response.data;
 }
+
+export async function getSalesPaymentTransactions(clientId: number) {
+  const response = await api.get<{ data: { id: number; name: string }[] }>(
+    `/sales-payments?client_id=${clientId}`,
+  );
+  return response.data;
+}
+
+export async function getSalesPaymentTransactionSummary(
+  transactionNumber: string,
+) {
+  const response = await api.get<{
+    data: {
+      transaction_number: string;
+      payment_date: string;
+      total_paid: number;
+      invoice_count: number;
+    } | null;
+  }>(`/sales-payments?transaction_number=${encodeURIComponent(transactionNumber)}`);
+  return response.data;
+}
+
+export async function deleteSalesPaymentTransaction(transactionId: number) {
+  const response = await api.delete<{ message: string }>(
+    `/sales-payments?transaction_id=${transactionId}`,
+  );
+  return response.data;
+}

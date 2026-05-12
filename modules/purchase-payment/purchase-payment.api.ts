@@ -44,3 +44,31 @@ export async function updateEditPayablesByInvoice(data: {
 
   return response.data;
 }
+
+export async function getPurchasePaymentTransactions(clientId: number) {
+  const response = await api.get<{ data: { id: number; name: string }[] }>(
+    `/purchase-payments?client_id=${clientId}`,
+  );
+  return response.data;
+}
+
+export async function getPurchasePaymentTransactionSummary(
+  transactionNumber: string,
+) {
+  const response = await api.get<{
+    data: {
+      transaction_number: string;
+      payment_date: string;
+      total_paid: number;
+      invoice_count: number;
+    } | null;
+  }>(`/purchase-payments?transaction_number=${encodeURIComponent(transactionNumber)}`);
+  return response.data;
+}
+
+export async function deletePurchasePaymentTransaction(transactionId: number) {
+  const response = await api.delete<{ message: string }>(
+    `/purchase-payments?transaction_id=${transactionId}`,
+  );
+  return response.data;
+}

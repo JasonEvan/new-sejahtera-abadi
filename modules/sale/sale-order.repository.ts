@@ -134,6 +134,35 @@ export const saleOrderRepository = {
     return database.execute(query);
   },
 
+  bulkDecPaidAmountAndIncBalanceDue(
+    items: { sales_order_id: number; paid_amount: number }[],
+    tx?: Tx,
+  ) {
+    const aggregatedItems = aggregateSalesOrderPaymentItems(items);
+
+    if (aggregatedItems.length === 0) return;
+
+    const database = tx ?? db;
+
+    const values = sql.join(
+      aggregatedItems.map(
+        (item) => sql`(${item.sales_order_id}::int, ${item.paid_amount}::int)`,
+      ),
+      sql`, `,
+    );
+
+    const query = sql`
+      UPDATE ${sales_orders} as so
+      SET
+        paid_amount = so.paid_amount - v.paid_amount,
+        balance_due = so.balance_due + v.paid_amount
+      FROM (VALUES ${values}) AS v(sales_order_id, paid_amount)
+      WHERE so.id = v.sales_order_id
+    `;
+
+    return database.execute(query);
+  },
+
   getSalesInvoices(invoicePrefix: string) {
     return db
       .select({
