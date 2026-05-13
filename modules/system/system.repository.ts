@@ -250,4 +250,75 @@ export const systemRepository = {
       .delete(purchase_orders)
       .where(inArray(purchase_orders.id, purchaseOrderIds));
   },
+
+  async getUnpaidOrdersSummary(endDate: Date, tx?: Tx) {
+    const database = tx ?? db;
+
+    const unpaidSales = await database
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+        totalBalanceDue: sql<number>`sum(${sales_orders.balance_due})`.mapWith(
+          Number,
+        ),
+      })
+      .from(sales_orders)
+      .where(
+        and(
+          lte(sales_orders.invoice_date, endDate),
+          sql`${sales_orders.balance_due} > 0`,
+        ),
+      );
+
+    const unpaidSalesList = await database
+      .select({
+        invoice_number: sales_orders.invoice_number,
+        balance_due: sales_orders.balance_due,
+      })
+      .from(sales_orders)
+      .where(
+        and(
+          lte(sales_orders.invoice_date, endDate),
+          sql`${sales_orders.balance_due} > 0`,
+        ),
+      );
+
+    const unpaidPurchases = await database
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+        totalBalanceDue: sql<number>`sum(${purchase_orders.balance_due})`.mapWith(
+          Number,
+        ),
+      })
+      .from(purchase_orders)
+      .where(
+        and(
+          lte(purchase_orders.invoice_date, endDate),
+          sql`${purchase_orders.balance_due} > 0`,
+        ),
+      );
+
+    const unpaidPurchasesList = await database
+      .select({
+        invoice_number: purchase_orders.invoice_number,
+        balance_due: purchase_orders.balance_due,
+      })
+      .from(purchase_orders)
+      .where(
+        and(
+          lte(purchase_orders.invoice_date, endDate),
+          sql`${purchase_orders.balance_due} > 0`,
+        ),
+      );
+
+    return {
+      unpaidSales: {
+        ...unpaidSales[0],
+        items: unpaidSalesList,
+      },
+      unpaidPurchases: {
+        ...unpaidPurchases[0],
+        items: unpaidPurchasesList,
+      },
+    };
+  },
 };

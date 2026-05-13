@@ -39,4 +39,8 @@ export const systemService = {
       return { success: true };
     });
   },
+
+  async getUnpaidOrdersSummary(endDate: Date) {
+    return systemRepository.getUnpaidOrdersSummary(endDate);
+  },
 };

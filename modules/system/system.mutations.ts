@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { performCutoff } from "./system.api";
+import { getCutoffSummary, performCutoff } from "./system.api";
 import { toast } from "sonner";
 
 export const usePerformCutoffMutation = () => {
@@ -10,5 +10,11 @@ export const usePerformCutoffMutation = () => {
         position: "bottom-right",
       });
     },
+  });
+};
+
+export const useCutoffSummaryMutation = () => {
+  return useMutation({
+    mutationFn: getCutoffSummary,
   });
 };
