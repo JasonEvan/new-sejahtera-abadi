@@ -95,8 +95,6 @@ export const purchaseService = {
           tx,
         );
 
-      await this.validateStockReductionAvailability(existingLines, tx);
-
       const revertedStocks = existingLines
         .filter((line) => line.stock_id !== null)
         .map((line) => ({
@@ -172,10 +170,11 @@ export const purchaseService = {
       }
 
       // 3. Validate no returns
-      const hasReturn = await purchaseReturnRepository.hasReturnForPurchaseOrder(
-        purchaseOrderId,
-        tx,
-      );
+      const hasReturn =
+        await purchaseReturnRepository.hasReturnForPurchaseOrder(
+          purchaseOrderId,
+          tx,
+        );
       if (hasReturn) {
         throw new AppError(
           "Nota tidak bisa dihapus karena sudah memiliki retur pembelian",
@@ -184,10 +183,11 @@ export const purchaseService = {
       }
 
       // 4. Revert stocks
-      const existingLines = await purchaseOrderLineRepository.getByPurchaseOrderId(
-        purchaseOrderId,
-        tx,
-      );
+      const existingLines =
+        await purchaseOrderLineRepository.getByPurchaseOrderId(
+          purchaseOrderId,
+          tx,
+        );
 
       // Validate if we can reduce the stock (some might have been sold)
       await this.validateStockReductionAvailability(existingLines, tx);
