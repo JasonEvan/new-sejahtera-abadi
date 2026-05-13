@@ -7,17 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { usePerformCutoffMutation } from "@/modules/system/system.mutations";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { alertDialogs } from "@/lib/alert-dialogs";
 import { AlertCircle, CalendarDays, DatabaseZap } from "lucide-react";
 
 export default function CutOffPage() {
@@ -92,39 +82,22 @@ export default function CutOffPage() {
         </div>
 
         <div className="p-6 bg-muted/10 border-t flex justify-end">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="destructive"
-                size="lg"
-                disabled={!endDate || isPending}
-                className="font-semibold shadow-lg shadow-destructive/20"
-              >
-                {isPending ? "Memproses..." : "Jalankan Proses Cut-Off"}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Apakah Anda benar-benar yakin?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  Proses ini akan memodifikasi data stok dan menghapus transaksi
-                  lunas sampai tanggal {endDate}. Data yang dihapus tidak dapat
-                  dikembalikan tanpa backup.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Batal</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleCutOff}
-                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                >
-                  Ya, Jalankan Cut-Off
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button
+            variant="destructive"
+            size="lg"
+            disabled={!endDate || isPending}
+            className="font-semibold shadow-lg shadow-destructive/20"
+            onClick={() =>
+              alertDialogs.open({
+                title: "Apakah Anda benar-benar yakin?",
+                description: `Proses ini akan memodifikasi data stok dan menghapus transaksi lunas sampai tanggal ${endDate}. Data yang dihapus tidak dapat dikembalikan tanpa backup.`,
+                confirmText: "Submit",
+                onConfirm: handleCutOff,
+              })
+            }
+          >
+            {isPending ? "Memproses..." : "Jalankan Proses Cut-Off"}
+          </Button>
         </div>
       </div>
     </div>
