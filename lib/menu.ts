@@ -14,8 +14,9 @@ import {
 
 export type SidebarChildItem = {
   title: string;
-  url: string;
+  url?: string;
   permission?: string | string[];
+  children?: SidebarChildItem[];
 };
 
 export type SidebarItem = {
@@ -162,44 +163,68 @@ export const sidebarItems: SidebarItem[] = [
     ],
     children: [
       {
-        title: "Kartu Persediaan",
-        url: "/view/inventory-ledger",
-        permission: "inventory-ledger.view",
+        title: "Stock",
+        permission: ["inventory-ledger.view", "asset-value.view"],
+        children: [
+          {
+            title: "Kartu Persediaan",
+            url: "/view/inventory-ledger",
+            permission: "inventory-ledger.view",
+          },
+          {
+            title: "Nilai Aset",
+            url: "/view/asset-value",
+            permission: "asset-value.view",
+          },
+        ],
       },
       {
-        title: "Nilai Aset",
-        url: "/view/asset-value",
-        permission: "asset-value.view",
-      },
-      {
-        title: "Semua Utang",
-        url: "/view/all-payables",
+        title: "Utang",
         permission: "purchase.payment.view",
+        children: [
+          {
+            title: "Semua Utang",
+            url: "/view/all-payables",
+            permission: "purchase.payment.view",
+          },
+          {
+            title: "Utang per Client",
+            url: "/view/payables-per-client",
+            permission: "purchase.payment.view",
+          },
+        ],
       },
       {
-        title: "Utang per Client",
-        url: "/view/payables-per-client",
-        permission: "purchase.payment.view",
-      },
-      {
-        title: "Semua Piutang",
-        url: "/view/all-receivables",
+        title: "Piutang",
         permission: "sales.payment.view",
+        children: [
+          {
+            title: "Semua Piutang",
+            url: "/view/all-receivables",
+            permission: "sales.payment.view",
+          },
+          {
+            title: "Piutang per Client",
+            url: "/view/receivables-per-client",
+            permission: "sales.payment.view",
+          },
+        ],
       },
       {
-        title: "Piutang per Client",
-        url: "/view/receivables-per-client",
-        permission: "sales.payment.view",
-      },
-      {
-        title: "Nota Penjualan",
-        url: "/view/sales-invoice",
-        permission: "sales.view",
-      },
-      {
-        title: "Nota Pembelian",
-        url: "/view/purchase-invoice",
-        permission: "purchase.view",
+        title: "Nota",
+        permission: ["sales.view", "purchase.view"],
+        children: [
+          {
+            title: "Nota Penjualan",
+            url: "/view/sales-invoice",
+            permission: "sales.view",
+          },
+          {
+            title: "Nota Pembelian",
+            url: "/view/purchase-invoice",
+            permission: "purchase.view",
+          },
+        ],
       },
       {
         title: "Laporan Laba",
@@ -259,22 +284,16 @@ export const sidebarItems: SidebarItem[] = [
 export const getRoutePermissions = () => {
   const permissions: Record<string, string | string[]> = {};
 
-  sidebarItems.forEach((item) => {
+  const processItem = (item: SidebarItem | SidebarChildItem) => {
     if (item.url && item.permission) {
       permissions[item.url] = item.permission;
     }
     if (item.children) {
-      item.children.forEach((child) => {
-        if (child.url && child.permission) {
-          permissions[child.url] = child.permission;
-        }
-      });
+      item.children.forEach(processItem);
     }
-  });
+  };
 
-  // Add special cases if any (though we aim for single source of truth)
-  // For example, if /view/all-payables and /view/payables-per-client are not in the list but need permissions
-  // In our case they ARE in the list.
+  sidebarItems.forEach(processItem);
 
   return permissions;
 };
