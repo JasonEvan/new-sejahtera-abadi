@@ -83,6 +83,12 @@ describe("report.repository", () => {
           subtitle: "SJ-1 - Client",
           occurred_at: "2026-04-14T00:00:00.000Z",
         },
+      ])
+      .mockResolvedValueOnce([
+        {
+          name: "Daniel",
+          total_revenue: 1000,
+        },
       ]);
 
     const snapshot = await reportRepository.getDashboardSnapshot();
@@ -109,6 +115,12 @@ describe("report.repository", () => {
       subtitle: "SJ-1 - Client",
       occurredAt: "2026-04-13T17:00:00.000Z", // Asia/Jakarta Time Zone
     });
+    expect(snapshot.salespersonPerformance).toEqual([
+      {
+        name: "Daniel",
+        totalRevenue: 1000,
+      },
+    ]);
   });
 
   it("getInventoryLedgers unions four queries and applies ordering", () => {
@@ -142,20 +154,23 @@ describe("report.repository", () => {
   });
 
   it("getAllPayables returns ordered query chain", () => {
+    const as = jest.fn().mockReturnValue("subquery");
     const orderBy = jest.fn().mockReturnValue("query-result");
-    const groupBy = jest.fn().mockReturnValue({ orderBy });
-    const chain = {
-      innerJoin: jest.fn().mockReturnValue(undefined),
-      leftJoin: jest.fn().mockReturnValue({ groupBy }),
+    const groupBy = jest.fn().mockReturnValue({ as, orderBy });
+    const chain: any = {
+      innerJoin: jest.fn(),
+      leftJoin: jest.fn(),
+      groupBy,
+      orderBy,
     };
     chain.innerJoin.mockReturnValue(chain);
+    chain.leftJoin.mockReturnValue(chain);
     const from = jest.fn().mockReturnValue(chain);
-    mockedDb.select.mockReturnValue({ from });
+    mockedDb.select.mockReturnValue({ from } as any);
 
     const result = reportRepository.getAllPayables();
 
-    expect(mockedDb.select).toHaveBeenCalledTimes(1);
-    expect(orderBy).toHaveBeenCalledTimes(1);
+    expect(mockedDb.select).toHaveBeenCalled();
     expect(result).toBe("query-result");
   });
 

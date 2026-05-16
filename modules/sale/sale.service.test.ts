@@ -273,7 +273,7 @@ describe("sale.service", () => {
     ).toHaveBeenCalledWith([{ id: 3, quantity: 2 }], tx);
     expect(mockedLineRepo.deleteBySalesOrderId).toHaveBeenCalledWith(10, tx);
     expect(mockedLineRepo.insertSaleOrderLineForEdit).toHaveBeenCalledWith(
-      { client_id: 1, cart: editPayload.cart },
+      { client_id: 1, salesperson_id: null, cart: editPayload.cart },
       10,
       tx,
     );

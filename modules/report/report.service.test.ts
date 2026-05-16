@@ -163,26 +163,18 @@ describe("report.service", () => {
     );
   });
 
-  it("getAllPayables formats dates and appends TOTAL summary row", async () => {
+  it("getAllPayables maps rows and appends TOTAL summary row", async () => {
     mockedReportRepo.getAllPayables.mockResolvedValueOnce([
       {
         name: "A",
-        city: "X",
-        invoice_number: "PB-1",
-        invoice_date: "2026-04-01",
         invoice_value: 100,
         paid_amount: 20,
-        payment_date: "2026-04-03",
         balance_due: 80,
       },
       {
         name: "B",
-        city: "Y",
-        invoice_number: "PB-2",
-        invoice_date: "2026-04-02",
         invoice_value: 50,
         paid_amount: 50,
-        payment_date: null,
         balance_due: 0,
       },
     ] as never);
@@ -190,16 +182,16 @@ describe("report.service", () => {
     const rows = await reportService.getAllPayables();
 
     expect(rows).toHaveLength(3);
-    expect(rows[0].invoice_date).toBe("01/04/2026");
-    expect(rows[0].payment_date).toBe("03/04/2026");
+    expect(rows[0]).toEqual({
+      name: "A",
+      invoice_value: 100,
+      paid_amount: 20,
+      balance_due: 80,
+    });
     expect(rows[2]).toEqual({
-      name: "",
-      city: "",
-      invoice_number: "TOTAL",
-      invoice_date: null,
+      name: "TOTAL",
       invoice_value: 150,
       paid_amount: 70,
-      payment_date: null,
       balance_due: 80,
     });
   });

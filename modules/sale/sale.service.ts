@@ -106,6 +106,10 @@ export const saleService = {
         tx,
       );
 
+      const existingSalespersonId =
+        existingLines.find((line) => line.salesperson_id !== null)
+          ?.salesperson_id ?? null;
+
       // Revert previous inventory movement from this invoice.
       const revertedStocks = existingLines
         .filter((line) => line.stock_id !== null)
@@ -126,6 +130,7 @@ export const saleService = {
       await saleOrderLineRepository.insertSaleOrderLineForEdit(
         {
           client_id: data.client_id,
+          salesperson_id: existingSalespersonId,
           cart: data.cart,
         },
         salesOrderId,

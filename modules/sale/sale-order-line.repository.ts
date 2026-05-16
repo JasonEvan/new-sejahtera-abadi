@@ -38,6 +38,7 @@ export const saleOrderLineRepository = {
   insertSaleOrderLineForEdit(
     data: {
       client_id: number;
+      salesperson_id: number | null;
       cart: {
         stock_id: number;
         quantity: number;
@@ -57,7 +58,7 @@ export const saleOrderLineRepository = {
       price: item.selling_price,
       qty: item.quantity,
       total_price: item.subtotal,
-      salesperson_id: null,
+      salesperson_id: data.salesperson_id,
     }));
 
     return database.insert(sales_order_lines).values(mappedData);
@@ -70,6 +71,7 @@ export const saleOrderLineRepository = {
         id: sales_order_lines.id,
         stock_id: sales_order_lines.stock_id,
         qty: sales_order_lines.qty,
+        salesperson_id: sales_order_lines.salesperson_id,
       })
       .from(sales_order_lines)
       .where(eq(sales_order_lines.sales_order_id, salesOrderId))
