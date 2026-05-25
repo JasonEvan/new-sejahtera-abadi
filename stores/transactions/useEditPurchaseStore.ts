@@ -8,6 +8,7 @@ export type EditPurchaseItemRow = {
   name: string;
   quantity: number;
   product_price: number;
+  capital_cost: number;
   subtotal: number;
 };
 
@@ -56,6 +57,7 @@ export const useEditPurchaseStore = create<EditPurchaseStore>((set) => ({
       name: line.name,
       quantity: line.qty,
       product_price: line.price,
+      capital_cost: line.capital_cost,
       subtotal: line.price * line.qty,
     }));
 

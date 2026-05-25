@@ -7,7 +7,7 @@ import {
   useEditPurchaseStore,
 } from "@/stores/transactions/useEditPurchaseStore";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import z from "zod";
 import { editPurchaseItemSchema } from "./item.validation";
@@ -21,6 +21,7 @@ export default function EditItemForm({ data }: { data: EditPurchaseItemRow }) {
       stock_id: data.stock_id,
       product_price: data.product_price,
       quantity: data.quantity,
+      capital_cost: data.capital_cost,
     },
     mode: "onBlur",
     reValidateMode: "onChange",
@@ -48,6 +49,9 @@ export default function EditItemForm({ data }: { data: EditPurchaseItemRow }) {
         setValue("product_price", selected.product_price || 0, {
           shouldValidate: true,
         });
+        setValue("capital_cost", selected.capital_cost || 0, {
+          shouldValidate: true,
+        });
       }
     }
   }, [watchedStockId, stocks, setValue]);
@@ -61,6 +65,7 @@ export default function EditItemForm({ data }: { data: EditPurchaseItemRow }) {
       name: selectedStock?.name || "",
       quantity: value.quantity,
       product_price: value.product_price,
+      capital_cost: value.capital_cost,
       subtotal: value.quantity * value.product_price,
     });
 
@@ -74,14 +79,21 @@ export default function EditItemForm({ data }: { data: EditPurchaseItemRow }) {
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-3"
       >
-        <ComboboxField
-          name="stock_id"
-          label="Nama Barang"
-          items={stocks || []}
-          isInDialog
-        />
         <div className="grid grid-cols-2 gap-x-2">
+          <ComboboxField
+            name="stock_id"
+            label="Nama Barang"
+            items={stocks || []}
+            isInDialog
+          />
           <InputField name="quantity" label="Jumlah" type="number" />
+        </div>
+        <div className="grid grid-cols-2 gap-x-2">
+          <InputField
+            name="capital_cost"
+            label="Modal"
+            type="number"
+          />
           <InputField name="product_price" label="Harga Beli" type="number" />
         </div>
       </form>

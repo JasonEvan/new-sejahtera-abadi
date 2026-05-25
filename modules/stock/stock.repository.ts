@@ -9,6 +9,7 @@ type StockQtyPriceItem = {
   id: number;
   quantity: number;
   product_price?: number;
+  capital_cost?: number;
 };
 
 function aggregateStockItems(items: StockQtyItem[]): StockQtyItem[] {
@@ -26,7 +27,7 @@ function aggregateStockItemsWithPrice(
 ): StockQtyPriceItem[] {
   const aggregated = new Map<
     number,
-    { quantity: number; product_price?: number }
+    { quantity: number; product_price?: number; capital_cost?: number }
   >();
 
   for (const item of items) {
@@ -36,6 +37,7 @@ function aggregateStockItemsWithPrice(
       aggregated.set(item.id, {
         quantity: item.quantity,
         product_price: item.product_price,
+        capital_cost: item.capital_cost,
       });
       continue;
     }
@@ -45,12 +47,17 @@ function aggregateStockItemsWithPrice(
     if (item.product_price !== undefined) {
       current.product_price = item.product_price;
     }
+
+    if (item.capital_cost !== undefined) {
+      current.capital_cost = item.capital_cost;
+    }
   }
 
   return Array.from(aggregated, ([id, value]) => ({
     id,
     quantity: value.quantity,
     product_price: value.product_price,
+    capital_cost: value.capital_cost,
   }));
 }
 
@@ -151,7 +158,7 @@ export const stockRepository = {
   },
 
   bulkIncrementStockAndIncrementQtyIn(
-    items: { id: number; quantity: number; product_price?: number }[],
+    items: { id: number; quantity: number; product_price?: number; capital_cost?: number }[],
     tx?: Tx,
   ) {
     const aggregatedItems = aggregateStockItemsWithPrice(items);
@@ -162,11 +169,9 @@ export const stockRepository = {
 
     const values = sql.join(
       aggregatedItems.map((item) => {
-        if (item.product_price !== undefined) {
-          return sql`(${item.id}::int, ${item.quantity}::int, ${item.product_price}::int)`;
-        } else {
-          return sql`(${item.id}::int, ${item.quantity}::int, NULL::int)`;
-        }
+        const productPriceVal = item.product_price !== undefined ? sql`${item.product_price}::int` : sql`NULL::int`;
+        const capitalCostVal = item.capital_cost !== undefined ? sql`${item.capital_cost}::int` : sql`NULL::int`;
+        return sql`(${item.id}::int, ${item.quantity}::int, ${productPriceVal}, ${capitalCostVal})`;
       }),
       sql`, `,
     );
@@ -176,8 +181,9 @@ export const stockRepository = {
       SET
         ending_stock = s.ending_stock + v.quantity,
         qty_in = s.qty_in + v.quantity,
-        product_price = COALESCE(v.product_price, s.product_price)
-      FROM (VALUES ${values}) AS v(id, quantity, product_price)
+        product_price = COALESCE(v.product_price, s.product_price),
+        capital_cost = COALESCE(v.capital_cost, s.capital_cost)
+      FROM (VALUES ${values}) AS v(id, quantity, product_price, capital_cost)
       WHERE s.id = v.id
     `;
 

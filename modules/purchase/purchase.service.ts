@@ -54,6 +54,7 @@ export const purchaseService = {
         id: item.stock_id,
         quantity: item.quantity,
         product_price: item.product_price,
+        capital_cost: item.capital_cost,
       }));
 
       await stockRepository.bulkIncrementStockAndIncrementQtyIn(mappedData, tx);
@@ -125,6 +126,7 @@ export const purchaseService = {
         id: item.stock_id,
         quantity: item.quantity,
         product_price: item.product_price,
+        capital_cost: item.capital_cost,
       }));
 
       await stockRepository.bulkIncrementStockAndIncrementQtyIn(newStockIn, tx);

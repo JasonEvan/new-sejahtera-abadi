@@ -46,6 +46,15 @@ export const useColumns = () => {
         header: "Nama Barang",
       }),
 
+      columnHelper.accessor("capital_cost", {
+        header: () => <div className="text-right">Modal</div>,
+        cell: (info) => (
+          <div className="text-right">
+            {info.getValue().toLocaleString("id-ID")}
+          </div>
+        ),
+      }),
+
       columnHelper.accessor("product_price", {
         header: () => <div className="text-right">Harga</div>,
         cell: (info) => (

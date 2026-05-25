@@ -4,6 +4,7 @@ export type PurchaseReturnLineApiItem = {
   name: string;
   price: number;
   qty: number;
+  capital_cost: number;
 };
 
 export type PurchaseReturnLineData = {

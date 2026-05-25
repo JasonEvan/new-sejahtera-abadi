@@ -69,6 +69,7 @@ export default function InvoiceMeta() {
           name: item.name,
           quantity: item.quantity,
           product_price: item.product_price,
+          capital_cost: item.capital_cost,
           subtotal: item.subtotal,
         })),
         invoice_value: data.invoice_value,
@@ -83,7 +84,7 @@ export default function InvoiceMeta() {
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="flex flex-col items-end space-y-1">
-            <div className="flex justify-between w-full max-w-[300px] items-center">
+            <div className="flex justify-between w-full max-w-75 items-center">
               <span className="text-muted-foreground font-medium">
                 Nilai Nota
               </span>
@@ -92,7 +93,7 @@ export default function InvoiceMeta() {
               </span>
             </div>
 
-            <div className="flex justify-between w-full max-w-[300px] items-center">
+            <div className="flex justify-between w-full max-w-75 items-center">
               <span className="text-muted-foreground font-medium">
                 Diskon (%)
               </span>
@@ -106,9 +107,9 @@ export default function InvoiceMeta() {
               </div>
             </div>
 
-            <div className="w-full max-w-[300px] border-t-2 border-border my-2" />
+            <div className="w-full max-w-75 border-t-2 border-border my-2" />
 
-            <div className="flex justify-between w-full max-w-[300px] items-center py-1">
+            <div className="flex justify-between w-full max-w-75 items-center py-1">
               <span className="text-xl font-bold text-foreground">
                 Total Akhir
               </span>

@@ -256,6 +256,7 @@ export const purchaseOrderRepository = {
         name: stocks.name,
         price: purchase_order_lines.price,
         qty: purchase_order_lines.qty,
+        capital_cost: stocks.capital_cost,
       })
       .from(purchase_order_lines)
       .innerJoin(
@@ -279,6 +280,7 @@ export const purchaseOrderRepository = {
         name: l.name ?? "",
         price: l.price,
         qty: l.qty,
+        capital_cost: l.capital_cost ?? 0,
       })),
     };
   },

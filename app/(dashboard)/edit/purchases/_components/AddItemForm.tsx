@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useGetStocks } from "@/modules/stock/stock.queries";
 import { useEditPurchaseStore } from "@/stores/transactions/useEditPurchaseStore";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import z from "zod";
 import { editPurchaseItemSchema } from "./item.validation";
@@ -18,6 +18,7 @@ export default function AddItemForm() {
       stock_id: 0,
       product_price: undefined,
       quantity: undefined,
+      capital_cost: undefined,
     },
     mode: "onBlur",
     reValidateMode: "onChange",
@@ -38,6 +39,9 @@ export default function AddItemForm() {
         setValue("product_price", selected.product_price || 0, {
           shouldValidate: true,
         });
+        setValue("capital_cost", selected.capital_cost || 0, {
+          shouldValidate: true,
+        });
       }
     }
   }, [watchedStockId, stocks, setValue]);
@@ -51,6 +55,7 @@ export default function AddItemForm() {
       name: selectedStock?.name || "",
       quantity: data.quantity,
       product_price: data.product_price,
+      capital_cost: data.capital_cost,
       subtotal: data.quantity * data.product_price,
     });
 

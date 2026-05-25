@@ -6,4 +6,7 @@ export const editPurchaseItemSchema = z.object({
     .number()
     .min(0, "Harga harus lebih dari atau sama dengan 0"),
   quantity: z.number().int().min(0, "Jumlah tidak boleh negatif"),
+  capital_cost: z
+    .number()
+    .min(0, "Harga modal harus lebih dari atau sama dengan 0"),
 });

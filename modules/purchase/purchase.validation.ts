@@ -65,6 +65,7 @@ export const backendPurchaseValidation = z
           product_price: z
             .int()
             .min(0, "Harga beli harus lebih dari atau sama dengan 0"),
+          capital_cost: z.int().min(0).optional(),
           subtotal: z
             .int()
             .min(0, "Subtotal harus lebih dari atau sama dengan 0"),
@@ -130,6 +131,7 @@ export const backendEditPurchaseValidation = z
           product_price: z
             .int()
             .min(0, "Harga beli harus lebih dari atau sama dengan 0"),
+          capital_cost: z.int().min(0).optional(),
           subtotal: z
             .int()
             .min(0, "Subtotal harus lebih dari atau sama dengan 0"),
