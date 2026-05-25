@@ -15,9 +15,9 @@ export const invoiceInformationValidation = z.object({
 export const createItemValidation = z.object({
   stock_id: z.int().min(1, "Pilih produk"),
   quantity: z.int().min(0, "Jumlah tidak boleh negatif"),
-  selling_price: z
+  capital_cost: z
     .int()
-    .min(0, "Harga jual harus lebih dari atau sama dengan 0"),
+    .min(0, "Harga modal harus lebih dari atau sama dengan 0"),
   product_price: z
     .int()
     .min(0, "Harga beli harus lebih dari atau sama dengan 0"),

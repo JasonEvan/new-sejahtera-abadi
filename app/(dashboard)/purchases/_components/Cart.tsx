@@ -21,7 +21,7 @@ export default function Cart() {
       stock_id: 0,
       quantity: undefined,
       product_price: undefined,
-      selling_price: undefined,
+      capital_cost: undefined,
     },
     mode: "onBlur",
     reValidateMode: "onChange",
@@ -37,7 +37,7 @@ export default function Cart() {
       name: stocks?.find((s) => s.id === data.stock_id)?.name || "",
       quantity: data.quantity,
       product_price: data.product_price,
-      selling_price: data.selling_price,
+      capital_cost: data.capital_cost,
       subtotal: data.quantity * data.product_price,
     });
 
@@ -58,7 +58,7 @@ export default function Cart() {
         setValue("product_price", selected.product_price || 0, {
           shouldValidate: true,
         });
-        setValue("selling_price", selected.selling_price || 0, {
+        setValue("capital_cost", selected.capital_cost || 0, {
           shouldValidate: true,
         });
       }
@@ -79,8 +79,8 @@ export default function Cart() {
           </div>
           <div className="grid grid-cols-2 gap-x-2">
             <InputField
-              name="selling_price"
-              label="Harga Jual"
+              name="capital_cost"
+              label="Modal"
               type="number"
               disabled
             />

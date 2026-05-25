@@ -12,7 +12,7 @@ export type PurchaseTableRow = {
   name: string;
   quantity: number;
   product_price: number;
-  selling_price: number;
+  capital_cost: number;
   subtotal: number;
 };
 

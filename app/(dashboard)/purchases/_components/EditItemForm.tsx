@@ -18,7 +18,7 @@ export default function EditItemForm({ data }: { data: PurchaseTableRow }) {
     defaultValues: {
       stock_id: data.stock_id,
       quantity: data.quantity,
-      selling_price: data.selling_price,
+      capital_cost: data.capital_cost,
       product_price: data.product_price,
     },
     mode: "onBlur",
@@ -35,7 +35,7 @@ export default function EditItemForm({ data }: { data: PurchaseTableRow }) {
       stock_id: value.stock_id,
       quantity: value.quantity,
       product_price: value.product_price,
-      selling_price: value.selling_price,
+      capital_cost: value.capital_cost,
       subtotal: value.quantity * value.product_price,
     });
 
@@ -61,7 +61,7 @@ export default function EditItemForm({ data }: { data: PurchaseTableRow }) {
       const selected = stocks?.find((s) => s.id === watchedStockId);
 
       if (selected) {
-        setValue("selling_price", selected.selling_price || 0, {
+        setValue("capital_cost", selected.capital_cost || 0, {
           shouldValidate: true,
         });
         setValue("product_price", selected.product_price, {
@@ -89,8 +89,8 @@ export default function EditItemForm({ data }: { data: PurchaseTableRow }) {
         </div>
         <div className="grid grid-cols-2 gap-x-2">
           <InputField
-            name="selling_price"
-            label="Harga Jual"
+            name="capital_cost"
+            label="Modal"
             type="number"
             disabled
           />
