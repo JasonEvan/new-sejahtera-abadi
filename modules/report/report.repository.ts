@@ -67,7 +67,7 @@ export const reportRepository = {
               Number,
             ),
           openReceivables:
-            sql<number>`COALESCE(SUM(${sales_orders.balance_due}) FILTER (WHERE ${sales_orders.balance_due} > 0), 0)`.mapWith(
+            sql<number>`COALESCE(SUM(${sales_orders.balance_due}) FILTER (WHERE ${sales_orders.balance_due} > 0 AND ${sales_orders.invoice_date} >= ${monthStart} AND ${sales_orders.invoice_date} <= ${monthEnd}), 0)`.mapWith(
               Number,
             ),
           todayOpenReceivables:
