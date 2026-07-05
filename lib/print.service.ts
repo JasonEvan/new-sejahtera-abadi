@@ -5,6 +5,7 @@ import type {
   ClientPayablesTableRow,
   ClientReceivablesTableRow,
   InventoryLedgerTableRow,
+  ProfitTableRow,
 } from "@/modules/report/report.types";
 
 export interface SalesInvoicePrintDetail {
@@ -559,6 +560,157 @@ export const printService = {
       columns,
       "payables-per-client.pdf",
     );
+  },
+
+  handlePrintProfitReport(rows: ProfitTableRow[], monthName: string, year: number) {
+    const columns: ReportColumn<ProfitTableRow>[] = [
+      {
+        header: "No",
+        width: 8,
+        gapAfter: 5,
+        align: "right",
+        getValue: (row) => {
+          if (
+            row.invoice_value === null ||
+            row.invoice_number === "TOTAL" ||
+            row.invoice_date === "GRAND TOTAL"
+          ) {
+            return "";
+          }
+          return row.row_number ? String(row.row_number) : "";
+        },
+      },
+      {
+        header: "Tanggal",
+        width: 25,
+        gapAfter: 5,
+        getValue: (row) => {
+          const isSalesHeader =
+            row.invoice_value === null &&
+            row.invoice_profit === null &&
+            row.invoice_number !== "" &&
+            row.invoice_number !== "TOTAL";
+
+          if (isSalesHeader) {
+            return row.invoice_number;
+          }
+          return row.invoice_date || "";
+        },
+      },
+      {
+        header: "Nomor Nota",
+        width: 30,
+        getValue: (row) => {
+          const isSalesHeader =
+            row.invoice_value === null &&
+            row.invoice_profit === null &&
+            row.invoice_number !== "" &&
+            row.invoice_number !== "TOTAL";
+
+          if (isSalesHeader) {
+            return "";
+          }
+          return row.invoice_number || "";
+        },
+      },
+      {
+        header: "Nama Client",
+        width: 42,
+        getValue: (row) => row.client_name || "",
+      },
+      {
+        header: "Kota",
+        width: 22,
+        getValue: (row) => row.client_city || "",
+      },
+      {
+        header: "Nilai Nota",
+        width: 27,
+        align: "right",
+        getValue: (row) =>
+          row.invoice_value !== null ? formatNumber(row.invoice_value) : "",
+      },
+      {
+        header: "Laba",
+        width: 26,
+        align: "right",
+        getValue: (row) =>
+          row.invoice_profit !== null ? formatNumber(row.invoice_profit) : "",
+      },
+    ];
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    const leftMargin = 10;
+    const topMargin = 12;
+    const rowHeight = 5.5;
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const bottomLimit = pageHeight - 10;
+
+    const title = `LAPORAN LABA - ${monthName.toUpperCase()} ${year}`;
+
+    const drawHeader = () => {
+      let y = topMargin;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(12);
+      pdf.text("SEJAHTERA ABADI", leftMargin, y);
+      y += 5;
+      pdf.text("SEMARANG", leftMargin, y);
+      y += 5;
+      pdf.text(title, leftMargin, y);
+      y += 7;
+
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "bold");
+      columns.forEach((column, columnIndex) => {
+        const x = getColumnX(columns, columnIndex, leftMargin);
+        const textWidth = pdf.getTextWidth(column.header);
+        const textX =
+          column.align === "right" ? x + column.width - textWidth : x;
+        pdf.text(column.header, textX, y);
+      });
+
+      return y + 4;
+    };
+
+    let y = drawHeader();
+
+    rows.forEach((row, index) => {
+      if (y + rowHeight > bottomLimit) {
+        pdf.addPage();
+        y = drawHeader();
+      }
+
+      const isSalesHeader =
+        row.invoice_value === null &&
+        row.invoice_profit === null &&
+        row.invoice_number !== "" &&
+        row.invoice_number !== "TOTAL";
+
+      const isTotal = row.invoice_number === "TOTAL";
+      const isGrandTotal = row.invoice_date === "GRAND TOTAL";
+
+      if (isSalesHeader || isTotal || isGrandTotal) {
+        pdf.setFont("helvetica", "bold");
+      } else {
+        pdf.setFont("helvetica", "normal");
+      }
+
+      pdf.setFontSize(9);
+
+      columns.forEach((column, columnIndex) => {
+        const cellText = column.getValue(row, index);
+        const x = getColumnX(columns, columnIndex, leftMargin);
+        const textWidth = pdf.getTextWidth(cellText);
+        const textX =
+          column.align === "right" ? x + column.width - textWidth : x;
+
+        pdf.text(cellText, textX, y);
+      });
+
+      y += rowHeight;
+    });
+
+    openPdfForPrint(pdf, `laporan-laba-${monthName.toLowerCase()}-${year}.pdf`);
   },
 };
 

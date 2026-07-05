@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Search } from "lucide-react";
 import { useGetProfitReport } from "@/modules/report/report.queries";
+import { printService } from "@/lib/print.service";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -83,6 +84,23 @@ export default function ProfitReportContent() {
             <ComboboxField name="year" label="Tahun" items={YEARS} />
           </div>
           <Button type="submit">Cari</Button>
+          <Button
+            type="button"
+            onClick={() => {
+              if (params) {
+                const monthName =
+                  MONTHS.find((m) => m.id === params.month)?.name ?? "";
+                printService.handlePrintProfitReport(
+                  rows || [],
+                  monthName,
+                  params.year,
+                );
+              }
+            }}
+            disabled={!params || !rows || rows.length === 0 || isLoading}
+          >
+            Print
+          </Button>
         </form>
       </FormProvider>
       {params && (
