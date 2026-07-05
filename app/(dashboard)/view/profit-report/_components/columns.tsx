@@ -18,23 +18,30 @@ export const columns = [
     cell: ({ row }) => row.original.row_number ?? "",
   }),
 
+  // ponytail: swapped Invoice Date and Invoice Number column order
+  columnHelper.accessor("invoice_date", {
+    header: "Tanggal",
+    cell: (info) => {
+      const row = info.row.original;
+      if (isSalesHeader(row)) {
+        return <span className="font-bold text-base">{row.invoice_number}</span>;
+      }
+      return info.getValue() || "";
+    },
+  }),
+
   columnHelper.accessor("invoice_number", {
     header: "Nomor Nota",
     cell: (info) => {
       const row = info.row.original;
       if (isSalesHeader(row)) {
-        return <span className="font-bold text-base">{info.getValue()}</span>;
+        return "";
       }
       if (isTotalRow(row)) {
         return <span className="font-semibold">{info.getValue()}</span>;
       }
       return info.getValue();
     },
-  }),
-
-  columnHelper.accessor("invoice_date", {
-    header: "Tanggal",
-    cell: (info) => info.getValue() || "",
   }),
 
   columnHelper.accessor("client_name", {
