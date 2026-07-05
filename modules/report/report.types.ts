@@ -90,7 +90,7 @@ export interface SalespersonPerformance {
 
 export interface DashboardSnapshot {
   headline: {
-    todayRevenue: DashboardHeadlineStat;
+    thisMonthOmzet: DashboardHeadlineStat;
     grossProfit: DashboardHeadlineStat;
     openReceivables: DashboardHeadlineStat;
     activeClients: DashboardHeadlineStat;

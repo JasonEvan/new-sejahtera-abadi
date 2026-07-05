@@ -43,6 +43,14 @@ export const reportRepository = {
     const weekStart = nowTz.startOf("week").toISOString();
     const monthStart = nowTz.startOf("month").toISOString();
     const monthEnd = nowTz.endOf("month").toISOString();
+    const prevMonthStart = nowTz
+      .subtract(1, "month")
+      .startOf("month")
+      .toISOString();
+    const prevMonthEnd = nowTz
+      .subtract(1, "month")
+      .endOf("month")
+      .toISOString();
     const days7Ago = nowTz.subtract(7, "days").toISOString();
     const days30Ago = nowTz.subtract(30, "days").toISOString();
     const days60Ago = nowTz.subtract(60, "days").toISOString();
@@ -58,12 +66,12 @@ export const reportRepository = {
       // 1. Consolidated Sales Metrics (SARGable range comparisons)
       db
         .select({
-          todayRevenue:
-            sql<number>`COALESCE(SUM(${sales_orders.invoice_value}) FILTER (WHERE ${sales_orders.invoice_date} >= ${todayStart} AND ${sales_orders.invoice_date} <= ${todayEnd}), 0)`.mapWith(
+          thisMonthOmzet:
+            sql<number>`COALESCE(SUM(${sales_orders.invoice_value}) FILTER (WHERE ${sales_orders.invoice_date} >= ${monthStart} AND ${sales_orders.invoice_date} <= ${monthEnd}), 0)`.mapWith(
               Number,
             ),
-          yesterdayRevenue:
-            sql<number>`COALESCE(SUM(${sales_orders.invoice_value}) FILTER (WHERE ${sales_orders.invoice_date} >= ${yesterdayStart} AND ${sales_orders.invoice_date} <= ${yesterdayEnd}), 0)`.mapWith(
+          prevMonthOmzet:
+            sql<number>`COALESCE(SUM(${sales_orders.invoice_value}) FILTER (WHERE ${sales_orders.invoice_date} >= ${prevMonthStart} AND ${sales_orders.invoice_date} <= ${prevMonthEnd}), 0)`.mapWith(
               Number,
             ),
           openReceivables:
@@ -241,11 +249,11 @@ export const reportRepository = {
 
     return {
       headline: {
-        todayRevenue: {
-          value: salesMetrics.todayRevenue,
+        thisMonthOmzet: {
+          value: salesMetrics.thisMonthOmzet,
           deltaPercentage: toDeltaPercentage(
-            salesMetrics.todayRevenue,
-            salesMetrics.yesterdayRevenue,
+            salesMetrics.thisMonthOmzet,
+            salesMetrics.prevMonthOmzet,
           ),
         },
         grossProfit: {

@@ -48,8 +48,8 @@ describe("report.repository", () => {
       .mockReturnValueOnce(
         selectChainThen([
           {
-            todayRevenue: 100,
-            yesterdayRevenue: 50,
+            thisMonthOmzet: 100,
+            prevMonthOmzet: 50,
             openReceivables: 70,
             todayOpenReceivables: 20,
             yesterdayOpenReceivables: 10,
@@ -93,7 +93,7 @@ describe("report.repository", () => {
 
     const snapshot = await reportRepository.getDashboardSnapshot();
 
-    expect(snapshot.headline.todayRevenue).toEqual({
+    expect(snapshot.headline.thisMonthOmzet).toEqual({
       value: 100,
       deltaPercentage: 100,
     });

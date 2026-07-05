@@ -49,7 +49,7 @@ describe("report.service", () => {
   it("getDashboardSnapshot proxies repository response", async () => {
     const snapshot = {
       headline: {
-        todayRevenue: { value: 1, deltaPercentage: 0 },
+        thisMonthOmzet: { value: 1, deltaPercentage: 0 },
         grossProfit: { value: 2, deltaPercentage: 10 },
         openReceivables: { value: 3, deltaPercentage: -5 },
         activeClients: { value: 4, deltaPercentage: null },

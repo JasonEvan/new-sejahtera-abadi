@@ -72,8 +72,8 @@ const quickActions = [
 
 const headlineStatsConfig = [
   {
-    key: "todayRevenue",
-    label: "Today Revenue",
+    key: "thisMonthOmzet",
+    label: "This Month Omzet",
     unit: "IDR",
     icon: CircleDollarSign,
   },
