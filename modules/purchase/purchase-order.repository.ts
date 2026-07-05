@@ -235,7 +235,8 @@ export const purchaseOrderRepository = {
           eq(purchase_orders.client_id, clientId),
           eq(purchase_orders.paid_amount, 0),
         ),
-      );
+      )
+      .orderBy(asc(purchase_orders.invoice_number));
   },
 
   async getPurchaseReturnLinesWithMeta(invoiceNumber: string) {

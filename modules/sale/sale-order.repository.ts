@@ -245,7 +245,8 @@ export const saleOrderRepository = {
           eq(sales_orders.client_id, clientId),
           eq(sales_orders.paid_amount, 0),
         ),
-      );
+      )
+      .orderBy(asc(sales_orders.invoice_number));
   },
 
   async getSaleReturnLinesWithMeta(invoiceNumber: string) {
