@@ -57,19 +57,25 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
   const hasUserChangedStockId = useRef<boolean>(false);
 
   useEffect(() => {
-    if (watchedStockId && watchedStockId !== initialStockId.current) {
-      hasUserChangedStockId.current = true;
-    }
-
-    if (watchedStockId && hasUserChangedStockId.current) {
-      const selected = stocks?.find((stock) => stock.id === watchedStockId);
+    if (watchedStockId && stocks) {
+      const selected = stocks.find((stock) => stock.id === watchedStockId);
       if (selected) {
-        setValue("capital_cost", selected.capital_cost, {
-          shouldValidate: true,
-        });
-        setValue("selling_price", selected.selling_price || 0, {
-          shouldValidate: true,
-        });
+        if (watchedStockId !== initialStockId.current) {
+          hasUserChangedStockId.current = true;
+        }
+
+        if (hasUserChangedStockId.current) {
+          setValue("capital_cost", selected.capital_cost, {
+            shouldValidate: true,
+          });
+          setValue("selling_price", selected.selling_price || 0, {
+            shouldValidate: true,
+          });
+        } else {
+          setValue("capital_cost", selected.capital_cost, {
+            shouldValidate: true,
+          });
+        }
       }
     }
   }, [watchedStockId, stocks, setValue]);
@@ -97,14 +103,22 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-3"
       >
-        <ComboboxField
-          name="stock_id"
-          label="Nama Barang"
-          items={stocks || []}
-          isInDialog
-        />
         <div className="grid grid-cols-2 gap-x-2">
+          <ComboboxField
+            name="stock_id"
+            label="Nama Barang"
+            items={stocks || []}
+            isInDialog
+          />
           <InputField name="quantity" label="Jumlah" type="number" />
+        </div>
+        <div className="grid grid-cols-2 gap-x-2">
+          <InputField
+            name="capital_cost"
+            label="Modal"
+            type="number"
+            disabled
+          />
           <InputField name="selling_price" label="Harga Jual" type="number" />
         </div>
       </form>
