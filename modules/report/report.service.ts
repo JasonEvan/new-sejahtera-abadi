@@ -1,7 +1,13 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { stockRepository } from "../stock/stock.repository";
 import { companyRepository } from "../company/company.repository";
 import { reportRepository } from "./report.repository";
+
+// ponytail: extend dayjs with timezone plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
 import {
   AllPayablesTableRow,
   AllReceivablesTableRow,
@@ -20,6 +26,7 @@ export const reportService = {
   },
 
   async getInventoryLedgers(stockId: number) {
+    const settings = await companyRepository.getSettings();
     const data = await reportRepository.getInventoryLedgers(stockId);
     const [stock] = await stockRepository.getStartingStock(stockId);
 
@@ -64,7 +71,8 @@ export const reportService = {
       tableRows.push({
         row_number: rowNumber++,
         invoice_number: row.invoice_number,
-        invoice_date: dayjs(row.invoice_date).format("DD/MM/YYYY"), // Pake row.date dari query baru
+        // ponytail: format using company timezone
+        invoice_date: dayjs(row.invoice_date).tz(settings.timezone).format("DD/MM/YYYY"), // Pake row.date dari query baru
         name: row.name,
         city: row.city,
         type: row.type as "B" | "J" | "BR" | "JR",
@@ -123,6 +131,7 @@ export const reportService = {
   },
 
   async getPayablesByClient(clientId: number) {
+    const settings = await companyRepository.getSettings();
     const data = await reportRepository.getPayablesByClient(clientId);
 
     let totalInvoiceValue = 0;
@@ -137,11 +146,12 @@ export const reportService = {
 
         return {
           invoice_number: row.invoice_number,
-          invoice_date: dayjs(row.invoice_date).format("DD/MM/YYYY"),
+          // ponytail: format using company timezone
+          invoice_date: dayjs(row.invoice_date).tz(settings.timezone).format("DD/MM/YYYY"),
           invoice_value: row.invoice_value,
           paid_amount: row.paid_amount,
           payment_date: row.payment_date
-            ? dayjs(row.payment_date).format("DD/MM/YYYY")
+            ? dayjs(row.payment_date).tz(settings.timezone).format("DD/MM/YYYY")
             : null,
           balance_due: row.balance_due,
         };
@@ -191,6 +201,7 @@ export const reportService = {
   },
 
   async getReceivablesByClient(clientId: number) {
+    const settings = await companyRepository.getSettings();
     const data = await reportRepository.getReceivablesByClient(clientId);
 
     let totalInvoiceValue = 0;
@@ -205,11 +216,12 @@ export const reportService = {
 
         return {
           invoice_number: row.invoice_number,
-          invoice_date: dayjs(row.invoice_date).format("DD/MM/YYYY"),
+          // ponytail: format using company timezone
+          invoice_date: dayjs(row.invoice_date).tz(settings.timezone).format("DD/MM/YYYY"),
           invoice_value: row.invoice_value,
           paid_amount: row.paid_amount,
           payment_date: row.payment_date
-            ? dayjs(row.payment_date).format("DD/MM/YYYY")
+            ? dayjs(row.payment_date).tz(settings.timezone).format("DD/MM/YYYY")
             : null,
           balance_due: row.balance_due,
         };
@@ -273,7 +285,8 @@ export const reportService = {
         tableRows.push({
           row_number: rowNumber++,
           invoice_number: data.invoice_number,
-          invoice_date: dayjs(data.invoice_date).format("DD/MM/YYYY"),
+          // ponytail: format using company timezone
+          invoice_date: dayjs(data.invoice_date).tz(settings.timezone).format("DD/MM/YYYY"),
           client_name: data.client_name,
           client_city: data.client_city,
           invoice_value: data.invoice_value,
