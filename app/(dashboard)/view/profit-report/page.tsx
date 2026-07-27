@@ -5,8 +5,8 @@ export default function ProfitReportPage() {
   return (
     <div>
       <PageTitle
-        title="Laporan Laba"
-        subtitle="Lihat laporan laba berdasarkan bulan dan tahun"
+        title="Laporan Penjualan"
+        subtitle="Lihat laporan penjualan berdasarkan bulan dan tahun"
       />
       <ProfitReportContent />
     </div>

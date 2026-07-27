@@ -227,7 +227,7 @@ export const sidebarItems: SidebarItem[] = [
         ],
       },
       {
-        title: "Laporan Laba",
+        title: "Laporan Penjualan",
         url: "/view/profit-report",
         permission: "profit-loss.view",
       },
