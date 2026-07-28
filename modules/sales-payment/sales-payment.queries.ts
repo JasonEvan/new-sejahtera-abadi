@@ -19,6 +19,8 @@ export const useGetEditReceivablesByInvoice = (
     queryFn: () => getEditReceivablesByInvoice(invoiceNumber),
     select: (data) => data.data,
     enabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };
 
@@ -43,5 +45,7 @@ export const useGetSalesPaymentTransactionSummary = (
     queryFn: () => getSalesPaymentTransactionSummary(transactionNumber),
     select: (data) => data.data,
     enabled,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };

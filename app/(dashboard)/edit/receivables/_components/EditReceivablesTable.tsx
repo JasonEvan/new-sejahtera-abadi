@@ -114,7 +114,11 @@ function AddReceivableInvoiceForm({
   tableRows,
   onAdd,
 }: AddReceivableInvoiceFormProps) {
-  const { data: invoices, isError, error } = useGetOrdersMenu({
+  const {
+    data: invoices,
+    isError,
+    error,
+  } = useGetOrdersMenu({
     clientId,
     isPaidOff: false,
   });
@@ -355,6 +359,7 @@ export default function EditReceivablesTable() {
 
   useEffect(() => {
     if (!searchTransactionNumber || isFetching) return;
+    if (tableState.activeInvoiceNumber === searchTransactionNumber) return;
 
     if (!data) {
       dispatch({ type: "RESET" });
@@ -405,7 +410,12 @@ export default function EditReceivablesTable() {
         activeInvoiceNumber: data.transaction_number,
       },
     });
-  }, [data, isFetching, searchTransactionNumber]);
+  }, [
+    data,
+    isFetching,
+    searchTransactionNumber,
+    tableState.activeInvoiceNumber,
+  ]);
 
   function handleOpenEditDialog(row: EditableReceivableRow) {
     if (tableState.selectedInvoiceValue === null) return;
@@ -524,7 +534,8 @@ export default function EditReceivablesTable() {
 
       {isSearchStale && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Nomor transaksi berubah. Klik Cari Transaksi untuk memuat ulang data terbaru.
+          Nomor transaksi berubah. Klik Cari Transaksi untuk memuat ulang data
+          terbaru.
         </div>
       )}
 
