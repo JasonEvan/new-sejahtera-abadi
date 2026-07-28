@@ -39,8 +39,12 @@ export interface DeleteEditReceivablesByInvoiceInput {
 }
 
 export interface UpdateEditReceivablesByInvoiceInput {
-  invoice_number: string;
-  payments: EditReceivablesPaymentInput[];
+  transaction_number: string;
+  payments: {
+    invoice_number: string;
+    paid_amount: number;
+    payment_date?: string;
+  }[];
 }
 
 export type SalesPaymentFormField = z.infer<

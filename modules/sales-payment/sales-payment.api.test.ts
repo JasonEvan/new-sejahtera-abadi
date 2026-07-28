@@ -71,10 +71,10 @@ describe("sales-payment.api", () => {
 
   it("updateEditReceivablesByInvoice calls PUT with strict contract", async () => {
     const payload = {
-      invoice_number: "SJ-101",
+      transaction_number: "TRX-SP-9",
       payments: [
         {
-          transaction_number: "TRX-SP-9",
+          invoice_number: "SJ-101",
           payment_date: "2026-04-15",
           paid_amount: 15000,
         },
@@ -97,7 +97,7 @@ describe("sales-payment.api", () => {
 
     await expect(
       updateEditReceivablesByInvoice({
-        invoice_number: "SJ-1",
+        transaction_number: "TRX-1",
         payments: [],
       }),
     ).rejects.toThrow("network");

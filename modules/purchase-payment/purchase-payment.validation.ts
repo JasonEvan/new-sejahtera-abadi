@@ -79,22 +79,13 @@ export const deleteEditPayablesByInvoiceValidation = z.object({
 
 export const updateEditPayablesByInvoiceValidation = z
   .object({
-    invoice_number: z.string().trim().min(1, "Nomor nota harus diisi"),
+    transaction_number: z.string().trim().min(1, "Nomor transaksi harus diisi"),
     payments: z
       .array(
         z.object({
-          transaction_number: z
-            .string()
-            .trim()
-            .min(1, "Nomor transaksi harus diisi"),
-          payment_date: z
-            .string()
-            .trim()
-            .min(1, "Tanggal lunas harus diisi")
-            .refine((val) => dayjs(val).isValid(), {
-              error: "Tanggal lunas tidak valid",
-            }),
+          invoice_number: z.string().trim().min(1, "Nomor nota harus diisi"),
           paid_amount: z.int().min(0, "Lunas nota tidak boleh negatif"),
+          payment_date: z.string().optional(),
         }),
       )
       .min(1, "Minimal ada 1 pembayaran"),

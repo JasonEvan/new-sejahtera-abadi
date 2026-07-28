@@ -118,6 +118,34 @@ export const salesPaymentRepository = {
     };
   },
 
+  getByTransactionNumber(transactionNumber: string, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .select({
+        id: sales_payments.id,
+        client_id: sales_payments.client_id,
+        sales_order_id: sales_payments.sales_order_id,
+        paid_amount: sales_payments.paid_amount,
+        payment_date: sales_payments.payment_date,
+      })
+      .from(sales_payments)
+      .where(eq(sales_payments.transaction_number, transactionNumber));
+  },
+
+  insertTransactionPayments(
+    payments: {
+      client_id: number;
+      sales_order_id: number;
+      transaction_number: string;
+      payment_date: Date;
+      paid_amount: number;
+    }[],
+    tx?: Tx,
+  ) {
+    const database = tx ?? db;
+    return database.insert(sales_payments).values(payments);
+  },
+
   deleteByTransactionNumber(transactionNumber: string, tx?: Tx) {
     const database = tx ?? db;
 

@@ -52,14 +52,12 @@ export const useUpdateEditPayablesMutation = () => {
 
   return useMutation({
     mutationFn: updateEditPayablesByInvoice,
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       toast.success(data.message || "Payments updated successfully", {
         position: "bottom-right",
       });
       queryClient.invalidateQueries({ queryKey: getAllPayablesKey() });
-      queryClient.invalidateQueries({
-        queryKey: getEditPayablesByInvoiceKey(variables.invoice_number),
-      });
+      queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
     },
   });
 };

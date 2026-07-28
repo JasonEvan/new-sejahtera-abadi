@@ -9,7 +9,7 @@ import {
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
-import { and, asc, desc, eq, ilike, like, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, like, ne, sql } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 
 type SalesOrderPaymentItem = {
@@ -85,6 +85,23 @@ export const saleOrderRepository = {
       .where(eq(sales_orders.invoice_number, invoiceNumber));
 
     return order;
+  },
+
+  async getByInvoiceNumbers(invoiceNumbers: string[], tx?: Tx) {
+    if (invoiceNumbers.length === 0) return [];
+    const database = tx ?? db;
+
+    return database
+      .select({
+        id: sales_orders.id,
+        client_id: sales_orders.client_id,
+        invoice_number: sales_orders.invoice_number,
+        invoice_value: sales_orders.invoice_value,
+        paid_amount: sales_orders.paid_amount,
+        balance_due: sales_orders.balance_due,
+      })
+      .from(sales_orders)
+      .where(inArray(sales_orders.invoice_number, invoiceNumbers));
   },
 
   getOrdersMenu(clientId: number, isPaidOff: boolean) {

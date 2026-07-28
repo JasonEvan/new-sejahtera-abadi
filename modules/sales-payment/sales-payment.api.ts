@@ -2,8 +2,8 @@ import api from "@/lib/axios";
 import {
   DeleteEditReceivablesByInvoiceInput,
   EditReceivablesInvoiceDetail,
-  EditReceivablesPaymentInput,
   InsertSalesPayment,
+  UpdateEditReceivablesByInvoiceInput,
 } from "./sales-payment.types";
 
 export async function createSalesPayment(data: InsertSalesPayment) {
@@ -30,10 +30,9 @@ export async function deleteEditReceivablesByInvoice(
   return response.data;
 }
 
-export async function updateEditReceivablesByInvoice(data: {
-  invoice_number: string;
-  payments: EditReceivablesPaymentInput[];
-}) {
+export async function updateEditReceivablesByInvoice(
+  data: UpdateEditReceivablesByInvoiceInput,
+) {
   const response = await api.put<{ message: string }>(
     "/sales-payments/detail",
     data,
@@ -66,7 +65,9 @@ export async function getSalesPaymentTransactionSummary(
         invoice_value: number;
       }[];
     } | null;
-  }>(`/sales-payments?transaction_number=${encodeURIComponent(transactionNumber)}`);
+  }>(
+    `/sales-payments?transaction_number=${encodeURIComponent(transactionNumber)}`,
+  );
   return response.data;
 }
 

@@ -111,68 +111,94 @@ export const salesPaymentService = {
 
   updateEditReceivablesByInvoice(data: UpdateEditReceivablesByInvoiceInput) {
     return db.transaction(async (tx) => {
-      const order = await saleOrderRepository.getByInvoiceNumber(
-        data.invoice_number,
-        tx,
-      );
+      const existingPayments =
+        await salesPaymentRepository.getByTransactionNumber(
+          data.transaction_number,
+          tx,
+        );
 
-      if (!order) {
-        throw new AppError("Invoice not found", 404);
+      if (existingPayments.length === 0) {
+        throw new AppError("Transaksi tidak ditemukan", 404);
       }
 
-      const existingPayments = await salesPaymentRepository.getBySalesOrderId(
-        order.id,
+      const clientId = existingPayments[0].client_id;
+      const oldTotalPaid = existingPayments.reduce(
+        (sum, p) => sum + p.paid_amount,
+        0,
+      );
+
+      // 1. Revert old payments on sales_orders
+      await saleOrderRepository.bulkDecPaidAmountAndIncBalanceDue(
+        existingPayments,
         tx,
       );
 
-      const oldTotalPaidAmount = existingPayments.reduce(
-        (total, item) => total + item.paid_amount,
+      // 2. Delete existing payment records for this transaction_number
+      await salesPaymentRepository.deleteByTransactionNumber(
+        data.transaction_number,
+        tx,
+      );
+
+      // 3. Resolve new sales_order_ids in a single batch query (No N+1)
+      const newTotalPaid = data.payments.reduce(
+        (sum, p) => sum + p.paid_amount,
         0,
       );
 
-      const newTotalPaidAmount = data.payments.reduce(
-        (total, item) => total + item.paid_amount,
-        0,
+      const uniqueInvoiceNumbers = Array.from(
+        new Set(data.payments.map((p) => p.invoice_number)),
       );
+      const orders = await saleOrderRepository.getByInvoiceNumbers(
+        uniqueInvoiceNumbers,
+        tx,
+      );
+      const orderMap = new Map(orders.map((o) => [o.invoice_number, o]));
 
-      if (newTotalPaidAmount > order.invoice_value) {
-        throw new AppError(
-          "Total paid amount cannot exceed invoice value",
-          400,
+      const defaultDate = existingPayments[0]?.payment_date
+        ? dayjs(existingPayments[0].payment_date).toDate()
+        : new Date();
+
+      const newPaymentItems = data.payments.map((item) => {
+        const order = orderMap.get(item.invoice_number);
+        if (!order) {
+          throw new AppError(`Nota ${item.invoice_number} tidak ditemukan`, 404);
+        }
+        return {
+          client_id: clientId,
+          sales_order_id: order.id,
+          paid_amount: item.paid_amount,
+          transaction_number: data.transaction_number,
+          payment_date: item.payment_date
+            ? dayjs(item.payment_date).toDate()
+            : defaultDate,
+        };
+      });
+
+      if (newPaymentItems.length > 0) {
+        await salesPaymentRepository.insertTransactionPayments(
+          newPaymentItems,
+          tx,
+        );
+        await saleOrderRepository.bulkIncPaidAmountAndDecBalanceDue(
+          newPaymentItems.map((p) => ({
+            sales_order_id: p.sales_order_id,
+            paid_amount: p.paid_amount,
+          })),
+          tx,
         );
       }
 
-      await salesPaymentRepository.deleteBySalesOrderId(order.id, tx);
-
-      await salesPaymentRepository.insertEditReceivablesPaymentRows(
-        {
-          client_id: order.client_id,
-          sales_order_id: order.id,
-          payments: data.payments,
-        },
-        tx,
-      );
-
-      await saleOrderRepository.updatePaidAndBalanceDue(
-        order.id,
-        {
-          paid_amount: newTotalPaidAmount,
-          balance_due: order.invoice_value - newTotalPaidAmount,
-        },
-        tx,
-      );
-
-      const receivableBalanceDelta = newTotalPaidAmount - oldTotalPaidAmount;
-
+      // 4. Adjust client receivable balance by delta
+      const receivableBalanceDelta = newTotalPaid - oldTotalPaid;
       if (receivableBalanceDelta > 0) {
         await clientRepository.decReceivableBalance(
-          order.client_id,
+          clientId,
           receivableBalanceDelta,
           tx,
         );
       } else if (receivableBalanceDelta < 0) {
         await clientRepository.incReceivableBalance(
-          order.client_id,
+          clientId,
           Math.abs(receivableBalanceDelta),
           tx,
         );

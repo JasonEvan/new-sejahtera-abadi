@@ -1,9 +1,9 @@
 import api from "@/lib/axios";
 import {
   DeleteEditPayablesByInvoiceInput,
-  EditPayablesPaymentInput,
   EditPayablesInvoiceDetail,
   InsertPurchasePayment,
+  UpdateEditPayablesByInvoiceInput,
 } from "./purchase-payment.types";
 
 export async function createPurchasePayment(data: InsertPurchasePayment) {
@@ -33,10 +33,9 @@ export async function deleteEditPayablesByInvoice(
   return response.data;
 }
 
-export async function updateEditPayablesByInvoice(data: {
-  invoice_number: string;
-  payments: EditPayablesPaymentInput[];
-}) {
+export async function updateEditPayablesByInvoice(
+  data: UpdateEditPayablesByInvoiceInput,
+) {
   const response = await api.put<{ message: string }>(
     "/purchase-payments/detail",
     data,
@@ -69,7 +68,9 @@ export async function getPurchasePaymentTransactionSummary(
         invoice_value: number;
       }[];
     } | null;
-  }>(`/purchase-payments?transaction_number=${encodeURIComponent(transactionNumber)}`);
+  }>(
+    `/purchase-payments?transaction_number=${encodeURIComponent(transactionNumber)}`,
+  );
   return response.data;
 }
 

@@ -51,7 +51,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
   const validatedBody = validate(body, updateEditPayablesByInvoiceValidation);
 
   const result = await purchasePaymentService.updateEditPayablesByInvoice({
-    invoice_number: validatedBody.invoice_number.trim().toUpperCase(),
+    transaction_number: validatedBody.transaction_number.trim().toUpperCase(),
     payments: validatedBody.payments,
   });
 

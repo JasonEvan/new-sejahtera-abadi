@@ -118,6 +118,34 @@ export const purchasePaymentRepository = {
     };
   },
 
+  getByTransactionNumber(transactionNumber: string, tx?: Tx) {
+    const database = tx ?? db;
+    return database
+      .select({
+        id: purchase_payments.id,
+        client_id: purchase_payments.client_id,
+        purchase_order_id: purchase_payments.purchase_order_id,
+        paid_amount: purchase_payments.paid_amount,
+        payment_date: purchase_payments.payment_date,
+      })
+      .from(purchase_payments)
+      .where(eq(purchase_payments.transaction_number, transactionNumber));
+  },
+
+  insertTransactionPayments(
+    payments: {
+      client_id: number;
+      purchase_order_id: number;
+      transaction_number: string;
+      payment_date: Date;
+      paid_amount: number;
+    }[],
+    tx?: Tx,
+  ) {
+    const database = tx ?? db;
+    return database.insert(purchase_payments).values(payments);
+  },
+
   deleteByTransactionNumber(transactionNumber: string, tx?: Tx) {
     const database = tx ?? db;
 

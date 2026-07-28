@@ -70,10 +70,10 @@ describe("purchase-payment.api", () => {
 
   it("updateEditPayablesByInvoice calls PUT with strict contract", async () => {
     const payload = {
-      invoice_number: "PB-100",
+      transaction_number: "TRX-PP-9",
       payments: [
         {
-          transaction_number: "TRX-PP-9",
+          invoice_number: "PB-100",
           payment_date: "2026-04-15",
           paid_amount: 21000,
         },

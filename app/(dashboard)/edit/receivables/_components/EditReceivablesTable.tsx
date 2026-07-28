@@ -200,7 +200,7 @@ function AddReceivableInvoiceForm({
     if (!selectedInvoice) return;
 
     const newRow: EditableReceivableRow = {
-      id: `new-${Date.now()}`,
+      id: crypto.randomUUID(),
       transaction_number: activeTransactionNumber,
       payment_date: dayjs().format("YYYY-MM-DD"),
       invoice_number: selectedInvoice.name,
@@ -463,9 +463,9 @@ export default function EditReceivablesTable() {
     if (!tableState.activeInvoiceNumber) return;
 
     await updateMutation.mutateAsync({
-      invoice_number: tableState.activeInvoiceNumber,
+      transaction_number: tableState.activeInvoiceNumber,
       payments: tableState.tableRows.map((row) => ({
-        transaction_number: row.transaction_number,
+        invoice_number: row.invoice_number,
         payment_date: row.payment_date,
         paid_amount: row.paid_amount,
       })),

@@ -19,13 +19,19 @@ jest.mock("./purchase-payment.repository", () => ({
     getByPurchaseOrderId: jest.fn(),
     deleteByPurchaseOrderId: jest.fn(),
     insertEditPayablesPaymentRows: jest.fn(),
+    getTransactionSummary: jest.fn(),
+    getByTransactionNumber: jest.fn(),
+    deleteByTransactionNumber: jest.fn(),
+    insertTransactionPayments: jest.fn(),
   },
 }));
 
 jest.mock("../purchase/purchase-order.repository", () => ({
   purchaseOrderRepository: {
     bulkIncPaidAmountAndDecBalanceDue: jest.fn(),
+    bulkDecPaidAmountAndIncBalanceDue: jest.fn(),
     getByInvoiceNumber: jest.fn(),
+    getByInvoiceNumbers: jest.fn(),
     updatePaidAndBalanceDue: jest.fn(),
   },
 }));
@@ -203,97 +209,48 @@ describe("purchase-payment.service", () => {
     );
   });
 
-  it("updateEditPayablesByInvoice throws when invoice does not exist", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce(
-      undefined as never,
-    );
+  it("updateEditPayablesByInvoice throws when transaction does not exist", async () => {
+    mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce([] as never);
 
     await expect(
       purchasePaymentService.updateEditPayablesByInvoice({
-        invoice_number: "PB-X",
+        transaction_number: "PB-X",
         payments: [],
       }),
     ).rejects.toEqual(
       expect.objectContaining({
-        message: "Invoice not found",
+        message: "Transaksi tidak ditemukan",
         statusCode: 404,
       }) as AppError,
     );
   });
 
-  it("updateEditPayablesByInvoice rejects when new paid total exceeds invoice value", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
-      id: 13,
-      client_id: 2,
-      invoice_value: 40000,
-    } as never);
-    mockedPaymentRepo.getByPurchaseOrderId.mockResolvedValueOnce([] as never);
-
-    await expect(
-      purchasePaymentService.updateEditPayablesByInvoice({
-        invoice_number: "PB-13",
-        payments: [
-          {
-            transaction_number: "TRX-OVR",
-            payment_date: "2026-04-15",
-            paid_amount: 41000,
-          },
-        ],
-      }),
-    ).rejects.toEqual(
-      expect.objectContaining({
-        message: "Total paid amount cannot exceed invoice value",
-        statusCode: 400,
-      }) as AppError,
-    );
-
-    expect(mockedPaymentRepo.deleteByPurchaseOrderId).not.toHaveBeenCalled();
-  });
-
   it("updateEditPayablesByInvoice updates paid/balance and decreases payable on positive delta", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
-      id: 5,
-      client_id: 2,
-      invoice_value: 90000,
-    } as never);
-    mockedPaymentRepo.getByPurchaseOrderId.mockResolvedValueOnce([
-      { id: 10, paid_amount: 10000 },
+    mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce([
+      { id: 10, client_id: 2, purchase_order_id: 5, paid_amount: 10000, payment_date: new Date() },
+    ] as never);
+    mockedOrderRepo.getByInvoiceNumbers.mockResolvedValueOnce([
+      {
+        id: 5,
+        client_id: 2,
+        invoice_number: "PB-5",
+        invoice_value: 90000,
+      },
     ] as never);
 
     const result = await purchasePaymentService.updateEditPayablesByInvoice({
-      invoice_number: "PB-5",
+      transaction_number: "TRX-N1",
       payments: [
         {
-          transaction_number: "TRX-N1",
+          invoice_number: "PB-5",
           payment_date: "2026-04-14",
           paid_amount: 25000,
         },
       ],
     });
 
-    expect(mockedPaymentRepo.deleteByPurchaseOrderId).toHaveBeenCalledWith(
-      5,
-      tx,
-    );
-    expect(
-      mockedPaymentRepo.insertEditPayablesPaymentRows,
-    ).toHaveBeenCalledWith(
-      {
-        client_id: 2,
-        purchase_order_id: 5,
-        payments: [
-          {
-            transaction_number: "TRX-N1",
-            payment_date: "2026-04-14",
-            paid_amount: 25000,
-          },
-        ],
-      },
-      tx,
-    );
-    expect(mockedOrderRepo.updatePaidAndBalanceDue).toHaveBeenCalledWith(
-      5,
-      { paid_amount: 25000, balance_due: 65000 },
+    expect(mockedPaymentRepo.deleteByTransactionNumber).toHaveBeenCalledWith(
+      "TRX-N1",
       tx,
     );
     expect(mockedClientRepo.decPayableBalance).toHaveBeenCalledWith(
@@ -305,20 +262,23 @@ describe("purchase-payment.service", () => {
   });
 
   it("updateEditPayablesByInvoice increases payable on negative delta", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
-      id: 6,
-      client_id: 4,
-      invoice_value: 90000,
-    } as never);
-    mockedPaymentRepo.getByPurchaseOrderId.mockResolvedValueOnce([
-      { id: 1, paid_amount: 50000 },
+    mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce([
+      { id: 1, client_id: 4, purchase_order_id: 6, paid_amount: 50000, payment_date: new Date() },
+    ] as never);
+    mockedOrderRepo.getByInvoiceNumbers.mockResolvedValueOnce([
+      {
+        id: 6,
+        client_id: 4,
+        invoice_number: "PB-6",
+        invoice_value: 90000,
+      },
     ] as never);
 
     await purchasePaymentService.updateEditPayablesByInvoice({
-      invoice_number: "PB-6",
+      transaction_number: "TRX-LOW",
       payments: [
         {
-          transaction_number: "TRX-LOW",
+          invoice_number: "PB-6",
           payment_date: "2026-04-15",
           paid_amount: 30000,
         },
@@ -334,20 +294,23 @@ describe("purchase-payment.service", () => {
   });
 
   it("updateEditPayablesByInvoice does not mutate client balance when delta is zero", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
-      id: 7,
-      client_id: 8,
-      invoice_value: 90000,
-    } as never);
-    mockedPaymentRepo.getByPurchaseOrderId.mockResolvedValueOnce([
-      { id: 1, paid_amount: 35000 },
+    mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce([
+      { id: 1, client_id: 8, purchase_order_id: 7, paid_amount: 35000, payment_date: new Date() },
+    ] as never);
+    mockedOrderRepo.getByInvoiceNumbers.mockResolvedValueOnce([
+      {
+        id: 7,
+        client_id: 8,
+        invoice_number: "PB-7",
+        invoice_value: 90000,
+      },
     ] as never);
 
     await purchasePaymentService.updateEditPayablesByInvoice({
-      invoice_number: "PB-7",
+      transaction_number: "TRX-SAME",
       payments: [
         {
-          transaction_number: "TRX-SAME",
+          invoice_number: "PB-7",
           payment_date: "2026-04-15",
           paid_amount: 35000,
         },
