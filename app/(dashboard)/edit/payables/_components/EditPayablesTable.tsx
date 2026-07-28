@@ -11,13 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { alertDialogs } from "@/lib/alert-dialogs";
 import { dialogs } from "@/lib/dialogs";
 import { useGetClientNames } from "@/modules/client/client.queries";
-import {
-  useDeleteEditPayablesMutation,
-  useUpdateEditPayablesMutation,
-} from "@/modules/purchase-payment/purchase-payment.mutations";
+import { useUpdateEditPayablesMutation } from "@/modules/purchase-payment/purchase-payment.mutations";
 import {
   useGetPurchasePaymentTransactions,
   useGetPurchasePaymentTransactionSummary,
@@ -95,7 +91,6 @@ function tableReducer(state: TableState, action: TableAction): TableState {
 }
 
 export default function EditPayablesTable() {
-  const deleteMutation = useDeleteEditPayablesMutation();
   const updateMutation = useUpdateEditPayablesMutation();
   const [searchTransactionNumber, setSearchTransactionNumber] = useState("");
   const [tableState, dispatch] = useReducer(tableReducer, initialTableState);
@@ -273,26 +268,6 @@ export default function EditPayablesTable() {
     dispatch({ type: "UPDATE_ROWS", payload: { tableRows: remainingRows } });
   }
 
-  function handleDeleteAll() {
-    if (!tableState.activeInvoiceNumber) return;
-
-    alertDialogs.open({
-      title: "Hapus semua transaksi?",
-      description:
-        "Semua transaksi pada tabel akan dihapus. Tindakan ini tidak dapat dibatalkan.",
-      confirmText: "Delete All",
-      onConfirm: async () => {
-        await deleteMutation.mutateAsync({
-          invoice_number: tableState.activeInvoiceNumber!,
-        });
-        dispatch({ type: "RESET" });
-        setSearchTransactionNumber("");
-        setValue("client", 0);
-        setValue("transaction_id", 0);
-      },
-    });
-  }
-
   async function handleSubmitChanges() {
     if (!tableState.activeInvoiceNumber) return;
 
@@ -316,6 +291,11 @@ export default function EditPayablesTable() {
       tableState.tableRows.reduce((total, row) => total + row.paid_amount, 0),
     [tableState.tableRows],
   );
+
+  const isCompleted =
+    tableState.selectedInvoiceValue !== null &&
+    !isSearchStale &&
+    tableState.tableRows.length > 0;
 
   return (
     <div className="space-y-5">
@@ -357,109 +337,82 @@ export default function EditPayablesTable() {
         </div>
       )}
 
-      {tableState.selectedInvoiceValue !== null && !isSearchStale && (
-        <div className="overflow-hidden rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tanggal Lunas</TableHead>
-                <TableHead>Nomor Nota</TableHead>
-                <TableHead className="text-right">Nilai Nota</TableHead>
-                <TableHead className="text-right">Lunas Nota</TableHead>
-                <TableHead className="text-right">Saldo Nota</TableHead>
-                <TableHead>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tableState.tableRows.length === 0 && (
+      {isCompleted && (
+        <div className="space-y-5">
+          <div className="overflow-hidden rounded-md border">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="h-20 text-center">
-                    Belum ada transaksi.
-                  </TableCell>
+                  <TableHead>Tanggal Lunas</TableHead>
+                  <TableHead>Nomor Nota</TableHead>
+                  <TableHead className="text-right">Nilai Nota</TableHead>
+                  <TableHead className="text-right">Lunas Nota</TableHead>
+                  <TableHead className="text-right">Saldo Nota</TableHead>
+                  <TableHead>Aksi</TableHead>
                 </TableRow>
-              )}
+              </TableHeader>
+              <TableBody>
+                {tableState.tableRows.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>{row.payment_date}</TableCell>
+                    <TableCell>{row.invoice_number}</TableCell>
+                    <TableCell className="text-right">
+                      {row.invoice_value.toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {row.paid_amount.toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {row.balance_due.toLocaleString("id-ID")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-x-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          type="button"
+                          onClick={() => handleOpenEditDialog(row)}
+                        >
+                          <Pencil />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          type="button"
+                          className="text-destructive"
+                          onClick={() => handleDeleteRow(row.id)}
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={3}>Total Amount</TableCell>
+                  <TableCell className="text-right">
+                    {paidAmountTotal.toLocaleString("id-ID")}
+                  </TableCell>
+                  <TableCell colSpan={2} />
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
 
-              {tableState.tableRows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>{row.payment_date}</TableCell>
-                  <TableCell>{row.invoice_number}</TableCell>
-                  <TableCell className="text-right">
-                    {row.invoice_value.toLocaleString("id-ID")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row.paid_amount.toLocaleString("id-ID")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row.balance_due.toLocaleString("id-ID")}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        onClick={() => handleOpenEditDialog(row)}
-                      >
-                        <Pencil />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        className="text-destructive"
-                        onClick={() => handleDeleteRow(row.id)}
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={3}>Total Amount</TableCell>
-                <TableCell className="text-right">
-                  {paidAmountTotal.toLocaleString("id-ID")}
-                </TableCell>
-                <TableCell colSpan={2} />
-              </TableRow>
-            </TableFooter>
-          </Table>
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              className="cursor-pointer"
+              onClick={handleSubmitChanges}
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending ? "Submitting..." : "Submit"}
+            </Button>
+          </div>
         </div>
       )}
-
-      <div className="flex justify-end gap-x-2">
-        <Button
-          variant="destructive"
-          type="button"
-          className="cursor-pointer"
-          onClick={handleDeleteAll}
-          disabled={
-            tableState.selectedInvoiceValue === null ||
-            tableState.tableRows.length === 0 ||
-            isSearchStale ||
-            deleteMutation.isPending ||
-            updateMutation.isPending
-          }
-        >
-          Delete
-        </Button>
-        <Button
-          type="button"
-          className="cursor-pointer"
-          onClick={handleSubmitChanges}
-          disabled={
-            tableState.selectedInvoiceValue === null ||
-            isSearchStale ||
-            tableState.tableRows.length === 0 ||
-            deleteMutation.isPending ||
-            updateMutation.isPending
-          }
-        >
-          {updateMutation.isPending ? "Submitting..." : "Submit"}
-        </Button>
-      </div>
     </div>
   );
 }
