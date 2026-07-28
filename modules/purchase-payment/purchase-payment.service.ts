@@ -13,7 +13,15 @@ import { eq } from "drizzle-orm";
 import { purchase_orders, purchase_payments } from "@/drizzle/schema";
 
 export const purchasePaymentService = {
-  createPurchasePayment(data: InsertPurchasePayment) {
+  async createPurchasePayment(data: InsertPurchasePayment) {
+    // ponytail: prevent creating payment with existing transaction_number
+    const existing = await purchasePaymentRepository.getTransactionSummary(
+      data.transaction_number,
+    );
+    if (existing) {
+      throw new AppError("Nomor transaksi sudah digunakan", 400);
+    }
+
     return db.transaction(async (tx) => {
       const totalPayments = data.cart.reduce(
         (acc, curr) => acc + curr.paid_amount,

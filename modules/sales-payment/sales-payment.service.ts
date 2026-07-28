@@ -10,10 +10,18 @@ import { clientRepository } from "../client/client.repository";
 import dayjs from "dayjs";
 import { AppError } from "@/lib/errors";
 import { eq } from "drizzle-orm";
-import { sales_orders, sales_payments } from "@/drizzle/schema";
+import { sales_payments } from "@/drizzle/schema";
 
 export const salesPaymentService = {
-  createSalesPayment(data: InsertSalesPayment) {
+  async createSalesPayment(data: InsertSalesPayment) {
+    // ponytail: prevent creating payment with existing transaction_number
+    const existing = await salesPaymentRepository.getTransactionSummary(
+      data.transaction_number,
+    );
+    if (existing) {
+      throw new AppError("Nomor transaksi sudah digunakan", 400);
+    }
+
     return db.transaction(async (tx) => {
       const totalPayments = data.cart.reduce(
         (acc, curr) => acc + curr.paid_amount,
@@ -206,10 +214,7 @@ export const salesPaymentService = {
       const clientId = payments[0].client_id;
 
       // Update invoices
-      await saleOrderRepository.bulkDecPaidAmountAndIncBalanceDue(
-        payments,
-        tx,
-      );
+      await saleOrderRepository.bulkDecPaidAmountAndIncBalanceDue(payments, tx);
 
       // Update client balance
       await clientRepository.incReceivableBalance(

@@ -3,6 +3,7 @@
 import { useSalesPaymentStore } from "@/stores/payments/useSalesPaymentStore";
 import TransactionInformation from "../../_components/TransactionInvormation";
 import ReceivablesTable from "./ReceivablesTable";
+import { getSalesPaymentTransactionSummary } from "@/modules/sales-payment/sales-payment.api";
 
 export default function ReceivablesContent() {
   const transaction_information = useSalesPaymentStore(
@@ -19,6 +20,10 @@ export default function ReceivablesContent() {
         onReset={useSalesPaymentStore.getState().clear}
         onSave={useSalesPaymentStore.getState().setTransactionInformation}
         isDisabled={isTransactionInformationFilled}
+        onCheckTransactionNumber={async (trxNum) => {
+          const res = await getSalesPaymentTransactionSummary(trxNum);
+          return !!res.data;
+        }}
       />
       {isTransactionInformationFilled && <ReceivablesTable />}
     </div>

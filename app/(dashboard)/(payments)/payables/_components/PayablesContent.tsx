@@ -3,6 +3,7 @@
 import TransactionInformation from "../../_components/TransactionInvormation";
 import { usePurchasePaymentStore } from "@/stores/payments/usePurchasePaymentStore";
 import PayablesTable from "./PayablesTable";
+import { getPurchasePaymentTransactionSummary } from "@/modules/purchase-payment/purchase-payment.api";
 
 export default function PayablesContent() {
   const transaction_information = usePurchasePaymentStore(
@@ -19,6 +20,10 @@ export default function PayablesContent() {
         onReset={usePurchasePaymentStore.getState().clear}
         onSave={usePurchasePaymentStore.getState().setTransactionInformation}
         isDisabled={isTransactionInformationFilled}
+        onCheckTransactionNumber={async (trxNum) => {
+          const res = await getPurchasePaymentTransactionSummary(trxNum);
+          return !!res.data;
+        }}
       />
       {isTransactionInformationFilled && <PayablesTable />}
     </div>

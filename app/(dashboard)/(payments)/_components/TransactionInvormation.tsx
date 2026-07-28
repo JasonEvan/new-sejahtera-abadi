@@ -5,7 +5,7 @@ import { useGetClientNames } from "@/modules/client/client.queries";
 import { transactionInformationValidation } from "@/modules/sales-payment/sales-payment.validation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import z from "zod";
 
@@ -18,14 +18,17 @@ type TransactionInformationProps = {
   onReset: () => void;
   onSave: (data: TransactionInformationFormField) => void;
   isDisabled: boolean;
+  onCheckTransactionNumber?: (transactionNumber: string) => Promise<boolean>;
 };
 
 export default function TransactionInformation({
   onReset,
   onSave,
   isDisabled,
+  onCheckTransactionNumber,
 }: TransactionInformationProps) {
   const { data: clients } = useGetClientNames();
+  const [isChecking, setIsChecking] = useState(false);
 
   const methods = useForm<TransactionInformationFormField>({
     defaultValues: {
@@ -49,7 +52,26 @@ export default function TransactionInformation({
     }
   }, [isDisabled, methods]);
 
-  const onSubmit = (data: TransactionInformationFormField) => {
+  const onSubmit = async (data: TransactionInformationFormField) => {
+    if (onCheckTransactionNumber) {
+      setIsChecking(true);
+      try {
+        // ponytail: check DB for duplicate transaction number before proceeding
+        const exists = await onCheckTransactionNumber(data.transaction_number);
+        if (exists) {
+          methods.setError("transaction_number", {
+            type: "manual",
+            message: "Nomor transaksi sudah digunakan",
+          });
+          return;
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (err) {
+        // ignore error and proceed
+      } finally {
+        setIsChecking(false);
+      }
+    }
     onSave(data);
   };
 
@@ -98,9 +120,9 @@ export default function TransactionInformation({
             <Button
               type="submit"
               className="cursor-pointer"
-              disabled={isDisabled}
+              disabled={isDisabled || isChecking}
             >
-              Submit
+              {isChecking ? "Checking..." : "Submit"}
             </Button>
           </div>
         </form>
