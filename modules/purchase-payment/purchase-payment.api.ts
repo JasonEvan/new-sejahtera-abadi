@@ -3,6 +3,7 @@ import {
   DeleteEditPayablesByInvoiceInput,
   EditPayablesInvoiceDetail,
   InsertPurchasePayment,
+  PurchasePaymentTransactionSummary,
   UpdateEditPayablesByInvoiceInput,
 } from "./purchase-payment.types";
 
@@ -55,19 +56,7 @@ export async function getPurchasePaymentTransactionSummary(
   transactionNumber: string,
 ) {
   const response = await api.get<{
-    data: {
-      transaction_number: string;
-      payment_date: string;
-      total_paid: number;
-      invoice_count: number;
-      payments: {
-        id: number;
-        paid_amount: number;
-        payment_date: string;
-        invoice_number: string;
-        invoice_value: number;
-      }[];
-    } | null;
+    data: PurchasePaymentTransactionSummary | null;
   }>(
     `/purchase-payments?transaction_number=${encodeURIComponent(transactionNumber)}`,
   );

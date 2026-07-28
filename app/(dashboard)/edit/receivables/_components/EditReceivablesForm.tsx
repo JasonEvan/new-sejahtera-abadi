@@ -23,22 +23,28 @@ interface EditReceivablesFormField {
 
 export default function EditReceivablesForm({
   row,
-  invoiceValue,
   onSave,
 }: {
   row: EditableReceivableRow;
-  invoiceValue: number;
   onSave: (id: string, paidAmount: number) => void;
 }) {
+  const maxAllowed = useMemo(
+    () => row.balance_due + row.paid_amount,
+    [row.balance_due, row.paid_amount],
+  );
+
   const schema = useMemo(
     () =>
       z.object({
         paid_amount: z
           .int("Lunas nota harus berupa angka bulat")
           .min(0, "Lunas nota tidak boleh negatif")
-          .max(invoiceValue, "Lunas nota tidak boleh melebihi nilai nota"),
+          .max(
+            maxAllowed,
+            `Lunas nota tidak boleh melebihi saldo nota (${maxAllowed.toLocaleString("id-ID")})`,
+          ),
       }),
-    [invoiceValue],
+    [maxAllowed],
   );
 
   const methods = useForm<EditReceivablesFormField>({

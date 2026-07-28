@@ -96,6 +96,7 @@ export const purchasePaymentRepository = {
         payment_date: purchase_payments.payment_date,
         invoice_number: purchase_orders.invoice_number,
         invoice_value: purchase_orders.invoice_value,
+        balance_due: purchase_orders.balance_due,
       })
       .from(purchase_payments)
       .innerJoin(

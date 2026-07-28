@@ -139,6 +139,14 @@ export const salesPaymentService = {
         tx,
       );
 
+      const oldPaidByOrderMap = new Map<number, number>();
+      for (const p of existingPayments) {
+        oldPaidByOrderMap.set(
+          p.sales_order_id,
+          (oldPaidByOrderMap.get(p.sales_order_id) ?? 0) + p.paid_amount,
+        );
+      }
+
       // 3. Resolve new sales_order_ids in a single batch query (No N+1)
       const newTotalPaid = data.payments.reduce(
         (sum, p) => sum + p.paid_amount,
@@ -154,15 +162,37 @@ export const salesPaymentService = {
       );
       const orderMap = new Map(orders.map((o) => [o.invoice_number, o]));
 
+      // Validate that new payments do not exceed max allowed balance per invoice
+      const newPaidByOrderMap = new Map<number, number>();
+      for (const item of data.payments) {
+        const order = orderMap.get(item.invoice_number);
+        if (!order) {
+          throw new AppError(`Nota ${item.invoice_number} tidak ditemukan`, 404);
+        }
+        newPaidByOrderMap.set(
+          order.id,
+          (newPaidByOrderMap.get(order.id) ?? 0) + item.paid_amount,
+        );
+      }
+
+      for (const order of orders) {
+        const newPaid = newPaidByOrderMap.get(order.id) ?? 0;
+        const oldPaid = oldPaidByOrderMap.get(order.id) ?? 0;
+        const maxAllowed = order.balance_due + oldPaid;
+        if (newPaid > maxAllowed) {
+          throw new AppError(
+            `Pelunasan nota ${order.invoice_number} tidak boleh melebihi saldo nota (${maxAllowed.toLocaleString("id-ID")})`,
+            400,
+          );
+        }
+      }
+
       const defaultDate = existingPayments[0]?.payment_date
         ? dayjs(existingPayments[0].payment_date).toDate()
         : new Date();
 
       const newPaymentItems = data.payments.map((item) => {
-        const order = orderMap.get(item.invoice_number);
-        if (!order) {
-          throw new AppError(`Nota ${item.invoice_number} tidak ditemukan`, 404);
-        }
+        const order = orderMap.get(item.invoice_number)!;
         return {
           client_id: clientId,
           sales_order_id: order.id,

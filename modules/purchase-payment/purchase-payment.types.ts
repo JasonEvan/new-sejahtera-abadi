@@ -20,6 +20,23 @@ export interface PurchasePaymentHistoryRow {
   paid_amount: number;
 }
 
+export interface PurchasePaymentTransactionSummaryItem {
+  id: number;
+  paid_amount: number;
+  payment_date: string;
+  invoice_number: string;
+  invoice_value: number;
+  balance_due: number;
+}
+
+export interface PurchasePaymentTransactionSummary {
+  transaction_number: string;
+  payment_date: string;
+  total_paid: number;
+  invoice_count: number;
+  payments: PurchasePaymentTransactionSummaryItem[];
+}
+
 export interface EditPayablesInvoiceDetail {
   invoice_number: string;
   invoice_value: number;

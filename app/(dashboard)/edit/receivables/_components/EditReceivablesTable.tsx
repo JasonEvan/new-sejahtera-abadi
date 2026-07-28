@@ -40,12 +40,14 @@ type TableState = {
   selectedInvoiceValue: number | null;
   tableRows: EditableReceivableRow[];
   activeInvoiceNumber: string | null;
+  invoiceMaxAllowedMap: Record<string, number>;
 };
 
 const initialTableState: TableState = {
   selectedInvoiceValue: null,
   tableRows: [],
   activeInvoiceNumber: null,
+  invoiceMaxAllowedMap: {},
 };
 
 type TableAction =
@@ -55,6 +57,7 @@ type TableAction =
         selectedInvoiceValue: number;
         tableRows: EditableReceivableRow[];
         activeInvoiceNumber: string;
+        invoiceMaxAllowedMap: Record<string, number>;
       };
     }
   | { type: "RESET" }
@@ -67,21 +70,27 @@ function tableReducer(state: TableState, action: TableAction): TableState {
         selectedInvoiceValue: action.payload.selectedInvoiceValue,
         tableRows: action.payload.tableRows,
         activeInvoiceNumber: action.payload.activeInvoiceNumber,
+        invoiceMaxAllowedMap: action.payload.invoiceMaxAllowedMap,
       };
     case "RESET":
       return initialTableState;
     case "UPDATE_ROWS":
       const invoicePaidMap: Record<string, number> = {};
+      action.payload.tableRows.forEach((row) => {
+        invoicePaidMap[row.invoice_number] =
+          (invoicePaidMap[row.invoice_number] || 0) + row.paid_amount;
+      });
+
       const updatedRows = action.payload.tableRows.map(
         (row: EditableReceivableRow) => {
-          invoicePaidMap[row.invoice_number] =
-            (invoicePaidMap[row.invoice_number] || 0) + row.paid_amount;
+          const maxAllowed =
+            state.invoiceMaxAllowedMap[row.invoice_number] ??
+            row.balance_due + row.paid_amount;
+          const paidForInvoice = invoicePaidMap[row.invoice_number] || 0;
+
           return {
             ...row,
-            balance_due: Math.max(
-              row.invoice_value - invoicePaidMap[row.invoice_number],
-              0,
-            ),
+            balance_due: Math.max(maxAllowed - paidForInvoice, 0),
           };
         },
       );
@@ -378,8 +387,15 @@ export default function EditReceivablesTable() {
     }
 
     const invoicePaidMap: Record<string, number> = {};
+    const invoiceMaxAllowedMap: Record<string, number> = {};
 
-    // ponytail: calculate balance_due per invoice_number (invoice_value - paid_amount)
+    data.payments.forEach((payment) => {
+      invoiceMaxAllowedMap[payment.invoice_number] =
+        (invoiceMaxAllowedMap[payment.invoice_number] || 0) +
+        payment.balance_due +
+        payment.paid_amount;
+    });
+
     const mappedRows: EditableReceivableRow[] = data.payments.map((payment) => {
       invoicePaidMap[payment.invoice_number] =
         (invoicePaidMap[payment.invoice_number] || 0) + payment.paid_amount;
@@ -387,6 +403,8 @@ export default function EditReceivablesTable() {
         typeof payment.payment_date === "string"
           ? payment.payment_date.split("T")[0]
           : dayjs(payment.payment_date).format("YYYY-MM-DD");
+
+      const maxAllowed = invoiceMaxAllowedMap[payment.invoice_number];
 
       return {
         id: payment.id.toString(),
@@ -396,7 +414,7 @@ export default function EditReceivablesTable() {
         invoice_value: payment.invoice_value,
         paid_amount: payment.paid_amount,
         balance_due: Math.max(
-          payment.invoice_value - invoicePaidMap[payment.invoice_number],
+          maxAllowed - invoicePaidMap[payment.invoice_number],
           0,
         ),
       };
@@ -408,6 +426,7 @@ export default function EditReceivablesTable() {
         selectedInvoiceValue: data.total_paid,
         tableRows: mappedRows,
         activeInvoiceNumber: data.transaction_number,
+        invoiceMaxAllowedMap,
       },
     });
   }, [
@@ -428,7 +447,6 @@ export default function EditReceivablesTable() {
       children: (
         <EditReceivablesForm
           row={row}
-          invoiceValue={row.invoice_value}
           onSave={(id, paidAmount) => {
             const editedRows = tableState.tableRows.map((item) =>
               item.id === id
@@ -438,13 +456,6 @@ export default function EditReceivablesTable() {
                   }
                 : item,
             );
-
-            if (paidAmount > row.invoice_value) {
-              toast.error("Total pelunasan tidak boleh melebihi nilai nota", {
-                position: "bottom-right",
-              });
-              return;
-            }
 
             dispatch({
               type: "UPDATE_ROWS",

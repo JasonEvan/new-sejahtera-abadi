@@ -20,6 +20,23 @@ export interface SalesPaymentHistoryRow {
   paid_amount: number;
 }
 
+export interface SalesPaymentTransactionSummaryItem {
+  id: number;
+  paid_amount: number;
+  payment_date: string;
+  invoice_number: string;
+  invoice_value: number;
+  balance_due: number;
+}
+
+export interface SalesPaymentTransactionSummary {
+  transaction_number: string;
+  payment_date: string;
+  total_paid: number;
+  invoice_count: number;
+  payments: SalesPaymentTransactionSummaryItem[];
+}
+
 export interface EditReceivablesInvoiceDetail {
   invoice_number: string;
   invoice_value: number;

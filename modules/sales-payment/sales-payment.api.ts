@@ -3,6 +3,7 @@ import {
   DeleteEditReceivablesByInvoiceInput,
   EditReceivablesInvoiceDetail,
   InsertSalesPayment,
+  SalesPaymentTransactionSummary,
   UpdateEditReceivablesByInvoiceInput,
 } from "./sales-payment.types";
 
@@ -52,19 +53,7 @@ export async function getSalesPaymentTransactionSummary(
   transactionNumber: string,
 ) {
   const response = await api.get<{
-    data: {
-      transaction_number: string;
-      payment_date: string;
-      total_paid: number;
-      invoice_count: number;
-      payments: {
-        id: number;
-        paid_amount: number;
-        payment_date: string;
-        invoice_number: string;
-        invoice_value: number;
-      }[];
-    } | null;
+    data: SalesPaymentTransactionSummary | null;
   }>(
     `/sales-payments?transaction_number=${encodeURIComponent(transactionNumber)}`,
   );
