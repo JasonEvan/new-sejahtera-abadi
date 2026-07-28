@@ -89,12 +89,12 @@ export const sidebarItems: SidebarItem[] = [
         permission: "purchase.update",
       },
       {
-        title: "Edit Utang",
+        title: "Edit Pelunasan Utang",
         url: "/edit/payables",
         permission: "purchase.payment.update",
       },
       {
-        title: "Edit Piutang",
+        title: "Edit Pelunasan Piutang",
         url: "/edit/receivables",
         permission: "sales.payment.update",
       },
@@ -129,12 +129,12 @@ export const sidebarItems: SidebarItem[] = [
         permission: "purchase.delete",
       },
       {
-        title: "Hapus Piutang",
+        title: "Hapus Pelunasan Piutang",
         url: "/delete/sales-payment",
         permission: "sales.payment.delete",
       },
       {
-        title: "Hapus Utang",
+        title: "Hapus Pelunasan Utang",
         url: "/delete/purchase-payment",
         permission: "purchase.payment.delete",
       },
