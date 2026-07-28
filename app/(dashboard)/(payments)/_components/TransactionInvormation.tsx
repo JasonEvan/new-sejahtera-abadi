@@ -5,6 +5,7 @@ import { useGetClientNames } from "@/modules/client/client.queries";
 import { transactionInformationValidation } from "@/modules/sales-payment/sales-payment.validation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
+import { useEffect } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import z from "zod";
 
@@ -36,6 +37,17 @@ export default function TransactionInformation({
     reValidateMode: "onChange",
     resolver: zodResolver(transactionInformationValidation),
   });
+
+  // ponytail: reset react-hook-form values when form is enabled (e.g. after payment success clear)
+  useEffect(() => {
+    if (!isDisabled) {
+      methods.reset({
+        client: 0,
+        transaction_number: "",
+        transaction_date: dayjs().format("YYYY-MM-DD"),
+      });
+    }
+  }, [isDisabled, methods]);
 
   const onSubmit = (data: TransactionInformationFormField) => {
     onSave(data);
