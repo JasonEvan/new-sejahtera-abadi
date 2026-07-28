@@ -12,6 +12,7 @@ export interface EditablePayableRow {
   transaction_number: string;
   payment_date: string;
   invoice_number: string;
+  invoice_value: number;
   paid_amount: number;
   balance_due: number;
 }

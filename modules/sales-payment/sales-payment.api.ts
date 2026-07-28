@@ -63,6 +63,7 @@ export async function getSalesPaymentTransactionSummary(
         paid_amount: number;
         payment_date: string;
         invoice_number: string;
+        invoice_value: number;
       }[];
     } | null;
   }>(`/sales-payments?transaction_number=${encodeURIComponent(transactionNumber)}`);

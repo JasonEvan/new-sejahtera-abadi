@@ -73,17 +73,17 @@ function tableReducer(state: TableState, action: TableAction): TableState {
     case "RESET":
       return initialTableState;
     case "UPDATE_ROWS":
+      const invoicePaidMap: Record<string, number> = {};
       const updatedRows = action.payload.tableRows.map(
-        (row: EditableReceivableRow, index: number) => {
-          const runningPaid = action.payload.tableRows
-            .slice(0, index + 1)
-            .reduce(
-              (sum: number, r: EditableReceivableRow) => sum + r.paid_amount,
-              0,
-            );
+        (row: EditableReceivableRow) => {
+          invoicePaidMap[row.invoice_number] =
+            (invoicePaidMap[row.invoice_number] || 0) + row.paid_amount;
           return {
             ...row,
-            balance_due: Math.max(state.selectedInvoiceValue! - runningPaid, 0),
+            balance_due: Math.max(
+              row.invoice_value - invoicePaidMap[row.invoice_number],
+              0,
+            ),
           };
         },
       );
@@ -195,10 +195,12 @@ export default function EditReceivablesTable() {
       return;
     }
 
-    let runningPaidAmount = 0;
+    const invoicePaidMap: Record<string, number> = {};
 
+    // ponytail: calculate balance_due per invoice_number (invoice_value - paid_amount)
     const mappedRows: EditableReceivableRow[] = data.payments.map((payment) => {
-      runningPaidAmount += payment.paid_amount;
+      invoicePaidMap[payment.invoice_number] =
+        (invoicePaidMap[payment.invoice_number] || 0) + payment.paid_amount;
       const formattedDate =
         typeof payment.payment_date === "string"
           ? payment.payment_date.split("T")[0]
@@ -209,8 +211,12 @@ export default function EditReceivablesTable() {
         transaction_number: data.transaction_number,
         payment_date: formattedDate,
         invoice_number: payment.invoice_number,
+        invoice_value: payment.invoice_value,
         paid_amount: payment.paid_amount,
-        balance_due: Math.max(data.total_paid - runningPaidAmount, 0),
+        balance_due: Math.max(
+          payment.invoice_value - invoicePaidMap[payment.invoice_number],
+          0,
+        ),
       };
     });
 
@@ -229,13 +235,13 @@ export default function EditReceivablesTable() {
 
     dialogs.open({
       title: "Edit Pelunasan Piutang",
-      description: `${row.invoice_number} - ${tableState.selectedInvoiceValue.toLocaleString("id-ID")}`,
+      description: `${row.invoice_number} - Nilai Nota: ${row.invoice_value.toLocaleString("id-ID")}`,
       type: "form",
       formId: "edit-receivables-by-invoice-form",
       children: (
         <EditReceivablesForm
           row={row}
-          invoiceValue={tableState.selectedInvoiceValue}
+          invoiceValue={row.invoice_value}
           onSave={(id, paidAmount) => {
             const editedRows = tableState.tableRows.map((item) =>
               item.id === id
@@ -246,12 +252,7 @@ export default function EditReceivablesTable() {
                 : item,
             );
 
-            const totalPaid = editedRows.reduce(
-              (total, item) => total + item.paid_amount,
-              0,
-            );
-
-            if (totalPaid > tableState.selectedInvoiceValue!) {
+            if (paidAmount > row.invoice_value) {
               toast.error("Total pelunasan tidak boleh melebihi nilai nota", {
                 position: "bottom-right",
               });
@@ -318,9 +319,6 @@ export default function EditReceivablesTable() {
     [tableState.tableRows],
   );
 
-  const invoiceValue = tableState.selectedInvoiceValue ?? 0;
-  const balanceDue = Math.max(invoiceValue - paidAmountTotal, 0);
-
   return (
     <div className="space-y-5">
       <FormProvider {...methods}>
@@ -366,9 +364,9 @@ export default function EditReceivablesTable() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nomor Transaksi</TableHead>
                 <TableHead>Tanggal Lunas</TableHead>
                 <TableHead>Nomor Nota</TableHead>
+                <TableHead className="text-right">Nilai Nota</TableHead>
                 <TableHead className="text-right">Lunas Nota</TableHead>
                 <TableHead className="text-right">Saldo Nota</TableHead>
                 <TableHead>Aksi</TableHead>
@@ -385,9 +383,11 @@ export default function EditReceivablesTable() {
 
               {tableState.tableRows.map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell>{row.transaction_number}</TableCell>
                   <TableCell>{row.payment_date}</TableCell>
                   <TableCell>{row.invoice_number}</TableCell>
+                  <TableCell className="text-right">
+                    {row.invoice_value.toLocaleString("id-ID")}
+                  </TableCell>
                   <TableCell className="text-right">
                     {row.paid_amount.toLocaleString("id-ID")}
                   </TableCell>
@@ -420,22 +420,11 @@ export default function EditReceivablesTable() {
             </TableBody>
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={4}>Invoice Value</TableCell>
-                <TableCell colSpan={2} className="text-right">
-                  {invoiceValue.toLocaleString("id-ID")}
-                </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell colSpan={4}>Paid Amount</TableCell>
-                <TableCell colSpan={2} className="text-right">
+                <TableCell colSpan={3}>Total Amount</TableCell>
+                <TableCell className="text-right">
                   {paidAmountTotal.toLocaleString("id-ID")}
                 </TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell colSpan={4}>Balance Due</TableCell>
-                <TableCell colSpan={2} className="text-right">
-                  {balanceDue.toLocaleString("id-ID")}
-                </TableCell>
+                <TableCell colSpan={2} />
               </TableRow>
             </TableFooter>
           </Table>
