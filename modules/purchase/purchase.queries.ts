@@ -30,6 +30,7 @@ export const useGetOrdersMenu = ({
       data.data.map((invoice) => ({
         id: invoice.id,
         name: invoice.invoice_number,
+        invoice_value: invoice.invoice_value,
         balance_due: invoice.balance_due,
       })),
   });

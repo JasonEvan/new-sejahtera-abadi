@@ -1,6 +1,7 @@
 "use client";
 
 import ComboboxField from "@/components/shared/ComboboxField";
+import InputField from "@/components/shared/InputField";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { dialogs } from "@/lib/dialogs";
 import { useGetClientNames } from "@/modules/client/client.queries";
+import { useGetOrdersMenu } from "@/modules/sale/sale.queries";
 import { useUpdateEditReceivablesMutation } from "@/modules/sales-payment/sales-payment.mutations";
 import {
   useGetSalesPaymentTransactions,
@@ -90,6 +92,186 @@ function tableReducer(state: TableState, action: TableAction): TableState {
     default:
       return state;
   }
+}
+
+interface AddReceivableInvoiceFormProps {
+  clientId: number;
+  activeTransactionNumber: string;
+  tableRows: EditableReceivableRow[];
+  onAdd: (newRow: EditableReceivableRow) => void;
+}
+
+interface AddInvoiceFormField {
+  sales_order_id: number;
+  balance_due: number;
+  paid_amount: number;
+}
+
+// ponytail: Add form matching ReceivablesTable form for adding invoice payment
+function AddReceivableInvoiceForm({
+  clientId,
+  activeTransactionNumber,
+  tableRows,
+  onAdd,
+}: AddReceivableInvoiceFormProps) {
+  const { data: invoices, isError, error } = useGetOrdersMenu({
+    clientId,
+    isPaidOff: false,
+  });
+
+  const schema = useMemo(
+    () =>
+      z
+        .object({
+          sales_order_id: z.number().min(1, "Pilih nota terlebih dahulu"),
+          balance_due: z.number().min(0, "Saldo nota tidak valid"),
+          paid_amount: z.number().min(1, "Lunas nota minimal 1"),
+        })
+        .superRefine((data, ctx) => {
+          if (data.paid_amount > data.balance_due) {
+            ctx.addIssue({
+              code: "custom",
+              message: "Pelunasan tidak boleh melebihi saldo",
+              path: ["paid_amount"],
+            });
+          }
+
+          const selectedInvoice = invoices?.find(
+            (item) => item.id === data.sales_order_id,
+          );
+
+          if (
+            selectedInvoice &&
+            tableRows.some((row) => row.invoice_number === selectedInvoice.name)
+          ) {
+            ctx.addIssue({
+              code: "custom",
+              message: "Nomor nota sudah ada di tabel",
+              path: ["sales_order_id"],
+            });
+          }
+        }),
+    [invoices, tableRows],
+  );
+
+  const methods = useForm<AddInvoiceFormField>({
+    defaultValues: {
+      sales_order_id: 0,
+      balance_due: undefined,
+      paid_amount: undefined,
+    },
+    mode: "onBlur",
+    reValidateMode: "onChange",
+    resolver: zodResolver(schema),
+  });
+
+  const { setValue, handleSubmit, reset, setFocus, control } = methods;
+
+  const watchedOrderId = useWatch({
+    control,
+    name: "sales_order_id",
+  });
+
+  useEffect(() => {
+    if (watchedOrderId) {
+      const selectedInvoice = invoices?.find(
+        (item) => item.id === watchedOrderId,
+      );
+
+      if (selectedInvoice) {
+        setValue("balance_due", selectedInvoice.balance_due);
+      }
+    }
+  }, [watchedOrderId, invoices, setValue]);
+
+  useEffect(() => {
+    if (isError) {
+      toast.error(error?.message || "Failed to fetch invoices", {
+        position: "bottom-right",
+      });
+    }
+  }, [isError, error]);
+
+  const onSubmit = (formData: AddInvoiceFormField) => {
+    const selectedInvoice = invoices?.find(
+      (item) => item.id === formData.sales_order_id,
+    );
+
+    if (!selectedInvoice) return;
+
+    const newRow: EditableReceivableRow = {
+      id: `new-${Date.now()}`,
+      transaction_number: activeTransactionNumber,
+      payment_date: dayjs().format("YYYY-MM-DD"),
+      invoice_number: selectedInvoice.name,
+      invoice_value: selectedInvoice.invoice_value,
+      paid_amount: formData.paid_amount,
+      balance_due: Math.max(
+        selectedInvoice.invoice_value - formData.paid_amount,
+        0,
+      ),
+    };
+
+    onAdd(newRow);
+    setFocus("sales_order_id");
+    reset();
+  };
+
+  const handlePayFull = () => {
+    const balanceDue = methods.getValues("balance_due");
+    const salesOrderId = methods.getValues("sales_order_id");
+
+    if (!salesOrderId) {
+      toast.error("Pilih nota terlebih dahulu", {
+        position: "bottom-right",
+      });
+      return;
+    }
+
+    if (balanceDue === undefined || balanceDue === null) {
+      toast.error("Saldo nota tidak ditemukan", {
+        position: "bottom-right",
+      });
+      return;
+    }
+
+    setValue("paid_amount", balanceDue, { shouldValidate: true });
+    handleSubmit(onSubmit)();
+  };
+
+  return (
+    <FormProvider {...methods}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+        <div className="grid grid-cols-3 gap-x-2">
+          <ComboboxField
+            name="sales_order_id"
+            label="Nomor Nota"
+            items={invoices || []}
+          />
+          <InputField
+            name="balance_due"
+            label="Saldo Nota"
+            type="number"
+            disabled
+          />
+          <InputField name="paid_amount" label="Lunas Nota" type="number" />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="cursor-pointer"
+            onClick={handlePayFull}
+          >
+            Add Full Payment
+          </Button>
+          <Button type="submit" className="cursor-pointer">
+            Add
+          </Button>
+        </div>
+      </form>
+    </FormProvider>
+  );
 }
 
 export default function EditReceivablesTable() {
@@ -270,6 +452,13 @@ export default function EditReceivablesTable() {
     dispatch({ type: "UPDATE_ROWS", payload: { tableRows: remainingRows } });
   }
 
+  function handleAddRow(newRow: EditableReceivableRow) {
+    dispatch({
+      type: "UPDATE_ROWS",
+      payload: { tableRows: [...tableState.tableRows, newRow] },
+    });
+  }
+
   async function handleSubmitChanges() {
     if (!tableState.activeInvoiceNumber) return;
 
@@ -341,6 +530,13 @@ export default function EditReceivablesTable() {
 
       {isCompleted && (
         <div className="space-y-5">
+          <AddReceivableInvoiceForm
+            clientId={watchedClient}
+            activeTransactionNumber={tableState.activeInvoiceNumber!}
+            tableRows={tableState.tableRows}
+            onAdd={handleAddRow}
+          />
+
           <div className="overflow-hidden rounded-md border">
             <Table>
               <TableHeader>
