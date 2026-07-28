@@ -1,6 +1,6 @@
 "use client";
 
-import InputField from "@/components/shared/InputField";
+import ComboboxField from "@/components/shared/ComboboxField";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,12 +13,17 @@ import {
 } from "@/components/ui/table";
 import { alertDialogs } from "@/lib/alert-dialogs";
 import { dialogs } from "@/lib/dialogs";
+import { useGetClientNames } from "@/modules/client/client.queries";
 import {
   useDeleteEditReceivablesMutation,
   useUpdateEditReceivablesMutation,
 } from "@/modules/sales-payment/sales-payment.mutations";
-import { useGetEditReceivablesByInvoice } from "@/modules/sales-payment/sales-payment.queries";
+import {
+  useGetSalesPaymentTransactions,
+  useGetSalesPaymentTransactionSummary,
+} from "@/modules/sales-payment/sales-payment.queries";
 import { zodResolver } from "@hookform/resolvers/zod";
+import dayjs from "dayjs";
 import { Pencil, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
@@ -28,8 +33,9 @@ import EditReceivablesForm, {
   EditableReceivableRow,
 } from "./EditReceivablesForm";
 
-interface InvoiceSearchForm {
-  invoice_number: string;
+interface PaymentSearchForm {
+  client: number;
+  transaction_id: number;
 }
 
 type TableState = {
@@ -93,32 +99,24 @@ function tableReducer(state: TableState, action: TableAction): TableState {
 export default function EditReceivablesTable() {
   const deleteMutation = useDeleteEditReceivablesMutation();
   const updateMutation = useUpdateEditReceivablesMutation();
-  const [searchInvoiceNumber, setSearchInvoiceNumber] = useState("");
+  const [searchTransactionNumber, setSearchTransactionNumber] = useState("");
   const [tableState, dispatch] = useReducer(tableReducer, initialTableState);
 
-  const { data, isFetching, isError, error } = useGetEditReceivablesByInvoice(
-    searchInvoiceNumber,
-    !!searchInvoiceNumber,
-  );
+  const { data: clients } = useGetClientNames();
 
   const schema = useMemo(
     () =>
       z.object({
-        invoice_number: z
-          .string()
-          .trim()
-          .min(3, "Nomor nota minimal 3 karakter")
-          .regex(
-            /^[A-Za-z0-9\-/]+$/,
-            "Nomor nota hanya boleh huruf, angka, - atau /",
-          ),
+        client: z.number().min(1, "Pilih client"),
+        transaction_id: z.number().min(1, "Pilih nomor transaksi"),
       }),
     [],
   );
 
-  const methods = useForm<InvoiceSearchForm>({
+  const methods = useForm<PaymentSearchForm>({
     defaultValues: {
-      invoice_number: "",
+      client: 0,
+      transaction_id: 0,
     },
     mode: "onBlur",
     reValidateMode: "onChange",
@@ -126,57 +124,74 @@ export default function EditReceivablesTable() {
   });
 
   const { handleSubmit, control, setValue } = methods;
-  const watchedInvoiceInput = useWatch({ control, name: "invoice_number" });
+  const watchedClient = useWatch({ control, name: "client" });
+  const watchedTransactionId = useWatch({ control, name: "transaction_id" });
 
-  const normalizedInvoiceInput = useMemo(
-    () => (watchedInvoiceInput || "").trim().toUpperCase(),
-    [watchedInvoiceInput],
+  // ponytail: reset transaction_id when client selection changes
+  useEffect(() => {
+    setValue("transaction_id", 0);
+  }, [watchedClient, setValue]);
+
+  const { data: transactions } = useGetSalesPaymentTransactions(
+    watchedClient,
+    !!watchedClient,
   );
+
+  const { data, isFetching, isError, error } =
+    useGetSalesPaymentTransactionSummary(
+      searchTransactionNumber,
+      !!searchTransactionNumber,
+    );
 
   const isSearchStale =
     tableState.activeInvoiceNumber !== null &&
-    normalizedInvoiceInput.length > 0 &&
-    normalizedInvoiceInput !== tableState.activeInvoiceNumber;
+    searchTransactionNumber !== tableState.activeInvoiceNumber;
 
-  function handleSearchInvoice(data: InvoiceSearchForm) {
-    const invoiceNumber = data.invoice_number.trim().toUpperCase();
+  function handleSearchPayment(formData: PaymentSearchForm) {
+    const selectedTrx = transactions?.find(
+      (item) => item.id === formData.transaction_id,
+    );
 
-    setValue("invoice_number", invoiceNumber, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-
-    if (
-      invoiceNumber === tableState.activeInvoiceNumber &&
-      tableState.selectedInvoiceValue !== null
-    ) {
-      toast.info("Nomor nota ini sudah dimuat", { position: "bottom-right" });
+    if (!selectedTrx) {
+      toast.error("Transaksi tidak ditemukan", { position: "bottom-right" });
       return;
     }
 
-    setSearchInvoiceNumber(invoiceNumber);
+    if (
+      selectedTrx.name === tableState.activeInvoiceNumber &&
+      tableState.selectedInvoiceValue !== null
+    ) {
+      toast.info("Transaksi ini sudah dimuat", { position: "bottom-right" });
+      return;
+    }
+
+    setSearchTransactionNumber(selectedTrx.name);
   }
 
   useEffect(() => {
     if (isError) {
-      toast.error(error?.message || "Gagal memuat data nota", {
+      toast.error(error?.message || "Gagal memuat data transaksi", {
         position: "bottom-right",
       });
     }
   }, [isError, error]);
 
   useEffect(() => {
-    if (!searchInvoiceNumber || isFetching) return;
+    if (!searchTransactionNumber || isFetching) return;
 
     if (!data) {
       dispatch({ type: "RESET" });
-      toast.error("Nomor nota tidak ditemukan", { position: "bottom-right" });
+      toast.error("Data transaksi tidak ditemukan", {
+        position: "bottom-right",
+      });
       return;
     }
 
-    if (data.paid_amount <= 0 || data.payments.length === 0) {
+    if (data.payments.length === 0) {
       dispatch({ type: "RESET" });
-      toast.error("Nomor nota ini belum dibayar", { position: "bottom-right" });
+      toast.error("Transaksi ini tidak memiliki rincian pembayaran", {
+        position: "bottom-right",
+      });
       return;
     }
 
@@ -184,26 +199,30 @@ export default function EditReceivablesTable() {
 
     const mappedRows: EditableReceivableRow[] = data.payments.map((payment) => {
       runningPaidAmount += payment.paid_amount;
+      const formattedDate =
+        typeof payment.payment_date === "string"
+          ? payment.payment_date.split("T")[0]
+          : dayjs(payment.payment_date).format("YYYY-MM-DD");
 
       return {
         id: payment.id.toString(),
-        transaction_number: payment.transaction_number,
-        payment_date: payment.payment_date,
-        invoice_number: data.invoice_number,
+        transaction_number: data.transaction_number,
+        payment_date: formattedDate,
+        invoice_number: payment.invoice_number,
         paid_amount: payment.paid_amount,
-        balance_due: Math.max(data.invoice_value - runningPaidAmount, 0),
+        balance_due: Math.max(data.total_paid - runningPaidAmount, 0),
       };
     });
 
     dispatch({
       type: "SET_DATA",
       payload: {
-        selectedInvoiceValue: data.invoice_value,
+        selectedInvoiceValue: data.total_paid,
         tableRows: mappedRows,
-        activeInvoiceNumber: data.invoice_number.toUpperCase(),
+        activeInvoiceNumber: data.transaction_number,
       },
     });
-  }, [data, isFetching, searchInvoiceNumber]);
+  }, [data, isFetching, searchTransactionNumber]);
 
   function handleOpenEditDialog(row: EditableReceivableRow) {
     if (tableState.selectedInvoiceValue === null) return;
@@ -268,11 +287,9 @@ export default function EditReceivablesTable() {
           invoice_number: tableState.activeInvoiceNumber!,
         });
         dispatch({ type: "RESET" });
-        setSearchInvoiceNumber("");
-        setValue("invoice_number", "", {
-          shouldDirty: false,
-          shouldValidate: false,
-        });
+        setSearchTransactionNumber("");
+        setValue("client", 0);
+        setValue("transaction_id", 0);
       },
     });
   }
@@ -290,11 +307,9 @@ export default function EditReceivablesTable() {
     });
 
     dispatch({ type: "RESET" });
-    setSearchInvoiceNumber("");
-    setValue("invoice_number", "", {
-      shouldDirty: false,
-      shouldValidate: false,
-    });
+    setSearchTransactionNumber("");
+    setValue("client", 0);
+    setValue("transaction_id", 0);
   }
 
   const paidAmountTotal = useMemo(
@@ -310,30 +325,39 @@ export default function EditReceivablesTable() {
     <div className="space-y-5">
       <FormProvider {...methods}>
         <form
-          onSubmit={handleSubmit(handleSearchInvoice)}
+          onSubmit={handleSubmit(handleSearchPayment)}
           className="space-y-3"
         >
-          <div className="grid grid-cols-1 gap-x-2 md:grid-cols-[1fr_auto]">
-            <InputField name="invoice_number" label="Invoice Number" />
-            <div className="flex items-end">
-              <Button
-                type="submit"
-                className="w-full cursor-pointer md:w-auto"
-                disabled={isFetching}
-              >
-                {isFetching ? "Memuat..." : "Cari Nota"}
-              </Button>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ComboboxField
+              name="client"
+              label="Nama Client"
+              placeholder="Pilih client"
+              items={clients || []}
+            />
+            <ComboboxField
+              name="transaction_id"
+              label="Nomor Transaksi"
+              placeholder="Pilih nomor transaksi"
+              items={transactions || []}
+              disabled={!watchedClient}
+            />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Gunakan nomor nota yang persis sama. Format: huruf, angka, - atau /.
-          </p>
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              className="cursor-pointer"
+              disabled={isFetching || !watchedTransactionId}
+            >
+              {isFetching ? "Memuat..." : "Cari Transaksi"}
+            </Button>
+          </div>
         </form>
       </FormProvider>
 
       {isSearchStale && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Nomor nota berubah. Klik Cari Nota untuk memuat ulang data terbaru.
+          Nomor transaksi berubah. Klik Cari Transaksi untuk memuat ulang data terbaru.
         </div>
       )}
 

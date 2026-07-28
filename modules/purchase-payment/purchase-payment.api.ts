@@ -61,6 +61,12 @@ export async function getPurchasePaymentTransactionSummary(
       payment_date: string;
       total_paid: number;
       invoice_count: number;
+      payments: {
+        id: number;
+        paid_amount: number;
+        payment_date: string;
+        invoice_number: string;
+      }[];
     } | null;
   }>(`/purchase-payments?transaction_number=${encodeURIComponent(transactionNumber)}`);
   return response.data;

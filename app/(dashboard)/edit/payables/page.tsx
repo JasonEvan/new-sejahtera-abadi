@@ -6,7 +6,7 @@ export default function EditPayablesPage() {
     <div>
       <PageTitle
         title="Edit Pelunasan Utang"
-        subtitle="Kelola perubahan pelunasan utang berdasarkan nomor nota"
+        subtitle="Kelola perubahan pelunasan utang berdasarkan nomor transaksi"
       />
       <EditPayablesContent />
     </div>

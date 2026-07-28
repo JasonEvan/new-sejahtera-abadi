@@ -6,7 +6,7 @@ export default function EditReceivablesPage() {
     <div>
       <PageTitle
         title="Edit Pelunasan Piutang"
-        subtitle="Kelola perubahan pelunasan piutang berdasarkan nomor nota"
+        subtitle="Kelola perubahan pelunasan piutang berdasarkan nomor transaksi"
       />
       <EditReceivablesContent />
     </div>
