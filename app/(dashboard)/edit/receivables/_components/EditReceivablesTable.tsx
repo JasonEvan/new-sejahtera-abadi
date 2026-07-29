@@ -574,7 +574,11 @@ export default function EditReceivablesTable() {
               <TableBody>
                 {tableState.tableRows.map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell>{row.payment_date}</TableCell>
+                    <TableCell>
+                      {row.payment_date
+                        ? dayjs(row.payment_date).format("DD/MM/YYYY")
+                        : "-"}
+                    </TableCell>
                     <TableCell>{row.invoice_number}</TableCell>
                     <TableCell className="text-right">
                       {row.invoice_value.toLocaleString("id-ID")}
