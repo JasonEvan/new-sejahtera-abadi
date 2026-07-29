@@ -14,7 +14,7 @@ import {
   stocks,
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
-import { and, asc, eq, gte, lte, max, sql } from "drizzle-orm";
+import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 import { Tx } from "@/lib/common-types";
 import dayjs from "dayjs";
@@ -516,32 +516,29 @@ export const reportRepository = {
   },
 
   getPayablesByClient(clientId: number) {
-    return (
-      db
-        .select({
-          invoice_number: purchase_orders.invoice_number,
-          invoice_date: purchase_orders.invoice_date,
-          invoice_value: purchase_orders.invoice_value,
-          paid_amount:
-            sql<number>`COALESCE(SUM(${purchase_payments.paid_amount}), 0)`.mapWith(
-              Number,
-            ),
-          payment_date: max(purchase_payments.payment_date),
-          balance_due: purchase_orders.balance_due,
-        })
-        .from(purchase_orders)
-        .leftJoin(
-          purchase_payments,
-          eq(purchase_orders.id, purchase_payments.purchase_order_id),
-        )
-        .where(eq(purchase_orders.client_id, clientId))
-        // OPTIMIZATION: Grouping by PK reduces load on the sorting engine and is sufficient in PostgreSQL
-        .groupBy(purchase_orders.id)
-        .orderBy(
-          asc(purchase_orders.invoice_date),
-          asc(purchase_orders.invoice_number),
-        )
-    );
+    return db
+      .select({
+        invoice_number: purchase_orders.invoice_number,
+        invoice_date: purchase_orders.invoice_date,
+        invoice_value: purchase_orders.invoice_value,
+        paid_amount:
+          sql<number>`COALESCE(${purchase_payments.paid_amount}, 0)`.mapWith(
+            Number,
+          ),
+        payment_date: purchase_payments.payment_date,
+        balance_due: purchase_orders.balance_due,
+      })
+      .from(purchase_orders)
+      .leftJoin(
+        purchase_payments,
+        eq(purchase_orders.id, purchase_payments.purchase_order_id),
+      )
+      .where(eq(purchase_orders.client_id, clientId))
+      .orderBy(
+        asc(purchase_orders.invoice_date),
+        asc(purchase_orders.invoice_number),
+        asc(purchase_payments.payment_date),
+      );
   },
 
   getAllReceivables() {
@@ -600,32 +597,29 @@ export const reportRepository = {
   },
 
   getReceivablesByClient(clientId: number) {
-    return (
-      db
-        .select({
-          invoice_number: sales_orders.invoice_number,
-          invoice_date: sales_orders.invoice_date,
-          invoice_value: sales_orders.invoice_value,
-          paid_amount:
-            sql<number>`COALESCE(SUM(${sales_payments.paid_amount}), 0)`.mapWith(
-              Number,
-            ),
-          payment_date: max(sales_payments.payment_date),
-          balance_due: sales_orders.balance_due,
-        })
-        .from(sales_orders)
-        .leftJoin(
-          sales_payments,
-          eq(sales_orders.id, sales_payments.sales_order_id),
-        )
-        .where(eq(sales_orders.client_id, clientId))
-        // OPTIMIZATION: Grouping by PK is sufficient and more efficient
-        .groupBy(sales_orders.id)
-        .orderBy(
-          asc(sales_orders.invoice_date),
-          asc(sales_orders.invoice_number),
-        )
-    );
+    return db
+      .select({
+        invoice_number: sales_orders.invoice_number,
+        invoice_date: sales_orders.invoice_date,
+        invoice_value: sales_orders.invoice_value,
+        paid_amount:
+          sql<number>`COALESCE(${sales_payments.paid_amount}, 0)`.mapWith(
+            Number,
+          ),
+        payment_date: sales_payments.payment_date,
+        balance_due: sales_orders.balance_due,
+      })
+      .from(sales_orders)
+      .leftJoin(
+        sales_payments,
+        eq(sales_orders.id, sales_payments.sales_order_id),
+      )
+      .where(eq(sales_orders.client_id, clientId))
+      .orderBy(
+        asc(sales_orders.invoice_date),
+        asc(sales_orders.invoice_number),
+        asc(sales_payments.payment_date),
+      );
   },
 
   getProfits(month: number, year: number, timezone: string = "Asia/Jakarta") {
