@@ -42,7 +42,7 @@ export function PrinterConnectButton() {
   const handleConnectSerial = async () => {
     const success = await connectSerial();
     if (success) {
-      toast.success("Printer LX3100 terhubung via Web Serial");
+      toast.success("Printer LX-310 terhubung via Web Serial");
     } else if (usePrinterStore.getState().error) {
       toast.error(usePrinterStore.getState().error);
     }
@@ -51,7 +51,7 @@ export function PrinterConnectButton() {
   const handleConnectUsb = async () => {
     const success = await connectUsb();
     if (success) {
-      toast.success("Printer LX3100 terhubung via Web USB");
+      toast.success("Printer LX-310 terhubung via Web USB");
     } else if (usePrinterStore.getState().error) {
       toast.error(usePrinterStore.getState().error);
     }
@@ -86,7 +86,7 @@ export function PrinterConnectButton() {
       >
         <Printer className="h-4 w-4" />
         <span className="hidden sm:inline">
-          {isConnected ? "LX3100 Terhubung" : "Hubungkan Printer"}
+          {isConnected ? "LX-310 Terhubung" : "Hubungkan Printer"}
         </span>
         <span
           className={`h-2.5 w-2.5 rounded-full ${
@@ -103,7 +103,7 @@ export function PrinterConnectButton() {
               <Printer className="h-5 w-5 text-primary" />
               <div>
                 <h4 className="text-sm font-semibold leading-none">
-                  Printer LX3100
+                  Printer LX-310
                 </h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Direct Continuous Form

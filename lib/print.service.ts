@@ -147,8 +147,8 @@ export const printService = {
 
     if (!printerStore.isConnected) {
       toast.info(
-        "Printer LX3100 Direct belum terhubung di Topbar. Menggunakan mode cetak PDF sebagai alternatif.",
-        { duration: 4000 }
+        "Printer LX-310 Direct belum terhubung di Topbar. Menggunakan mode cetak PDF sebagai alternatif.",
+        { duration: 4000 },
       );
       this.printContinuousFormPdf(details, total);
       return;
@@ -160,11 +160,11 @@ export const printService = {
 
       if (success) {
         toast.success(
-          `Nota ${details[0]?.nomor_nota || ""} berhasil dikirim ke printer LX3100!`
+          `Nota ${details[0]?.nomor_nota || ""} berhasil dikirim ke printer LX-310!`,
         );
       } else {
         toast.error(
-          printerStore.error || "Gagal mengirim data ke printer LX3100."
+          printerStore.error || "Gagal mengirim data ke printer LX-310.",
         );
       }
     } catch (err: unknown) {
@@ -591,7 +591,11 @@ export const printService = {
     );
   },
 
-  handlePrintProfitReport(rows: ProfitTableRow[], monthName: string, year: number) {
+  handlePrintProfitReport(
+    rows: ProfitTableRow[],
+    monthName: string,
+    year: number,
+  ) {
     const columns: ReportColumn<ProfitTableRow>[] = [
       {
         header: "No",
@@ -753,7 +757,10 @@ function padLeft(str: string, length: number): string {
   return " ".repeat(length - str.length) + str;
 }
 
-function splitTextByWidth(text: string, maxWidth: number): { line1: string; line2: string } {
+function splitTextByWidth(
+  text: string,
+  maxWidth: number,
+): { line1: string; line2: string } {
   if (text.length <= maxWidth) {
     return { line1: text, line2: "" };
   }
@@ -787,14 +794,25 @@ export function generateContinuousFormEscPos(
 
   const encoder = new TextEncoder();
   const initBytes = new Uint8Array([
-    0x1b, 0x40, // ESC @ (Initialize printer)
-    0x1b, 0x78, 0x01, // ESC x 1 (NLQ High Quality Mode)
-    0x1b, 0x6b, 0x01, // ESC k 1 (Sans Serif Font)
-    0x1b, 0x45, // ESC E (Emphasized / Bold Font ON)
-    0x1b, 0x50, // ESC P (10 CPI pitch)
-    0x1b, 0x32, // ESC 2 (1/6 inch line spacing)
-    0x1b, 0x43, 33, // ESC C 33 (Set page length to 33 lines - 5.5 inches)
-    0x1b, 0x4f, // ESC O (Cancel bottom margin)
+    0x1b,
+    0x40, // ESC @ (Initialize printer)
+    0x1b,
+    0x78,
+    0x01, // ESC x 1 (NLQ High Quality Mode)
+    0x1b,
+    0x6b,
+    0x01, // ESC k 1 (Sans Serif Font)
+    0x1b,
+    0x45, // ESC E (Emphasized / Bold Font ON)
+    0x1b,
+    0x50, // ESC P (10 CPI pitch)
+    0x1b,
+    0x32, // ESC 2 (1/6 inch line spacing)
+    0x1b,
+    0x43,
+    33, // ESC C 33 (Set page length to 33 lines - 5.5 inches)
+    0x1b,
+    0x4f, // ESC O (Cancel bottom margin)
   ]);
 
   const itemsPerPage = 15;
@@ -812,9 +830,16 @@ export function generateContinuousFormEscPos(
       : header.kota_client || "";
 
     textOutput += padRight("SA", 40) + padRight("KEPADA YTH", 40) + "\n";
-    textOutput += padRight(header.tanggal_nota || "", 40) + padRight(header.nama_client || "", 40) + "\n";
-    textOutput += padRight(header.nomor_nota || "", 40) + padRight(clientAddress, 40) + "\n";
-    textOutput += padRight(header.kode_sales || "", 40) + padRight("", 40) + "\n";
+    textOutput +=
+      padRight(header.tanggal_nota || "", 40) +
+      padRight(header.nama_client || "", 40) +
+      "\n";
+    textOutput +=
+      padRight(header.nomor_nota || "", 40) +
+      padRight(clientAddress, 40) +
+      "\n";
+    textOutput +=
+      padRight(header.kode_sales || "", 40) + padRight("", 40) + "\n";
     textOutput += "\n";
 
     const sep = "-".repeat(80);
@@ -838,7 +863,10 @@ export function generateContinuousFormEscPos(
       const globalIdx = startIdx + idx + 1;
       const noStr = padLeft(String(globalIdx), 3);
       const namaStr = padRight(row.nama_barang || "", 40);
-      const qtyStr = padLeft(row.qty_barang != null ? String(row.qty_barang) : "", 5);
+      const qtyStr = padLeft(
+        row.qty_barang != null ? String(row.qty_barang) : "",
+        5,
+      );
       const satStr = padRight(row.satuan_barang || "", 6);
       const hargaStr = padLeft(formatNumber(row.harga_barang), 10);
       const totalStr = padLeft(formatNumber(row.total_harga), 11);
