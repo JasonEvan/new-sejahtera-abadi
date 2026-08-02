@@ -789,18 +789,18 @@ export function generateContinuousFormEscPos(
       ? `${header.alamat_client}${header.kota_client ? ", " + header.kota_client : ""}`
       : header.kota_client || "";
 
-    textOutput += padRight("SA", 32) + padRight("KEPADA YTH", 36) + "\n";
-    textOutput += padRight(header.tanggal_nota || "", 32) + padRight(header.nama_client || "", 36) + "\n";
-    textOutput += padRight(header.nomor_nota || "", 32) + padRight(clientAddress, 36) + "\n";
-    textOutput += padRight(header.kode_sales || "", 32) + padRight("", 36) + "\n";
+    textOutput += padRight("SA", 40) + padRight("KEPADA YTH", 40) + "\n";
+    textOutput += padRight(header.tanggal_nota || "", 40) + padRight(header.nama_client || "", 40) + "\n";
+    textOutput += padRight(header.nomor_nota || "", 40) + padRight(clientAddress, 40) + "\n";
+    textOutput += padRight(header.kode_sales || "", 40) + padRight("", 40) + "\n";
     textOutput += "\n";
 
-    const sep = "-".repeat(68);
+    const sep = "-".repeat(80);
     textOutput += sep + "\n";
     textOutput +=
       padLeft("No", 3) +
       " " +
-      padRight("Nama Barang", 28) +
+      padRight("Nama Barang", 40) +
       " " +
       padLeft("Qty", 5) +
       " " +
@@ -815,7 +815,7 @@ export function generateContinuousFormEscPos(
     pageDetails.forEach((row, idx) => {
       const globalIdx = startIdx + idx + 1;
       const noStr = padLeft(String(globalIdx), 3);
-      const namaStr = padRight(row.nama_barang || "", 28);
+      const namaStr = padRight(row.nama_barang || "", 40);
       const qtyStr = padLeft(row.qty_barang != null ? String(row.qty_barang) : "", 5);
       const satStr = padRight(row.satuan_barang || "", 6);
       const hargaStr = padLeft(formatNumber(row.harga_barang), 10);
@@ -830,7 +830,7 @@ export function generateContinuousFormEscPos(
     }
 
     if (page === totalPages - 1) {
-      const rupiahPart = padRight(rupiahText, 40);
+      const rupiahPart = padRight(rupiahText, 53);
       const totalPart = "TOTAL " + padLeft(totalText, 21);
       textOutput += rupiahPart + totalPart + "\n";
     } else {
