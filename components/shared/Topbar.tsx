@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { SidebarTrigger } from "../ui/sidebar";
+import { PrinterConnectButton } from "./PrinterConnectButton";
 import { ThemeToggle } from "./ThemeToggle";
 import api from "@/lib/axios";
 import { useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ export default function Topbar() {
       <SidebarTrigger />
       <Separator orientation="vertical" className="h-6" />
       <div className="ml-auto flex items-center gap-2">
+        <PrinterConnectButton />
         <ThemeToggle />
         <Button
           className="text-destructive cursor-pointer"

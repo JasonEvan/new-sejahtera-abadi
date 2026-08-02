@@ -7,6 +7,8 @@ import type {
   InventoryLedgerTableRow,
   ProfitTableRow,
 } from "@/modules/report/report.types";
+import { usePrinterStore } from "@/lib/printer-store";
+import { toast } from "sonner";
 
 export interface SalesInvoicePrintDetail {
   tanggal_nota: string;
@@ -135,33 +137,64 @@ export const printService = {
     return y + 16; // Return new y position after header
   },
 
-  handlePrintContinuousForm(
+  async handlePrintContinuousForm(
+    details: SalesInvoicePrintDetail[],
+    total: SalesInvoiceTotal,
+  ) {
+    if (!details || details.length === 0) return;
+
+    const printerStore = usePrinterStore.getState();
+
+    if (!printerStore.isConnected) {
+      toast.info(
+        "Printer LX3100 Direct belum terhubung di Topbar. Menggunakan mode cetak PDF sebagai alternatif.",
+        { duration: 4000 }
+      );
+      this.printContinuousFormPdf(details, total);
+      return;
+    }
+
+    try {
+      const payload = generateContinuousFormEscPos(details, total);
+      const success = await printerStore.sendRawData(payload);
+
+      if (success) {
+        toast.success(
+          `Nota ${details[0]?.nomor_nota || ""} berhasil dikirim ke printer LX3100!`
+        );
+      } else {
+        toast.error(
+          printerStore.error || "Gagal mengirim data ke printer LX3100."
+        );
+      }
+    } catch (err: unknown) {
+      const errorMsg =
+        err instanceof Error ? err.message : "Terjadi kesalahan saat mencetak";
+      toast.error(errorMsg);
+    }
+  },
+
+  printContinuousFormPdf(
     details: SalesInvoicePrintDetail[],
     total: SalesInvoiceTotal,
   ) {
     if (!details || details.length === 0) return;
 
     const totalText = formatTotal(total);
-
     const pdf = new jsPDF("p", "mm", [217, 140]);
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(6.3);
 
     let needToChangePage = false;
-
-    // Add header
     let y = 7;
     y = this.drawHeader(pdf, y, details);
 
-    // Table headers
     const colX = [5, 10, 80, 90, 110, 125];
     const columnWidths = [5, 70, 10, 20, 15, 15];
     const headers = ["No", "Nama Barang", "Qty", "Satuan", "Harga", "Total"];
     const numericalCols = [0, 2, 4, 5];
     headers.forEach((header, i) => {
-      // Align right for numerical columns
-      // -1 for padding
       const x = numericalCols.includes(i)
         ? colX[i] + columnWidths[i] - pdf.getTextWidth(header) - 1
         : colX[i];
@@ -169,7 +202,6 @@ export const printService = {
     });
     y += 5;
 
-    // Table rows
     let rowCount = 0;
     details.forEach((row, index) => {
       const texts = [
@@ -201,10 +233,8 @@ export const printService = {
           needToChangePage = true;
         }
 
-        // Redraw header
         y = this.drawHeader(pdf, y, details);
 
-        // Redraw table headers
         headers.forEach((header, i) => {
           const x = numericalCols.includes(i)
             ? colX[i] + columnWidths[i] - pdf.getTextWidth(header) - 1
@@ -216,7 +246,6 @@ export const printService = {
     });
     y += 2;
 
-    // Total row and Bottom text
     const bottomText = `${rupiahToString(parseTotalToNumber(total))} rupiah`;
     const bottomTextWidth = pdf.getTextWidth(bottomText);
     const totalLabelX = colX[4];
@@ -713,6 +742,113 @@ export const printService = {
     openPdfForPrint(pdf, `laporan-laba-${monthName.toLowerCase()}-${year}.pdf`);
   },
 };
+
+function padRight(str: string, length: number): string {
+  if (str.length >= length) return str.substring(0, length);
+  return str + " ".repeat(length - str.length);
+}
+
+function padLeft(str: string, length: number): string {
+  if (str.length >= length) return str.substring(0, length);
+  return " ".repeat(length - str.length) + str;
+}
+
+export function generateContinuousFormEscPos(
+  details: SalesInvoicePrintDetail[],
+  total: SalesInvoiceTotal,
+): Uint8Array {
+  if (!details || details.length === 0) return new Uint8Array(0);
+
+  const header = details[0];
+  const totalText = formatTotal(total);
+  const numericTotal = parseTotalToNumber(total);
+  const rupiahText = `${rupiahToString(numericTotal)} rupiah`;
+
+  const encoder = new TextEncoder();
+  const initBytes = new Uint8Array([
+    0x1b, 0x40, // ESC @ (Initialize printer)
+    0x1b, 0x78, 0x00, // ESC x 0 (Draft mode)
+    0x1b, 0x50, // ESC P (10 CPI pitch)
+    0x1b, 0x32, // ESC 2 (1/6 inch line spacing)
+    0x1b, 0x43, 33, // ESC C 33 (Set page length to 33 lines - 5.5 inches)
+    0x1b, 0x4f, // ESC O (Cancel bottom margin)
+  ]);
+
+  const itemsPerPage = 15;
+  const totalItems = details.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+  let textOutput = "";
+
+  for (let page = 0; page < totalPages; page++) {
+    const startIdx = page * itemsPerPage;
+    const pageDetails = details.slice(startIdx, startIdx + itemsPerPage);
+
+    const clientAddress = header.alamat_client
+      ? `${header.alamat_client}${header.kota_client ? ", " + header.kota_client : ""}`
+      : header.kota_client || "";
+
+    textOutput += padRight("SA", 32) + padRight("KEPADA YTH", 36) + "\n";
+    textOutput += padRight(header.tanggal_nota || "", 32) + padRight(header.nama_client || "", 36) + "\n";
+    textOutput += padRight(header.nomor_nota || "", 32) + padRight(clientAddress, 36) + "\n";
+    textOutput += padRight(header.kode_sales || "", 32) + padRight("", 36) + "\n";
+    textOutput += "\n";
+
+    const sep = "-".repeat(68);
+    textOutput += sep + "\n";
+    textOutput +=
+      padLeft("No", 3) +
+      " " +
+      padRight("Nama Barang", 28) +
+      " " +
+      padLeft("Qty", 5) +
+      " " +
+      padRight("Satuan", 6) +
+      " " +
+      padLeft("Harga", 10) +
+      " " +
+      padLeft("Total", 11) +
+      "\n";
+    textOutput += sep + "\n";
+
+    pageDetails.forEach((row, idx) => {
+      const globalIdx = startIdx + idx + 1;
+      const noStr = padLeft(String(globalIdx), 3);
+      const namaStr = padRight(row.nama_barang || "", 28);
+      const qtyStr = padLeft(row.qty_barang != null ? String(row.qty_barang) : "", 5);
+      const satStr = padRight(row.satuan_barang || "", 6);
+      const hargaStr = padLeft(formatNumber(row.harga_barang), 10);
+      const totalStr = padLeft(formatNumber(row.total_harga), 11);
+
+      textOutput += `${noStr} ${namaStr} ${qtyStr} ${satStr} ${hargaStr} ${totalStr}\n`;
+    });
+
+    const emptyLines = itemsPerPage - pageDetails.length;
+    for (let i = 0; i < emptyLines; i++) {
+      textOutput += "\n";
+    }
+
+    textOutput += sep + "\n";
+
+    if (page === totalPages - 1) {
+      const rupiahPart = padRight(rupiahText, 40);
+      const totalPart = "TOTAL " + padLeft(totalText, 21);
+      textOutput += rupiahPart + totalPart + "\n";
+    } else {
+      textOutput += padRight("(Bersambung ke halaman berikutnya...)", 68) + "\n";
+    }
+
+    textOutput += sep + "\n";
+    textOutput += "\x0C"; // Form Feed
+  }
+
+  const textBytes = encoder.encode(textOutput);
+  const resultBytes = new Uint8Array(initBytes.length + textBytes.length);
+  resultBytes.set(initBytes, 0);
+  resultBytes.set(textBytes, initBytes.length);
+
+  return resultBytes;
+}
 
 const units = [
   "nol",
