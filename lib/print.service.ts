@@ -834,7 +834,7 @@ export function generateContinuousFormEscPos(
       const totalPart = "TOTAL " + padLeft(totalText, 21);
       textOutput += rupiahPart + totalPart + "\n";
     } else {
-      textOutput += padRight("(Bersambung ke halaman berikutnya...)", 68) + "\n";
+      textOutput += "\n";
     }
 
     textOutput += "\x0C"; // Form Feed
