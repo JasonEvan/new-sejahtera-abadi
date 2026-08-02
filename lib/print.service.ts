@@ -790,6 +790,7 @@ export function generateContinuousFormEscPos(
     0x1b, 0x40, // ESC @ (Initialize printer)
     0x1b, 0x78, 0x01, // ESC x 1 (NLQ High Quality Mode)
     0x1b, 0x6b, 0x01, // ESC k 1 (Sans Serif Font)
+    0x1b, 0x45, // ESC E (Emphasized / Bold Font ON)
     0x1b, 0x50, // ESC P (10 CPI pitch)
     0x1b, 0x32, // ESC 2 (1/6 inch line spacing)
     0x1b, 0x43, 33, // ESC C 33 (Set page length to 33 lines - 5.5 inches)
