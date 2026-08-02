@@ -234,7 +234,8 @@ export const usePrinterStore = create<PrinterState>((set, get) => ({
     const encoder = new TextEncoder();
     const initCmd = new Uint8Array([
       0x1b, 0x40, // ESC @ Reset
-      0x1b, 0x78, 0x00, // ESC x 0 Draft Mode
+      0x1b, 0x78, 0x01, // ESC x 1 NLQ Mode
+      0x1b, 0x6b, 0x01, // ESC k 1 Sans Serif Font
       0x1b, 0x50, // ESC P 10 CPI
       0x1b, 0x45, // ESC E Bold On
     ]);

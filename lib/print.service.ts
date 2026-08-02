@@ -767,7 +767,8 @@ export function generateContinuousFormEscPos(
   const encoder = new TextEncoder();
   const initBytes = new Uint8Array([
     0x1b, 0x40, // ESC @ (Initialize printer)
-    0x1b, 0x78, 0x00, // ESC x 0 (Draft mode)
+    0x1b, 0x78, 0x01, // ESC x 1 (NLQ High Quality Mode)
+    0x1b, 0x6b, 0x01, // ESC k 1 (Sans Serif Font)
     0x1b, 0x50, // ESC P (10 CPI pitch)
     0x1b, 0x32, // ESC 2 (1/6 inch line spacing)
     0x1b, 0x43, 33, // ESC C 33 (Set page length to 33 lines - 5.5 inches)
@@ -828,8 +829,6 @@ export function generateContinuousFormEscPos(
       textOutput += "\n";
     }
 
-    textOutput += sep + "\n";
-
     if (page === totalPages - 1) {
       const rupiahPart = padRight(rupiahText, 40);
       const totalPart = "TOTAL " + padLeft(totalText, 21);
@@ -838,7 +837,6 @@ export function generateContinuousFormEscPos(
       textOutput += padRight("(Bersambung ke halaman berikutnya...)", 68) + "\n";
     }
 
-    textOutput += sep + "\n";
     textOutput += "\x0C"; // Form Feed
   }
 
