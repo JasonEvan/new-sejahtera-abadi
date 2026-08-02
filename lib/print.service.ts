@@ -753,6 +753,27 @@ function padLeft(str: string, length: number): string {
   return " ".repeat(length - str.length) + str;
 }
 
+function splitTextByWidth(text: string, maxWidth: number): { line1: string; line2: string } {
+  if (text.length <= maxWidth) {
+    return { line1: text, line2: "" };
+  }
+
+  const words = text.split(" ");
+  let line1 = "";
+  let i = 0;
+
+  for (; i < words.length; i++) {
+    const testLine = line1 ? `${line1} ${words[i]}` : words[i];
+    if (testLine.length > maxWidth) {
+      break;
+    }
+    line1 = testLine;
+  }
+
+  const line2 = words.slice(i).join(" ");
+  return { line1, line2 };
+}
+
 export function generateContinuousFormEscPos(
   details: SalesInvoicePrintDetail[],
   total: SalesInvoiceTotal,
@@ -830,9 +851,15 @@ export function generateContinuousFormEscPos(
     }
 
     if (page === totalPages - 1) {
-      const rupiahPart = padRight(rupiahText, 53);
-      const totalPart = "TOTAL " + padLeft(totalText, 21);
-      textOutput += rupiahPart + totalPart + "\n";
+      const totalPart = "TOTAL " + padLeft(totalText, 15);
+      const maxFirstLineLen = 80 - totalPart.length - 2;
+
+      const { line1, line2 } = splitTextByWidth(rupiahText, maxFirstLineLen);
+
+      textOutput += padRight(line1, maxFirstLineLen + 1) + totalPart + "\n";
+      if (line2) {
+        textOutput += line2 + "\n";
+      }
     } else {
       textOutput += "\n";
     }
