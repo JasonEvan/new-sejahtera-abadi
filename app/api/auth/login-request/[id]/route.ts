@@ -50,6 +50,22 @@ export const GET = withErrorHandler(
       maxAge: 60 * 60 * 3, // 3 hours
       path: "/",
     });
+
+    // If owner opted to remember this device, set device_token cookie for client
+    const trusted = await authRepository.getTrustedDevice(
+      user.id,
+      request.deviceFingerprint,
+    );
+    if (trusted) {
+      response.cookies.set("device_token", trusted.deviceToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 365, // 1 year
+        path: "/",
+      });
+    }
+
     return response;
   },
 );

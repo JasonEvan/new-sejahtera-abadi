@@ -7,6 +7,7 @@ export async function sendApprovalEmail(payload: {
 }) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
   const approveUrl = `${baseUrl}/api/auth/approve/${payload.approvalToken}`;
+  const approveRememberUrl = `${baseUrl}/api/auth/approve/${payload.approvalToken}?remember=true`;
   const declineUrl = `${baseUrl}/api/auth/decline/${payload.approvalToken}`;
 
   await transporter.sendMail({
@@ -29,20 +30,30 @@ export async function sendApprovalEmail(payload: {
             <p style="margin: 4px 0; color: #64748b;"><strong>Time:</strong> ${new Date().toLocaleString("id-ID")}</p>
             <p style="margin: 4px 0; color: #64748b;"><strong>Expired:</strong> 1 jam dari sekarang</p>
           </div>
-          <div style="display: flex; gap: 20px; margin-top: 32px;">
+
+          <div style="margin-top: 32px;">
+            <a href="${approveRememberUrl}"
+               style="display: block; width: 100%; box-sizing: border-box; padding: 14px 24px; margin-bottom: 12px;
+                      background: #16a34a; color: #ffffff; border-radius: 8px; text-decoration: none;
+                      font-weight: 600; text-align: center; font-size: 15px;">
+              🛡️ Accept (Remember Device)
+            </a>
             <a href="${approveUrl}"
-               style="display: inline-block; padding: 12px 24px; background: #16a34a; color: #fff;
-                      border-radius: 8px; text-decoration: none; font-weight: 600; text-align: center; flex: 1;">
-              ✅ Approve Login
+               style="display: block; width: 100%; box-sizing: border-box; padding: 14px 24px; margin-bottom: 12px;
+                      background: #2563eb; color: #ffffff; border-radius: 8px; text-decoration: none;
+                      font-weight: 600; text-align: center; font-size: 15px;">
+              ✅ Accept
             </a>
             <a href="${declineUrl}"
-               style="display: inline-block; padding: 12px 24px; background: #dc2626; color: #fff;
-                      border-radius: 8px; text-decoration: none; font-weight: 600; text-align: center; flex: 1;">
-              ❌ Decline
+               style="display: block; width: 100%; box-sizing: border-box; padding: 14px 24px;
+                      background: #dc2626; color: #ffffff; border-radius: 8px; text-decoration: none;
+                      font-weight: 600; text-align: center; font-size: 15px;">
+              ❌ Reject
             </a>
           </div>
+
           <p style="margin-top: 32px; color: #94a3b8; font-size: 14px;">
-            Jika Anda tidak mengharapkan permintaan ini, segera klik <strong>Decline</strong>
+            Jika Anda tidak mengharapkan permintaan ini, segera klik <strong>Reject</strong>
             dan pertimbangkan untuk mengganti password akun tersebut.
           </p>
         </div>

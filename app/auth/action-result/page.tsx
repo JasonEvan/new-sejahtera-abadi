@@ -24,6 +24,14 @@ function ActionResultContent() {
       color: "text-green-600",
       bgColor: "bg-green-500/10",
     },
+    approved_remember: {
+      title: "Berhasil Disetujui & Device Diingat",
+      description:
+        "Permintaan login disetujui dan device ini dipercayai untuk login selanjutnya.",
+      icon: <CheckCircle2 className="h-16 w-16 text-emerald-500" />,
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-500/10",
+    },
     declined: {
       title: "Berhasil Ditolak",
       description:

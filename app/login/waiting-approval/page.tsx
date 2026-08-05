@@ -1,18 +1,10 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import api from "@/lib/axios";
-import { useFingerprint } from "@/hooks/useFingerprint";
-import { getDeviceLabel } from "@/utils/deviceLabel";
-import {
-  Loader2,
-  ShieldAlert,
-  CheckCircle2,
-  XCircle,
-  Monitor,
-} from "lucide-react";
+import { Loader2, ShieldAlert, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function WaitingApprovalContent() {
@@ -22,12 +14,9 @@ function WaitingApprovalContent() {
   const [status, setStatus] = useState<
     "pending" | "approved" | "declined" | "expired"
   >("pending");
-  const [showTrustPrompt, setShowTrustPrompt] = useState(false);
-  const [isTrusting, setIsTrusting] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const fingerprint = useFingerprint();
 
-  const checkStatus = async () => {
+  const checkStatus = useCallback(async () => {
     if (!requestId || status !== "pending") return;
 
     setIsChecking(true);
@@ -37,7 +26,13 @@ function WaitingApprovalContent() {
         setStatus(data.status);
 
         if (data.status === "approved") {
-          setShowTrustPrompt(true);
+          toast.success("Login disetujui oleh owner!");
+          document.cookie =
+            "pending_request_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+          setTimeout(() => {
+            router.push("/");
+            router.refresh();
+          }, 1200);
         }
       }
     } catch (error) {
@@ -45,7 +40,7 @@ function WaitingApprovalContent() {
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [requestId, router, status]);
 
   useEffect(() => {
     if (!requestId || status !== "pending") return;
@@ -53,29 +48,7 @@ function WaitingApprovalContent() {
     const interval = setInterval(checkStatus, 5000);
 
     return () => clearInterval(interval);
-  }, [requestId, status]);
-
-  const handleTrustDevice = async (trust: boolean) => {
-    if (trust) {
-      setIsTrusting(true);
-      try {
-        await api.post("/auth/trust-device", {
-          deviceFingerprint: fingerprint,
-          deviceLabel: getDeviceLabel(),
-        });
-        toast.success("Device ini sekarang dipercayai.");
-      } catch (error) {
-        toast.error("Gagal mempercayai device.");
-      } finally {
-        setIsTrusting(false);
-      }
-    }
-
-    document.cookie =
-      "pending_request_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    router.push("/");
-    router.refresh();
-  };
+  }, [checkStatus, requestId, status]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-background to-muted/50 p-4">
@@ -129,7 +102,7 @@ function WaitingApprovalContent() {
             </div>
           )}
 
-          {status === "approved" && showTrustPrompt && (
+          {status === "approved" && (
             <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
               <div className="flex justify-center">
                 <div className="rounded-full bg-green-500/10 p-6">
@@ -141,47 +114,13 @@ function WaitingApprovalContent() {
                   Login Disetujui!
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  Permintaan login Anda telah diterima oleh owner.
+                  Permintaan login Anda telah disetujui oleh owner.
                 </p>
               </div>
 
-              <div className="bg-muted/50 p-6 rounded-2xl border border-border/50 space-y-4">
-                <div className="flex items-center gap-3 text-left">
-                  <div className="bg-background p-2 rounded-lg">
-                    <Monitor className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">
-                      Percayai device ini?
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Jika dipercayai, Anda tidak perlu lagi meminta persetujuan
-                      saat login dari browser ini.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    className="flex-1 rounded-xl"
-                    onClick={() => handleTrustDevice(false)}
-                    disabled={isTrusting}
-                  >
-                    Tidak
-                  </Button>
-                  <Button
-                    className="flex-1 rounded-xl bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20"
-                    onClick={() => handleTrustDevice(true)}
-                    disabled={isTrusting}
-                  >
-                    {isTrusting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Ya, Percayai"
-                    )}
-                  </Button>
-                </div>
+              <div className="flex items-center justify-center gap-2 text-green-600 font-medium bg-green-500/10 py-3 px-4 rounded-xl">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Mengalihkan ke aplikasi...</span>
               </div>
             </div>
           )}
