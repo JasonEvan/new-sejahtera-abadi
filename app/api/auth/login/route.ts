@@ -96,7 +96,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   // [5] Notify owner via email
   after(() => {
-    sendApprovalEmail({
+    return sendApprovalEmail({
       approvalToken,
       userName: user.email,
       deviceLabel: deviceLabel ?? "Unknown Device",

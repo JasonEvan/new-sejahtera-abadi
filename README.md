@@ -71,6 +71,30 @@ A modern, full-stack management application built with Next.js, designed for eff
 
 Open [http://localhost:3000](http://localhost:3000) to see the application.
 
+### Login Approval Email (Resend)
+
+Login requests from untrusted devices send an approval email to `OWNER_EMAIL`
+through [Resend](https://resend.com/docs/send-with-nextjs).
+Configure these variables in `.env` and in your deployment environment:
+
+```dotenv
+RESEND_API_KEY=re_your_api_key
+RESEND_FROM_EMAIL="POS Security <security@your-domain.com>"
+OWNER_EMAIL=admin@example.com
+NEXT_PUBLIC_APP_URL=https://your-app.example.com
+```
+
+- Create an API key with permission to send emails in Resend.
+- Verify the sender domain in [Resend Domains](https://resend.com/domains)
+  and use an address on that domain for `RESEND_FROM_EMAIL`. A Gmail address
+  cannot be used as the sender; `OWNER_EMAIL` can still be a Gmail address.
+- For limited testing, `POS Security <onboarding@resend.dev>` can send only
+  to the email address associated with your Resend account.
+- Set `NEXT_PUBLIC_APP_URL` to the application's reachable URL so the
+  approve, remember-device, and reject links work for the owner.
+- SMTP credentials are no longer used. Restart the application after changing
+  environment variables.
+
 ## 📁 Project Structure
 
 - `app/`: Next.js App Router (pages and API routes)

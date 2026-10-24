@@ -1,19 +1,23 @@
-import { transporter } from "@/lib/mailer";
+import { sendEmail } from "@/lib/mailer";
 
 export async function sendApprovalEmail(payload: {
   approvalToken: string;
   userName: string;
   deviceLabel: string;
 }) {
+  const ownerEmail = process.env.OWNER_EMAIL;
+  if (!ownerEmail) {
+    throw new Error("OWNER_EMAIL must be configured");
+  }
+
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
   const approveUrl = `${baseUrl}/api/auth/approve/${payload.approvalToken}`;
   const approveRememberUrl = `${baseUrl}/api/auth/approve/${payload.approvalToken}?remember=true`;
   const declineUrl = `${baseUrl}/api/auth/decline/${payload.approvalToken}`;
 
-  await transporter.sendMail({
-    from: `"POS Security" <${process.env.SMTP_USER}>`,
-    to: process.env.OWNER_EMAIL,
-    subject: `[POS] Login Request — ${payload.userName}`,
+  await sendEmail({
+    to: ownerEmail,
+    subject: `[ERP] Login Request — ${payload.userName}`,
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff;">
         <div style="background: #1e293b; padding: 24px; text-align: center;">
