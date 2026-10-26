@@ -2,6 +2,7 @@
 
 import InputField from "@/components/shared/InputField";
 import { useGetLatestSoldItemsByClient } from "@/modules/sale/sale.queries";
+import { useEditSaleStore } from "@/stores/transactions/useEditSaleStore";
 import dayjs from "dayjs";
 import { useMemo } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
@@ -11,6 +12,12 @@ type CheckHargaFormField = {
 };
 
 export default function CheckHargaDialog({ clientId }: { clientId: number }) {
+  const invoiceItems = useEditSaleStore((state) => state.items);
+  const invoiceItemNames = useMemo(
+    () => new Set(invoiceItems.map((item) => item.name)),
+    [invoiceItems],
+  );
+
   const methods = useForm<CheckHargaFormField>({
     defaultValues: {
       name: "",
@@ -69,9 +76,16 @@ export default function CheckHargaDialog({ clientId }: { clientId: number }) {
           {!isFetching &&
             sortedItems.map((item) => (
               <div key={item.name} className="rounded-md border p-3">
-                <p className="text-sm font-medium">
-                  {item.name} - {item.price.toLocaleString("id-ID")}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-medium">
+                    {item.name} - {item.price.toLocaleString("id-ID")}
+                  </p>
+                  {invoiceItemNames.has(item.name) && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                      Ada di nota aktif
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {dayjs(item.sold_at).format("DD/MM/YYYY HH:mm")}
                 </p>
