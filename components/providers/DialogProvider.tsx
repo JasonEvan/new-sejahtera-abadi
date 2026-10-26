@@ -24,12 +24,23 @@ export default function DialogProvider() {
 
   return (
     <Dialog open={isOpen}>
-      <DialogContent showCloseButton={false}>
+      <DialogContent
+        showCloseButton={false}
+        className={
+          props.size === "tall"
+            ? "h-[85dvh] max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto]"
+            : undefined
+        }
+      >
         <DialogHeader>
           <DialogTitle>{props.title}</DialogTitle>
           <DialogDescription>{props.description}</DialogDescription>
         </DialogHeader>
-        <div className="no-scrollbar -mx-4 max-h-[50vh] overflow-y-auto px-4">
+        <div
+          className={`no-scrollbar -mx-4 overflow-y-auto px-4 ${
+            props.size === "tall" ? "min-h-0" : "max-h-[50vh]"
+          }`}
+        >
           {props.children}
         </div>
         <DialogFooter>

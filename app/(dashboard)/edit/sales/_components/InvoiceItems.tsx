@@ -30,6 +30,7 @@ export default function InvoiceItems() {
       title: "Check Harga",
       description: "Cari harga jual terakhir per barang untuk client ini",
       type: "text",
+      size: "tall",
       children: <CheckHargaDialog clientId={invoiceInformation.client} />,
     });
   }, [invoiceInformation.client]);

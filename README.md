@@ -29,6 +29,7 @@ A modern, full-stack management application built with Next.js, designed for eff
 ### Keyboard Shortcuts
 
 - On `/edit/sales`, press **F1** to open **Check Harga**, including while an input is focused. Select a client and invoice first, just as when using the button. The shortcut prevents the browser's default F1 help action and is removed when leaving the page.
+- The `/edit/sales` **Check Harga** modal uses 85% of the viewport height with a scrollable body. Search results are ordered by sale date, newest first; each item still shows its latest price for the selected client.
 
 ## 🛠️ Getting Started
 

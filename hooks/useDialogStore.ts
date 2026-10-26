@@ -4,6 +4,7 @@ interface DialogProps {
   title: string;
   description: string;
   type: "text" | "form";
+  size?: "default" | "tall";
   formId?: string;
   mutationKey?: string[];
   children: React.ReactNode;

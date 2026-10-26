@@ -3,6 +3,7 @@
 import InputField from "@/components/shared/InputField";
 import { useGetLatestSoldItemsByClient } from "@/modules/sale/sale.queries";
 import dayjs from "dayjs";
+import { useMemo } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 
 type CheckHargaFormField = {
@@ -29,6 +30,14 @@ export default function CheckHargaDialog({ clientId }: { clientId: number }) {
     clientId,
     normalizedName,
     !!normalizedName,
+  );
+
+  const sortedItems = useMemo(
+    () =>
+      [...(soldItems ?? [])].sort(
+        (a, b) => new Date(b.sold_at).getTime() - new Date(a.sold_at).getTime(),
+      ),
+    [soldItems],
   );
 
   return (
@@ -58,7 +67,7 @@ export default function CheckHargaDialog({ clientId }: { clientId: number }) {
           )}
 
           {!isFetching &&
-            (soldItems || []).map((item) => (
+            sortedItems.map((item) => (
               <div key={item.name} className="rounded-md border p-3">
                 <p className="text-sm font-medium">
                   {item.name} - {item.price.toLocaleString("id-ID")}
