@@ -109,6 +109,7 @@ export const saleOrderRepository = {
       .select({
         id: sales_orders.id,
         invoice_number: sales_orders.invoice_number,
+        invoice_value: sales_orders.invoice_value,
         balance_due: sales_orders.balance_due,
       })
       .from(sales_orders)

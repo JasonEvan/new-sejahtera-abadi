@@ -32,6 +32,11 @@ A modern, full-stack management application built with Next.js, designed for eff
 - The `/edit/sales` **Check Harga** modal uses 85% of the viewport height with a scrollable body. Search results are ordered by sale date, newest first; each item still shows its latest price for the selected client.
 - Results matching an item name in the currently edited invoice show **Ada di nota aktif**. The marker follows the unsaved item list, updating when items are added or removed; similarly named items are not marked unless their full names match.
 
+### Editing Receivables
+
+- On `/edit/receivables`, adding an invoice preserves its full invoice value for display and calculates the remaining balance from its current outstanding balance minus the payment being added. **Add Full Payment** pays only the outstanding balance, including for invoices with earlier payments.
+- The sales invoice menu (`GET /api/sales?for_menu=true`) includes `id`, `invoice_number`, `invoice_value`, and `balance_due`.
+
 ## 🛠️ Getting Started
 
 ### Prerequisites
