@@ -108,6 +108,7 @@ export const purchaseOrderRepository = {
       .select({
         id: purchase_orders.id,
         invoice_number: purchase_orders.invoice_number,
+        invoice_value: purchase_orders.invoice_value,
         balance_due: purchase_orders.balance_due,
       })
       .from(purchase_orders)

@@ -218,7 +218,7 @@ function AddPayableInvoiceForm({
       invoice_value: selectedInvoice.invoice_value,
       paid_amount: formData.paid_amount,
       balance_due: Math.max(
-        selectedInvoice.invoice_value - formData.paid_amount,
+        selectedInvoice.balance_due - formData.paid_amount,
         0,
       ),
     };
