@@ -26,6 +26,10 @@ A modern, full-stack management application built with Next.js, designed for eff
 - **Trusted Device Auth**: Enhanced security via device fingerprinting and email verification.
 - **Data Export/Backup**: Export reports to Excel and PDF formats, with backup capabilities.
 
+### Keyboard Shortcuts
+
+- On `/edit/sales`, press **F1** to open **Check Harga**, including while an input is focused. Select a client and invoice first, just as when using the button. The shortcut prevents the browser's default F1 help action and is removed when leaving the page.
+
 ## 🛠️ Getting Started
 
 ### Prerequisites
