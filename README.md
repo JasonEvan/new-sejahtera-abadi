@@ -25,6 +25,8 @@ A modern, full-stack management application built with Next.js, designed for eff
 - **Role-Based Access Control (RBAC)**: Fine-grained permissions for different user roles.
 - **Trusted Device Auth**: Enhanced security via device fingerprinting and email verification.
 - **Data Export/Backup**: Export reports to Excel and PDF formats, with backup capabilities.
+Pada formulir penjualan dan edit penjualan, pilihan barang muncul di bawah field dengan kolom nama dan stok akhir terpisah; pencarian menggunakan nama barang. Tombol panah berpindah langsung antara pilihan pertama dan terakhir saat mencapai ujung daftar.
+
 
 ### Keyboard Shortcuts
 

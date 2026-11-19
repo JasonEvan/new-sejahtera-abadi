@@ -17,7 +17,7 @@ export const useGetStockNames = () => {
     select: (data) =>
       data.data.map((stock) => ({
         id: stock.id,
-        name: `${stock.name} || ${stock.ending_stock}`,
+        name: stock.name,
         ending_stock: stock.ending_stock,
         capital_cost: stock.capital_cost,
         selling_price: stock.selling_price,

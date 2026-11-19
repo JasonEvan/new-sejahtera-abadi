@@ -1,4 +1,4 @@
-import ComboboxField from "@/components/shared/ComboboxField";
+import StockComboboxField from "@/components/shared/StockComboboxField";
 import { DataTable } from "@/components/shared/DataTable";
 import InputField from "@/components/shared/InputField";
 import { Button } from "@/components/ui/button";
@@ -61,10 +61,7 @@ export default function Cart() {
       }
     }
 
-    const name = stocks
-      ?.find((s) => s.id === data.stock_id)
-      ?.name.split(" || ")[0]
-      .trim();
+    const name = stocks?.find((s) => s.id === data.stock_id)?.name;
 
     useSaleStore.getState().addToCart({
       id: crypto.randomUUID(),
@@ -105,7 +102,7 @@ export default function Cart() {
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div className="grid grid-cols-2 gap-x-2">
-            <ComboboxField
+            <StockComboboxField
               name="stock_id"
               label="Nama Barang"
               items={stocks || []}

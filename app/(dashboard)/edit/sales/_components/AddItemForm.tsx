@@ -1,4 +1,4 @@
-import ComboboxField from "@/components/shared/ComboboxField";
+import StockComboboxField from "@/components/shared/StockComboboxField";
 import InputField from "@/components/shared/InputField";
 import { alertDialogs } from "@/lib/alert-dialogs";
 import { Button } from "@/components/ui/button";
@@ -94,7 +94,7 @@ export default function AddItemForm() {
     useEditSaleStore.getState().addItem({
       sales_order_line_id: undefined,
       stock_id: data.stock_id,
-      name: selectedStock?.name.split(" || ")[0].trim() || "",
+      name: selectedStock?.name || "",
       quantity: data.quantity,
       capital_cost: data.capital_cost,
       selling_price: data.selling_price,
@@ -110,7 +110,7 @@ export default function AddItemForm() {
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           <div className="grid grid-cols-2 gap-x-2">
-            <ComboboxField
+            <StockComboboxField
               name="stock_id"
               label="Nama Barang"
               items={stocks || []}

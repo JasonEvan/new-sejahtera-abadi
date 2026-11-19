@@ -1,4 +1,4 @@
-import ComboboxField from "@/components/shared/ComboboxField";
+import StockComboboxField from "@/components/shared/StockComboboxField";
 import InputField from "@/components/shared/InputField";
 import { dialogs } from "@/lib/dialogs";
 import { useGetStockNames } from "@/modules/stock/stock.queries";
@@ -86,7 +86,7 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
     useEditSaleStore.getState().updateItem(data.id, {
       sales_order_line_id: data.sales_order_line_id,
       stock_id: value.stock_id,
-      name: selectedStock?.name.split(" || ")[0].trim() || "",
+      name: selectedStock?.name || "",
       quantity: value.quantity,
       capital_cost: value.capital_cost,
       selling_price: value.selling_price,
@@ -104,7 +104,7 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
         className="space-y-3"
       >
         <div className="grid grid-cols-2 gap-x-2">
-          <ComboboxField
+          <StockComboboxField
             name="stock_id"
             label="Nama Barang"
             items={stocks || []}

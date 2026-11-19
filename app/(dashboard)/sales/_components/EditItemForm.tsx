@@ -1,4 +1,4 @@
-import ComboboxField from "@/components/shared/ComboboxField";
+import StockComboboxField from "@/components/shared/StockComboboxField";
 import InputField from "@/components/shared/InputField";
 import { dialogs } from "@/lib/dialogs";
 import { ItemValidation, SaleTableRow } from "@/modules/sale/sale.types";
@@ -31,10 +31,7 @@ export default function EditItemForm({ data }: { data: SaleTableRow }) {
   });
 
   const onSubmit = (value: ItemValidation) => {
-    const name = stocks
-      ?.find((s) => s.id === value.stock_id)
-      ?.name.split(" || ")[0]
-      .trim();
+    const name = stocks?.find((s) => s.id === value.stock_id)?.name;
 
     useSaleStore.getState().updateCart(data.id, {
       id: data.id,
@@ -86,7 +83,7 @@ export default function EditItemForm({ data }: { data: SaleTableRow }) {
         className="space-y-3"
       >
         <div className="grid grid-cols-2 gap-x-2">
-          <ComboboxField
+          <StockComboboxField
             name="stock_id"
             label="Nama Barang"
             items={stocks || []}
