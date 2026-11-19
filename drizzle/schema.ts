@@ -1,4 +1,5 @@
 import {
+  bigint,
   index,
   integer,
   pgTable,
@@ -135,16 +136,16 @@ export const clients = pgTable(
     phone: varchar("phone", { length: 20 }),
     mobile_phone: varchar("mobile_phone", { length: 20 }),
     address: varchar("address", { length: 100 }),
-    initial_payable_balance: integer("initial_payable_balance")
+    initial_payable_balance: bigint("initial_payable_balance", { mode: "number" })
       .default(0)
       .notNull(),
-    initial_receivable_balance: integer("initial_receivable_balance")
+    initial_receivable_balance: bigint("initial_receivable_balance", { mode: "number" })
       .default(0)
       .notNull(),
-    ending_payable_balance: integer("ending_payable_balance")
+    ending_payable_balance: bigint("ending_payable_balance", { mode: "number" })
       .default(0)
       .notNull(),
-    ending_receivable_balance: integer("ending_receivable_balance")
+    ending_receivable_balance: bigint("ending_receivable_balance", { mode: "number" })
       .default(0)
       .notNull(),
   },
