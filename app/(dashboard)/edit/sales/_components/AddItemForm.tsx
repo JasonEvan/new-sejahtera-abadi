@@ -2,6 +2,7 @@ import StockComboboxField from "@/components/shared/StockComboboxField";
 import InputField from "@/components/shared/InputField";
 import { alertDialogs } from "@/lib/alert-dialogs";
 import { Button } from "@/components/ui/button";
+import { getSaleDraftStockAdjustments } from "@/modules/sale/sale-draft-stock";
 import { useGetStockNames } from "@/modules/stock/stock.queries";
 import { useEditSaleStore } from "@/stores/transactions/useEditSaleStore";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,6 +21,10 @@ export default function AddItemForm() {
   const items = useEditSaleStore((state) => state.items);
   const baseQuantitiesByStock = useEditSaleStore(
     (state) => state.base_quantities_by_stock,
+  );
+  const stockAdjustments = useMemo(
+    () => getSaleDraftStockAdjustments(items, baseQuantitiesByStock),
+    [items, baseQuantitiesByStock],
   );
 
   const schema = useMemo(
@@ -114,6 +119,7 @@ export default function AddItemForm() {
               name="stock_id"
               label="Nama Barang"
               items={stocks || []}
+              stockAdjustments={stockAdjustments}
             />
             <InputField name="quantity" label="Jumlah" type="number" />
           </div>

@@ -2,6 +2,7 @@ import StockComboboxField from "@/components/shared/StockComboboxField";
 import { DataTable } from "@/components/shared/DataTable";
 import InputField from "@/components/shared/InputField";
 import { Button } from "@/components/ui/button";
+import { getSaleDraftStockAdjustments } from "@/modules/sale/sale-draft-stock";
 import { ItemValidation } from "@/modules/sale/sale.types";
 import { createItemValidation } from "@/modules/sale/sale.validation";
 import { useGetStockNames } from "@/modules/stock/stock.queries";
@@ -17,6 +18,10 @@ export default function Cart() {
   const { data: stocks } = useGetStockNames();
   const cart = useSaleStore((state) => state.cart);
   const columns = useColumns();
+  const stockAdjustments = useMemo(
+    () => getSaleDraftStockAdjustments(cart),
+    [cart],
+  );
 
   const schema = useMemo(
     () => createItemValidation(stocks || [], cart),
@@ -106,6 +111,7 @@ export default function Cart() {
               name="stock_id"
               label="Nama Barang"
               items={stocks || []}
+              stockAdjustments={stockAdjustments}
             />
             <InputField name="quantity" label="Jumlah" type="number" />
           </div>

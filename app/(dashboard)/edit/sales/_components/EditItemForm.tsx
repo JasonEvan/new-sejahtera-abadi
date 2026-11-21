@@ -1,6 +1,7 @@
 import StockComboboxField from "@/components/shared/StockComboboxField";
 import InputField from "@/components/shared/InputField";
 import { dialogs } from "@/lib/dialogs";
+import { getSaleDraftStockAdjustments } from "@/modules/sale/sale-draft-stock";
 import { useGetStockNames } from "@/modules/stock/stock.queries";
 import {
   EditSaleItemRow,
@@ -21,6 +22,10 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
   const items = useEditSaleStore((state) => state.items);
   const baseQuantitiesByStock = useEditSaleStore(
     (state) => state.base_quantities_by_stock,
+  );
+  const stockAdjustments = useMemo(
+    () => getSaleDraftStockAdjustments(items, baseQuantitiesByStock),
+    [items, baseQuantitiesByStock],
   );
 
   const schema = useMemo(
@@ -108,6 +113,7 @@ export default function EditItemForm({ data }: { data: EditSaleItemRow }) {
             name="stock_id"
             label="Nama Barang"
             items={stocks || []}
+            stockAdjustments={stockAdjustments}
             isInDialog
           />
           <InputField name="quantity" label="Jumlah" type="number" />

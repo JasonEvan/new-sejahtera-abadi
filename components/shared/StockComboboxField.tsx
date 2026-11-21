@@ -15,6 +15,7 @@ type StockComboboxFieldProps = {
   name: string;
   label: string;
   items: StockItem[];
+  stockAdjustments?: ReadonlyMap<number, number>;
   isInDialog?: boolean;
 };
 
@@ -22,6 +23,7 @@ export default function StockComboboxField({
   name,
   label,
   items,
+  stockAdjustments,
   isInDialog,
 }: StockComboboxFieldProps) {
   const { control } = useFormContext();
@@ -73,7 +75,7 @@ export default function StockComboboxField({
                       {item.name}
                     </span>
                     <span className="self-stretch border-l py-2 pr-8 pl-2 text-right tabular-nums">
-                      {item.ending_stock}
+                      {item.ending_stock + (stockAdjustments?.get(item.id) ?? 0)}
                     </span>
                   </ComboboxItem>
                 )}

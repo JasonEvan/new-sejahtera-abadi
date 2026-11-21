@@ -1,6 +1,7 @@
 import StockComboboxField from "@/components/shared/StockComboboxField";
 import InputField from "@/components/shared/InputField";
 import { dialogs } from "@/lib/dialogs";
+import { getSaleDraftStockAdjustments } from "@/modules/sale/sale-draft-stock";
 import { ItemValidation, SaleTableRow } from "@/modules/sale/sale.types";
 import { createItemValidation } from "@/modules/sale/sale.validation";
 import { useGetStockNames } from "@/modules/stock/stock.queries";
@@ -12,6 +13,10 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 export default function EditItemForm({ data }: { data: SaleTableRow }) {
   const { data: stocks } = useGetStockNames();
   const cart = useSaleStore((state) => state.cart);
+  const stockAdjustments = useMemo(
+    () => getSaleDraftStockAdjustments(cart),
+    [cart],
+  );
 
   const schema = useMemo(
     () => createItemValidation(stocks || [], cart, data.id),
@@ -87,6 +92,7 @@ export default function EditItemForm({ data }: { data: SaleTableRow }) {
             name="stock_id"
             label="Nama Barang"
             items={stocks || []}
+            stockAdjustments={stockAdjustments}
             isInDialog
           />
           <InputField name="quantity" label="Jumlah" type="number" />
