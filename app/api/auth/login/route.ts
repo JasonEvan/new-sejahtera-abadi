@@ -3,11 +3,16 @@ import bcrypt from "bcrypt";
 import { encrypt } from "@/lib/auth";
 import { sendApprovalEmail } from "@/lib/sendApprovalEmail";
 import { randomUUID } from "crypto";
-import { withErrorHandler } from "@/lib/withErrorHandler";
 import { userRepository } from "@/modules/user/user.repository";
 import { authRepository } from "@/modules/auth/auth.repository";
+import {
+  createLoginReceipt,
+  loginReceiptCookie,
+  loginRequestLifetimeSeconds,
+  withNoStore,
+} from "@/modules/auth/login-receipt";
 
-export const POST = withErrorHandler(async (req: NextRequest) => {
+export const POST = withNoStore(async (req: NextRequest) => {
   const { email, password, deviceFingerprint, deviceLabel } = await req.json();
 
   // device_token is httpOnly — read server-side directly from cookie
@@ -31,12 +36,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  // [2] Check trusted device (fingerprint OR cookie)
-  const trusted = await authRepository.getTrustedDevice(
-    user.id,
-    deviceFingerprint,
-    deviceToken,
-  );
+  // A fingerprint describes a device but does not prove possession.
+  const trusted = deviceToken
+    ? await authRepository.getTrustedDevice(user.id, deviceToken)
+    : null;
 
   if (trusted) {
     await authRepository.updateTrustedDeviceLastUsed(trusted.id);
@@ -62,28 +65,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     return response;
   }
 
-  // [3] Deduplication — check for existing pending request
-  const existingRequest = await authRepository.getPendingLoginRequest(user.id);
-
-  if (existingRequest) {
-    const response = NextResponse.json(
-      { status: "pending", requestId: existingRequest.id },
-      { status: 202 },
-    );
-
-    // Set cookie for automatic redirect from /login page
-    response.cookies.set("pending_request_id", String(existingRequest.id), {
-      httpOnly: false, // Must be accessible by client-side useEffect
-      maxAge: 60 * 60, // 1 hour
-      path: "/",
-    });
-
-    return response;
-  }
-
-  // [4] Create new login_request
+  // Create a fresh request for this credential-validated browser.
   const approvalToken = randomUUID();
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // +1 hour
+  const expiresAt = new Date(Date.now() + loginRequestLifetimeSeconds * 1000);
 
   const newRequest = await authRepository.createLoginRequest({
     userId: user.id,
@@ -93,8 +77,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     status: "pending",
     expiresAt,
   });
+  const receipt = await createLoginReceipt(newRequest.id, approvalToken);
 
-  // [5] Notify owner via email
+  // Notify the owner only after the browser receipt has been signed.
   after(() => {
     return sendApprovalEmail({
       approvalToken,
@@ -108,11 +93,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     { status: 202 },
   );
 
-  // Set cookie for automatic redirect from /login page
-  response.cookies.set("pending_request_id", String(newRequest.id), {
-    httpOnly: false, // Must be accessible by client-side useEffect
-    maxAge: 60 * 60, // 1 hour
-    path: "/",
+  response.cookies.set(loginReceiptCookie, receipt, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: loginRequestLifetimeSeconds,
+    path: "/api/auth/login-request",
   });
 
   return response;

@@ -1,46 +1,68 @@
 "use client";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import { useEffect, useRef, useState, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import api from "@/lib/axios";
 import { Loader2, ShieldAlert, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-function WaitingApprovalContent() {
+function WaitingApprovalContent({ requestId }: { requestId: string | null }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const requestId = searchParams.get("id");
   const [status, setStatus] = useState<
-    "pending" | "approved" | "declined" | "expired"
-  >("pending");
+    "pending" | "approved" | "declined" | "expired" | "unavailable"
+  >(requestId && /^[1-9]\d{0,9}$/.test(requestId) ? "pending" : "unavailable");
   const [isChecking, setIsChecking] = useState(false);
+  const inFlight = useRef(false);
+  const finished = useRef(false);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const checkStatus = useCallback(async () => {
-    if (!requestId || status !== "pending") return;
+    if (!requestId || finished.current || inFlight.current) return;
 
+    inFlight.current = true;
     setIsChecking(true);
     try {
-      const { data } = await api.get(`/auth/login-request/${requestId}`);
-      if (data.status !== "pending") {
-        setStatus(data.status);
+      const response = await fetch(`/api/auth/login-request/${requestId}`, {
+        method: "POST",
+        cache: "no-store",
+      });
+      if (!mounted.current) return;
+      const nextStatus =
+        response.status === 404
+          ? "unavailable"
+          : response.ok
+            ? (await response.json()).status
+            : null;
 
-        if (data.status === "approved") {
+      if (!mounted.current) return;
+      if (
+        nextStatus === "approved" ||
+        nextStatus === "declined" ||
+        nextStatus === "expired" ||
+        nextStatus === "unavailable"
+      ) {
+        finished.current = true;
+        setStatus(nextStatus);
+        if (nextStatus === "approved") {
           toast.success("Login disetujui oleh owner!");
-          document.cookie =
-            "pending_request_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-          setTimeout(() => {
-            router.push("/");
-            router.refresh();
-          }, 1200);
+          router.replace("/");
+          router.refresh();
         }
       }
     } catch (error) {
       console.error("Status check error:", error);
     } finally {
-      setIsChecking(false);
+      inFlight.current = false;
+      if (mounted.current) setIsChecking(false);
     }
-  }, [requestId, router, status]);
+  }, [requestId, router]);
 
   useEffect(() => {
     if (!requestId || status !== "pending") return;
@@ -143,18 +165,14 @@ function WaitingApprovalContent() {
               <Button
                 variant="outline"
                 className="w-full rounded-xl"
-                onClick={() => {
-                  document.cookie =
-                    "pending_request_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                  router.push("/login");
-                }}
+                onClick={() => router.replace("/login")}
               >
                 Kembali ke Login
               </Button>
             </div>
           )}
 
-          {status === "expired" && (
+          {(status === "expired" || status === "unavailable") && (
             <div className="space-y-6 animate-in zoom-in duration-300">
               <div className="flex justify-center">
                 <div className="rounded-full bg-orange-500/10 p-6">
@@ -163,20 +181,20 @@ function WaitingApprovalContent() {
               </div>
               <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight text-orange-600">
-                  Permintaan Kadaluarsa
+                  {status === "expired"
+                    ? "Permintaan Kadaluarsa"
+                    : "Permintaan Tidak Tersedia"}
                 </h1>
                 <p className="text-muted-foreground text-sm">
-                  Permintaan login Anda telah kadaluarsa (melewati 1 jam).
+                  {status === "expired"
+                    ? "Permintaan login Anda telah kadaluarsa (melewati 1 jam)."
+                    : "Permintaan login ini tidak dapat dilanjutkan. Silakan masuk kembali."}
                 </p>
               </div>
               <Button
                 variant="outline"
                 className="w-full rounded-xl"
-                onClick={() => {
-                  document.cookie =
-                    "pending_request_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                  router.push("/login");
-                }}
+                onClick={() => router.replace("/login")}
               >
                 Coba Login Lagi
               </Button>
@@ -188,6 +206,11 @@ function WaitingApprovalContent() {
   );
 }
 
+function WaitingApprovalFromQuery() {
+  const requestId = useSearchParams().get("id");
+  return <WaitingApprovalContent key={requestId} requestId={requestId} />;
+}
+
 export default function WaitingApprovalPage() {
   return (
     <Suspense
@@ -197,7 +220,7 @@ export default function WaitingApprovalPage() {
         </div>
       }
     >
-      <WaitingApprovalContent />
+      <WaitingApprovalFromQuery />
     </Suspense>
   );
 }

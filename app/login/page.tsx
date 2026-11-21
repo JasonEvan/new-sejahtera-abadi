@@ -31,20 +31,7 @@ function LoginContent() {
   const fingerprint = useFingerprint();
 
   useEffect(() => {
-    // 1. Check for pending request cookie (if user is waiting for approval)
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(";").shift();
-    };
-
-    const pendingId = getCookie("pending_request_id");
-    if (pendingId) {
-      router.push(`/login/waiting-approval?id=${pendingId}`);
-      return;
-    }
-
-    // 2. Check if already authenticated (has active session)
+    // Check if already authenticated (has active session).
     const checkAuth = async () => {
       try {
         const { data } = await api.get("/auth/me");
@@ -80,8 +67,6 @@ function LoginContent() {
         toast.info(
           "Login dari device baru terdeteksi. Menunggu persetujuan owner...",
         );
-        if (fingerprint)
-          sessionStorage.setItem("temp_fingerprint", fingerprint);
         startTransition(() => {
           router.push(`/login/waiting-approval?id=${data.requestId}`);
         });

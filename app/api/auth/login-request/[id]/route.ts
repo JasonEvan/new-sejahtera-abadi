@@ -1,39 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isExpired } from "@/lib/isExpired";
 import { encrypt } from "@/lib/auth";
-import { withErrorHandler } from "@/lib/withErrorHandler";
-import { authRepository } from "@/modules/auth/auth.repository";
+import {
+  approvedDeviceId,
+  authRepository,
+} from "@/modules/auth/auth.repository";
+import { readLoginReceipt, withNoStore } from "@/modules/auth/login-receipt";
 import { userRepository } from "@/modules/user/user.repository";
-import { AppError } from "@/lib/errors";
 
-export const GET = withErrorHandler(
+function unavailable() {
+  return NextResponse.json({ status: "unavailable" }, { status: 404 });
+}
+
+export const POST = withNoStore(
   async (req: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
-    const request = await authRepository.getLoginRequestById(Number(id));
+    if (!/^[1-9]\d{0,9}$/.test(id)) return unavailable();
+    const requestId = Number(id);
+    if (requestId > 2_147_483_647) return unavailable();
 
-    if (!request) {
-      throw new AppError("Not found", 404);
-    }
+    const approvalTokenHash = await readLoginReceipt(req, requestId);
+    if (!approvalTokenHash) return unavailable();
 
-    // Lazy expiry — check on every read
-    if (request.status === "pending" && isExpired(request.expiresAt)) {
-      await authRepository.updateLoginRequestStatus(request.id, "expired");
-      return NextResponse.json({ status: "expired" });
-    }
+    const request = await authRepository.getBoundLoginRequest(
+      requestId,
+      approvalTokenHash,
+    );
+    if (!request) return unavailable();
 
     if (request.status === "declined" || request.status === "expired") {
       return NextResponse.json({ status: request.status });
     }
 
-    if (request.status === "pending") {
-      return NextResponse.json({ status: "pending" });
+    const trustedDeviceId = approvedDeviceId(request.status);
+    const approved = request.status === "approved" || trustedDeviceId !== null;
+    if (request.status !== "pending" && !approved) return unavailable();
+    if (request.expiresAt.getTime() <= Date.now()) {
+      return NextResponse.json({ status: "expired" });
     }
+    if (!approved) return NextResponse.json({ status: "pending" });
 
-    // status === 'approved' — issue session via cookie
     const user = await userRepository.getUserById(request.userId);
-    if (!user) {
-      throw new AppError("User not found", 404);
-    }
+    if (!user) return unavailable();
 
     const session = await encrypt({
       id: user.id,
@@ -41,6 +48,23 @@ export const GET = withErrorHandler(
       role: user.role ?? "unknown",
       permissions: user.permissions,
     });
+
+    const deviceToken =
+      trustedDeviceId === null
+        ? undefined
+        : await authRepository.getTrustedDeviceToken(user.id, trustedDeviceId);
+
+    const consumed = await authRepository.consumeLoginRequest(
+      requestId,
+      approvalTokenHash,
+      request.status,
+    );
+    if (!consumed) {
+      if (request.expiresAt.getTime() <= Date.now()) {
+        return NextResponse.json({ status: "expired" });
+      }
+      return unavailable();
+    }
 
     const response = NextResponse.json({ status: "approved" });
     response.cookies.set("session", session, {
@@ -51,13 +75,8 @@ export const GET = withErrorHandler(
       path: "/",
     });
 
-    // If owner opted to remember this device, set device_token cookie for client
-    const trusted = await authRepository.getTrustedDevice(
-      user.id,
-      request.deviceFingerprint,
-    );
-    if (trusted) {
-      response.cookies.set("device_token", trusted.deviceToken, {
+    if (deviceToken) {
+      response.cookies.set("device_token", deviceToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",

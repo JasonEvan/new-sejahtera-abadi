@@ -64,6 +64,10 @@ Pada formulir penjualan dan edit penjualan, pilihan barang muncul di bawah field
    ```bash
    cp .env.example .env
    ```
+   Set `JWT_SECRET` in `.env` and in the deployment environment before starting
+   the app. Generate a unique value with `openssl rand -hex 32`. The server
+   rejects a missing or blank secret. If a deployment used the old fallback
+   or a shared placeholder, replace it; users must sign in again.
 
 4. **Database Setup:**
    Generate and run migrations:
@@ -107,6 +111,16 @@ NEXT_PUBLIC_APP_URL=https://your-app.example.com
   approve, remember-device, and reject links work for the owner.
 - SMTP credentials are no longer used. Restart the application after changing
   environment variables.
+
+After the owner approves, continue in the same browser that requested login.
+The browser can claim the approval once within one hour of the request.
+Login requests started before this update must be restarted. Remembered
+browsers need their `device_token` cookie; clearing it requires a new approval.
+
+## Access Controls
+
+Role permissions require `role.view` to read and `role.update` to change.
+Both the yearly cutoff preview and execution require `system.cutoff`.
 
 ## 📁 Project Structure
 

@@ -85,7 +85,7 @@ export const loginRequests = pgTable(
     approvalToken: varchar("approval_token", { length: 255 })
       .notNull()
       .unique(),
-    // status values: 'pending' | 'approved' | 'declined' | 'expired'
+    // 'pending' | 'approved' | 'approved:<trustedDeviceId>' | 'declined' | 'expired' | 'consumed'
     status: varchar("status", { length: 20 }).notNull().default("pending"),
     expiresAt: timestamp("expires_at").notNull(), // set to now() + 1 hour on insert
     createdAt: timestamp("created_at").notNull().defaultNow(),
