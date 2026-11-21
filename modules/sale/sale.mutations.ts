@@ -16,7 +16,7 @@ import { useSaleStore } from "@/stores/transactions/useSaleStore";
 import { useSaleReturnStore } from "@/stores/transactions/useSaleReturnStore";
 import { useEditSaleStore } from "@/stores/transactions/useEditSaleStore";
 import { useDeleteSaleStore } from "@/stores/transactions/useDeleteSaleStore";
-import { invalidateOrdersMenuKey } from "./sale.keys";
+import { getSaleEditDetailKey, invalidateOrdersMenuKey } from "./sale.keys";
 import {
   getAllReceivablesKey,
   invalidateInventoryLedgersKey,
@@ -77,7 +77,7 @@ export const useUpdateSaleMutation = () => {
       salesOrderId: number;
       data: Parameters<typeof updateSale>[1];
     }) => updateSale(salesOrderId, data),
-    onSuccess: (response) => {
+    onSuccess: (response, { data, salesOrderId }) => {
       toast.success(response.message || "Nota penjualan berhasil diupdate", {
         position: "bottom-right",
       });
@@ -87,6 +87,9 @@ export const useUpdateSaleMutation = () => {
       queryClient.invalidateQueries({ queryKey: getClientsKey() });
       queryClient.invalidateQueries({ queryKey: getStocksKey() });
       queryClient.invalidateQueries({ queryKey: invalidateOrdersMenuKey() });
+      queryClient.invalidateQueries({
+        queryKey: getSaleEditDetailKey(data.client_id, salesOrderId),
+      });
       queryClient.invalidateQueries({ queryKey: getAllReceivablesKey() });
       queryClient.invalidateQueries({ queryKey: invalidateProfitReportKey() });
       queryClient.invalidateQueries({

@@ -4,8 +4,8 @@ import ComboboxField from "@/components/shared/ComboboxField";
 import { Button } from "@/components/ui/button";
 import { useGetClientNames } from "@/modules/client/client.queries";
 import {
-  useGetReturnEligibleOrders,
-  useGetSaleReturnLines,
+  useGetEditEligibleOrders,
+  useGetSaleEditDetail,
 } from "@/modules/sale/sale.queries";
 import { useEditSaleStore } from "@/stores/transactions/useEditSaleStore";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,12 +37,13 @@ export default function InvoiceInformation() {
     resolver: zodResolver(invoiceInformationValidation),
   });
 
-  const { reset, handleSubmit, control } = methods;
+  const { reset, resetField, handleSubmit, control } = methods;
 
   const watchedClient = useWatch({ control, name: "client" });
   const watchedSalesOrderId = useWatch({ control, name: "sales_order_id" });
+  const isLocked = !!invoiceInformation.sales_order_id;
 
-  const { data: eligibleOrders } = useGetReturnEligibleOrders(
+  const { data: eligibleOrders } = useGetEditEligibleOrders(
     watchedClient,
     !!watchedClient,
   );
@@ -51,13 +52,18 @@ export default function InvoiceInformation() {
     (order) => order.id === watchedSalesOrderId,
   )?.name;
 
-  const { data: invoiceLineData } = useGetSaleReturnLines(
-    selectedInvoiceNumber ?? "",
-    !!selectedInvoiceNumber,
+  const {
+    data: invoiceLineData,
+    isFetching,
+    isSuccess,
+  } = useGetSaleEditDetail(
+    watchedClient,
+    watchedSalesOrderId,
+    !!selectedInvoiceNumber && !isLocked,
   );
 
   const onSubmit = (data: InvoiceInformationFormField) => {
-    if (!invoiceLineData || !selectedInvoiceNumber) {
+    if (!isSuccess || isFetching || !invoiceLineData || !selectedInvoiceNumber) {
       toast.error("Data nota belum dimuat, coba lagi", {
         position: "bottom-right",
       });
@@ -89,7 +95,9 @@ export default function InvoiceInformation() {
     });
   }, [invoiceInformation, reset]);
 
-  const isLocked = !!invoiceInformation.sales_order_id;
+  useEffect(() => {
+    if (!isLocked) resetField("sales_order_id");
+  }, [isLocked, resetField, watchedClient]);
 
   return (
     <FormProvider {...methods}>

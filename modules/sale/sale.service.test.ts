@@ -23,6 +23,7 @@ jest.mock("./sale-order.repository", () => ({
     getOrdersMenu: jest.fn(),
     getSalesInvoices: jest.fn(),
     getSalesInvoiceDetail: jest.fn(),
+    getSaleEditDetail: jest.fn(),
     getReturnEligibleOrders: jest.fn(),
     getSaleReturnLinesWithMeta: jest.fn(),
     getLatestSoldItemsByClient: jest.fn(),
@@ -345,6 +346,16 @@ describe("sale.service", () => {
         statusCode: 404,
       }) as AppError,
     );
+  });
+
+  it("returns 404 when the invoice is not eligible for the selected client", async () => {
+    mockedOrderRepo.getSaleEditDetail.mockResolvedValueOnce(null);
+
+    await expect(saleService.getSaleEditDetail(5, 12)).rejects.toMatchObject({
+      message: "Invoice not found",
+      statusCode: 404,
+    });
+    expect(mockedOrderRepo.getSaleEditDetail).toHaveBeenCalledWith(5, 12);
   });
 
   it("delegates query methods to repository", async () => {

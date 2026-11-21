@@ -1,4 +1,5 @@
 import db from "@/lib/drizzle";
+import { PgDialect, QueryBuilder } from "drizzle-orm/pg-core";
 import { saleOrderRepository } from "./sale-order.repository";
 
 jest.mock("@/lib/drizzle", () => ({
@@ -57,6 +58,39 @@ describe("saleOrderRepository", () => {
     const result = saleOrderRepository.bulkIncPaidAmountAndDecBalanceDue([]);
     expect(result).toBeUndefined();
     expect(mockedDb.execute).not.toHaveBeenCalled();
+  });
+
+  it("lists invoices for the selected client without returns, regardless of payment", () => {
+    const builder = new QueryBuilder();
+    const select = builder.select.bind(builder);
+    mockedDb.select
+      .mockImplementationOnce(select)
+      .mockImplementationOnce(select);
+
+    const { sql, params } = saleOrderRepository.getEditEligibleOrders(5).toSQL();
+
+    expect(params).toEqual([5]);
+    expect(sql).toContain('"sales_orders"."client_id" = $1');
+    expect(sql).toContain('not exists (select "id" from "sales_returns"');
+    expect(sql).toContain('"sales_returns"."sales_order_id" = "sales_orders"."id"');
+    expect(sql).not.toMatch(/paid_amount|balance_due/);
+  });
+
+  it("loads edit lines only when the invoice is eligible for the selected client", async () => {
+    const where = jest.fn().mockResolvedValue([]);
+    const builder = new QueryBuilder();
+    mockedDb.select
+      .mockReturnValueOnce({ from: jest.fn(() => ({ where })) })
+      .mockImplementationOnce(builder.select.bind(builder));
+
+    await expect(saleOrderRepository.getSaleEditDetail(5, 12)).resolves.toBeNull();
+
+    const { sql, params } = new PgDialect().sqlToQuery(where.mock.calls[0][0]);
+    expect(params).toEqual([12, 5]);
+    expect(sql).toContain('"sales_orders"."id" = $1');
+    expect(sql).toContain('"sales_orders"."client_id" = $2');
+    expect(sql).toContain('not exists (select "id" from "sales_returns"');
+    expect(mockedDb.select).toHaveBeenCalledTimes(2);
   });
 
   it("getLatestSoldItemsByClient returns [] for blank prefix", async () => {

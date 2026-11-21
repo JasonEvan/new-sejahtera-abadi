@@ -14,6 +14,12 @@ import {
 } from "@/components/ui/table";
 import { dialogs } from "@/lib/dialogs";
 import { useGetClientNames } from "@/modules/client/client.queries";
+import {
+  initialPaymentDraftState,
+  paymentDraftReducer,
+  type EditablePaymentDraftRow,
+  type PaymentDraftRow,
+} from "@/modules/payment-draft/payment-draft";
 import { useGetOrdersMenu } from "@/modules/purchase/purchase.queries";
 import { useUpdateEditPayablesMutation } from "@/modules/purchase-payment/purchase-payment.mutations";
 import {
@@ -27,85 +33,18 @@ import { useEffect, useMemo, useReducer, useState } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import z from "zod";
-import EditPayablesForm, { EditablePayableRow } from "./EditPayablesForm";
+import EditPayablesForm from "./EditPayablesForm";
 
 interface PaymentSearchForm {
   client: number;
   transaction_id: number;
 }
 
-type TableState = {
-  selectedInvoiceValue: number | null;
-  tableRows: EditablePayableRow[];
-  activeInvoiceNumber: string | null;
-  invoiceMaxAllowedMap: Record<string, number>;
-};
-
-const initialTableState: TableState = {
-  selectedInvoiceValue: null,
-  tableRows: [],
-  activeInvoiceNumber: null,
-  invoiceMaxAllowedMap: {},
-};
-
-type TableAction =
-  | {
-      type: "SET_DATA";
-      payload: {
-        selectedInvoiceValue: number;
-        tableRows: EditablePayableRow[];
-        activeInvoiceNumber: string;
-        invoiceMaxAllowedMap: Record<string, number>;
-      };
-    }
-  | { type: "RESET" }
-  | { type: "UPDATE_ROWS"; payload: { tableRows: EditablePayableRow[] } };
-
-function tableReducer(state: TableState, action: TableAction): TableState {
-  switch (action.type) {
-    case "SET_DATA":
-      return {
-        selectedInvoiceValue: action.payload.selectedInvoiceValue,
-        tableRows: action.payload.tableRows,
-        activeInvoiceNumber: action.payload.activeInvoiceNumber,
-        invoiceMaxAllowedMap: action.payload.invoiceMaxAllowedMap,
-      };
-    case "RESET":
-      return initialTableState;
-    case "UPDATE_ROWS":
-      const invoicePaidMap: Record<string, number> = {};
-      action.payload.tableRows.forEach((row) => {
-        invoicePaidMap[row.invoice_number] =
-          (invoicePaidMap[row.invoice_number] || 0) + row.paid_amount;
-      });
-
-      const updatedRows = action.payload.tableRows.map(
-        (row: EditablePayableRow) => {
-          const maxAllowed =
-            state.invoiceMaxAllowedMap[row.invoice_number] ??
-            row.balance_due + row.paid_amount;
-          const paidForInvoice = invoicePaidMap[row.invoice_number] || 0;
-
-          return {
-            ...row,
-            balance_due: Math.max(maxAllowed - paidForInvoice, 0),
-          };
-        },
-      );
-      return {
-        ...state,
-        tableRows: updatedRows,
-      };
-    default:
-      return state;
-  }
-}
-
 interface AddPayableInvoiceFormProps {
   clientId: number;
-  activeTransactionNumber: string;
-  tableRows: EditablePayableRow[];
-  onAdd: (newRow: EditablePayableRow) => void;
+  tableRows: EditablePaymentDraftRow[];
+  baselineByInvoice: ReadonlyMap<string, number>;
+  onAdd: (newRow: PaymentDraftRow, invoiceBalance: number) => void;
 }
 
 interface AddInvoiceFormField {
@@ -117,7 +56,7 @@ interface AddInvoiceFormField {
 // ponytail: Add form matching PayablesTable form for adding invoice payment
 function AddPayableInvoiceForm({
   clientId,
-  activeTransactionNumber,
+  baselineByInvoice,
   tableRows,
   onAdd,
 }: AddPayableInvoiceFormProps) {
@@ -190,10 +129,14 @@ function AddPayableInvoiceForm({
       );
 
       if (selectedInvoice) {
-        setValue("balance_due", selectedInvoice.balance_due);
+        setValue(
+          "balance_due",
+          baselineByInvoice.get(selectedInvoice.name) ??
+            selectedInvoice.balance_due,
+        );
       }
     }
-  }, [watchedOrderId, invoices, setValue]);
+  }, [watchedOrderId, invoices, baselineByInvoice, setValue]);
 
   useEffect(() => {
     if (isError) {
@@ -210,20 +153,15 @@ function AddPayableInvoiceForm({
 
     if (!selectedInvoice) return;
 
-    const newRow: EditablePayableRow = {
+    const newRow: PaymentDraftRow = {
       id: crypto.randomUUID(),
-      transaction_number: activeTransactionNumber,
       payment_date: dayjs().format("YYYY-MM-DD"),
       invoice_number: selectedInvoice.name,
       invoice_value: selectedInvoice.invoice_value,
       paid_amount: formData.paid_amount,
-      balance_due: Math.max(
-        selectedInvoice.balance_due - formData.paid_amount,
-        0,
-      ),
     };
 
-    onAdd(newRow);
+    onAdd(newRow, selectedInvoice.balance_due);
     setFocus("purchase_order_id");
     reset();
   };
@@ -288,7 +226,10 @@ function AddPayableInvoiceForm({
 export default function EditPayablesTable() {
   const updateMutation = useUpdateEditPayablesMutation();
   const [searchTransactionNumber, setSearchTransactionNumber] = useState("");
-  const [tableState, dispatch] = useReducer(tableReducer, initialTableState);
+  const [tableState, dispatch] = useReducer(
+    paymentDraftReducer,
+    initialPaymentDraftState,
+  );
 
   const { data: clients } = useGetClientNames();
 
@@ -345,10 +286,7 @@ export default function EditPayablesTable() {
       return;
     }
 
-    if (
-      selectedTrx.name === tableState.activeInvoiceNumber &&
-      tableState.selectedInvoiceValue !== null
-    ) {
+    if (selectedTrx.name === tableState.activeInvoiceNumber) {
       toast.info("Transaksi ini sudah dimuat", { position: "bottom-right" });
       return;
     }
@@ -384,48 +322,26 @@ export default function EditPayablesTable() {
       return;
     }
 
-    const invoicePaidMap: Record<string, number> = {};
-    const invoiceMaxAllowedMap: Record<string, number> = {};
-
-    data.payments.forEach((payment) => {
-      invoiceMaxAllowedMap[payment.invoice_number] =
-        (invoiceMaxAllowedMap[payment.invoice_number] || 0) +
-        payment.balance_due +
-        payment.paid_amount;
-    });
-
-    const mappedRows: EditablePayableRow[] = data.payments.map((payment) => {
-      invoicePaidMap[payment.invoice_number] =
-        (invoicePaidMap[payment.invoice_number] || 0) + payment.paid_amount;
+    const mappedRows = data.payments.map((payment) => {
       const formattedDate =
         typeof payment.payment_date === "string"
           ? payment.payment_date.split("T")[0]
           : dayjs(payment.payment_date).format("YYYY-MM-DD");
 
-      const maxAllowed = invoiceMaxAllowedMap[payment.invoice_number];
-
       return {
         id: payment.id.toString(),
-        transaction_number: data.transaction_number,
         payment_date: formattedDate,
         invoice_number: payment.invoice_number,
         invoice_value: payment.invoice_value,
         paid_amount: payment.paid_amount,
-        balance_due: Math.max(
-          maxAllowed - invoicePaidMap[payment.invoice_number],
-          0,
-        ),
+        balance_due: payment.balance_due,
       };
     });
 
     dispatch({
       type: "SET_DATA",
-      payload: {
-        selectedInvoiceValue: data.total_paid,
-        tableRows: mappedRows,
-        activeInvoiceNumber: data.transaction_number,
-        invoiceMaxAllowedMap,
-      },
+      transactionNumber: data.transaction_number,
+      payments: mappedRows,
     });
   }, [
     data,
@@ -434,9 +350,7 @@ export default function EditPayablesTable() {
     tableState.activeInvoiceNumber,
   ]);
 
-  function handleOpenEditDialog(row: EditablePayableRow) {
-    if (tableState.selectedInvoiceValue === null) return;
-
+  function handleOpenEditDialog(row: EditablePaymentDraftRow) {
     dialogs.open({
       title: "Edit Pembayaran Utang",
       description: `${row.invoice_number} - Nilai Nota: ${row.invoice_value.toLocaleString("id-ID")}`,
@@ -446,19 +360,7 @@ export default function EditPayablesTable() {
         <EditPayablesForm
           row={row}
           onSave={(id, paidAmount) => {
-            const editedRows = tableState.tableRows.map((item) =>
-              item.id === id
-                ? {
-                    ...item,
-                    paid_amount: paidAmount,
-                  }
-                : item,
-            );
-
-            dispatch({
-              type: "UPDATE_ROWS",
-              payload: { tableRows: editedRows },
-            });
+            dispatch({ type: "EDIT_ROW", id, paidAmount });
           }}
         />
       ),
@@ -466,16 +368,11 @@ export default function EditPayablesTable() {
   }
 
   function handleDeleteRow(id: string) {
-    const remainingRows = tableState.tableRows.filter((item) => item.id !== id);
-
-    dispatch({ type: "UPDATE_ROWS", payload: { tableRows: remainingRows } });
+    dispatch({ type: "DELETE_ROW", id });
   }
 
-  function handleAddRow(newRow: EditablePayableRow) {
-    dispatch({
-      type: "UPDATE_ROWS",
-      payload: { tableRows: [...tableState.tableRows, newRow] },
-    });
+  function handleAddRow(row: PaymentDraftRow, invoiceBalance: number) {
+    dispatch({ type: "ADD_ROW", row, invoiceBalance });
   }
 
   async function handleSubmitChanges() {
@@ -502,10 +399,7 @@ export default function EditPayablesTable() {
     [tableState.tableRows],
   );
 
-  const isCompleted =
-    tableState.selectedInvoiceValue !== null &&
-    !isSearchStale &&
-    tableState.tableRows.length > 0;
+  const isCompleted = tableState.activeInvoiceNumber !== null && !isSearchStale;
 
   return (
     <div className="space-y-5">
@@ -552,7 +446,7 @@ export default function EditPayablesTable() {
         <div className="space-y-5">
           <AddPayableInvoiceForm
             clientId={watchedClient}
-            activeTransactionNumber={tableState.activeInvoiceNumber!}
+            baselineByInvoice={tableState.baselineByInvoice}
             tableRows={tableState.tableRows}
             onAdd={handleAddRow}
           />
@@ -628,7 +522,9 @@ export default function EditPayablesTable() {
               type="button"
               className="cursor-pointer"
               onClick={handleSubmitChanges}
-              disabled={updateMutation.isPending}
+              disabled={
+                updateMutation.isPending || tableState.tableRows.length === 0
+              }
             >
               {updateMutation.isPending ? "Submitting..." : "Submit"}
             </Button>

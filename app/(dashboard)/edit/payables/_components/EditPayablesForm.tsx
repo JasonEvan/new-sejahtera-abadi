@@ -2,20 +2,11 @@
 
 import InputField from "@/components/shared/InputField";
 import { dialogs } from "@/lib/dialogs";
+import type { EditablePaymentDraftRow } from "@/modules/payment-draft/payment-draft";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import z from "zod";
-
-export interface EditablePayableRow {
-  id: string;
-  transaction_number: string;
-  payment_date: string;
-  invoice_number: string;
-  invoice_value: number;
-  paid_amount: number;
-  balance_due: number;
-}
 
 interface EditPayablesFormField {
   paid_amount: number;
@@ -25,13 +16,10 @@ export default function EditPayablesForm({
   row,
   onSave,
 }: {
-  row: EditablePayableRow;
+  row: EditablePaymentDraftRow;
   onSave: (id: string, paidAmount: number) => void;
 }) {
-  const maxAllowed = useMemo(
-    () => row.balance_due + row.paid_amount,
-    [row.balance_due, row.paid_amount],
-  );
+  const maxAllowed = row.max_paid_amount;
 
   const schema = useMemo(
     () =>

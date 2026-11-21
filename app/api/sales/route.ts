@@ -3,7 +3,10 @@ import { AppError } from "@/lib/errors";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
 import { saleService } from "@/modules/sale/sale.service";
-import { backendSaleValidation } from "@/modules/sale/sale.validation";
+import {
+  backendSaleValidation,
+  saleIdValidation,
+} from "@/modules/sale/sale.validation";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -30,6 +33,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const isPaidOff = request.nextUrl.searchParams.get("is_paid_off") === "true";
   const forMenu = request.nextUrl.searchParams.get("for_menu") === "true";
   const forReturn = request.nextUrl.searchParams.get("for_return") === "true";
+  const forEdit = request.nextUrl.searchParams.get("for_edit") === "true";
 
   if (forMenu) {
     if (!session || !session.permissions?.includes("sales.view")) {
@@ -41,6 +45,17 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     if (!session || !session.permissions?.includes("sales.return.view")) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
+  }
+
+  if (forEdit && !forMenu && !forReturn) {
+    if (!session || !session.permissions?.includes("sales.update")) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
+    const editClientId = validate(Number(clientId), saleIdValidation);
+
+    const data = await saleService.getEditEligibleOrders(editClientId);
+    return NextResponse.json({ data });
   }
 
   if (!clientId || isNaN(Number(clientId))) {

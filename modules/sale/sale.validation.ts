@@ -2,6 +2,8 @@ import dayjs from "dayjs";
 import z from "zod";
 import { SaleTableRow } from "./sale.types";
 
+export const saleIdValidation = z.int32().positive();
+
 export const invoiceInformationValidation = z.object({
   client: z.int().min(1, "Pilih klien"),
   salesman: z.int().min(1, "Pilih sales"),

@@ -282,6 +282,19 @@ export const saleService = {
     return saleOrderRepository.getReturnEligibleOrders(clientId);
   },
 
+  getEditEligibleOrders(clientId: number) {
+    return saleOrderRepository.getEditEligibleOrders(clientId);
+  },
+
+  async getSaleEditDetail(clientId: number, salesOrderId: number) {
+    const result = await saleOrderRepository.getSaleEditDetail(
+      clientId,
+      salesOrderId,
+    );
+    if (!result) throw new AppError("Invoice not found", 404);
+    return result;
+  },
+
   async getSaleReturnLines(invoiceNumber: string) {
     const result =
       await saleOrderRepository.getSaleReturnLinesWithMeta(invoiceNumber);

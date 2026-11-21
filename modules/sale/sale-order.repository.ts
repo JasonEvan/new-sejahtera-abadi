@@ -1,15 +1,28 @@
 import { Tx } from "@/lib/common-types";
-import { InsertSale } from "./sale.types";
+import { InsertSale, SalesOrder } from "./sale.types";
 import {
   clients,
   sales_order_lines,
   sales_orders,
   salespersons,
+  sales_returns,
   stocks,
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
-import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  like,
+  ne,
+  notExists,
+  or,
+  sql,
+} from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 
 type SalesOrderPaymentItem = {
@@ -33,6 +46,55 @@ function aggregateSalesOrderPaymentItems(
     sales_order_id,
     paid_amount,
   }));
+}
+
+function hasNoSalesReturn() {
+  return notExists(
+    db
+      .select({ id: sales_returns.id })
+      .from(sales_returns)
+      .where(eq(sales_returns.sales_order_id, sales_orders.id)),
+  );
+}
+
+const saleLineInvoiceFields = {
+  id: sales_orders.id,
+  invoice_value: sales_orders.invoice_value,
+  invoice_discount: sales_orders.invoice_discount,
+};
+
+async function getSaleLinesWithMeta(
+  order: Pick<SalesOrder, keyof typeof saleLineInvoiceFields>,
+) {
+  const lines = await db
+    .select({
+      id: sales_order_lines.id,
+      stock_id: sales_order_lines.stock_id,
+      name: stocks.name,
+      price: sales_order_lines.price,
+      qty: sales_order_lines.qty,
+    })
+    .from(sales_order_lines)
+    .leftJoin(stocks, eq(sales_order_lines.stock_id, stocks.id))
+    .where(eq(sales_order_lines.sales_order_id, order.id));
+
+  return {
+    meta: {
+      invoice_value: lines.reduce(
+        (total, line) => total + line.price * line.qty,
+        0,
+      ),
+      discount: order.invoice_discount,
+      total: order.invoice_value,
+    },
+    lines: lines.map((line) => ({
+      id: line.id,
+      stock_id: line.stock_id ?? 0,
+      name: line.name ?? "",
+      price: line.price,
+      qty: line.qty,
+    })),
+  };
 }
 
 export const saleOrderRepository = {
@@ -261,49 +323,39 @@ export const saleOrderRepository = {
       .orderBy(asc(sales_orders.invoice_number));
   },
 
+  getEditEligibleOrders(clientId: number) {
+    return db
+      .select({
+        id: sales_orders.id,
+        invoice_number: sales_orders.invoice_number,
+      })
+      .from(sales_orders)
+      .where(and(eq(sales_orders.client_id, clientId), hasNoSalesReturn()))
+      .orderBy(asc(sales_orders.invoice_number));
+  },
+
+  async getSaleEditDetail(clientId: number, salesOrderId: number) {
+    const [order] = await db
+      .select(saleLineInvoiceFields)
+      .from(sales_orders)
+      .where(
+        and(
+          eq(sales_orders.id, salesOrderId),
+          eq(sales_orders.client_id, clientId),
+          hasNoSalesReturn(),
+        ),
+      );
+
+    return order ? getSaleLinesWithMeta(order) : null;
+  },
+
   async getSaleReturnLinesWithMeta(invoiceNumber: string) {
     const [order] = await db
-      .select({
-        invoice_value: sales_orders.invoice_value,
-        invoice_discount: sales_orders.invoice_discount,
-      })
+      .select(saleLineInvoiceFields)
       .from(sales_orders)
       .where(eq(sales_orders.invoice_number, invoiceNumber));
 
-    if (!order) return null;
-
-    const lines = await db
-      .select({
-        id: sales_order_lines.id,
-        stock_id: sales_order_lines.stock_id,
-        name: stocks.name,
-        price: sales_order_lines.price,
-        qty: sales_order_lines.qty,
-      })
-      .from(sales_order_lines)
-      .innerJoin(
-        sales_orders,
-        eq(sales_order_lines.sales_order_id, sales_orders.id),
-      )
-      .leftJoin(stocks, eq(sales_order_lines.stock_id, stocks.id))
-      .where(eq(sales_orders.invoice_number, invoiceNumber));
-
-    const invoice_value = lines.reduce((acc, l) => acc + l.price * l.qty, 0);
-
-    return {
-      meta: {
-        invoice_value,
-        discount: order.invoice_discount,
-        total: order.invoice_value,
-      },
-      lines: lines.map((l) => ({
-        id: l.id,
-        stock_id: l.stock_id ?? 0,
-        name: l.name ?? "",
-        price: l.price,
-        qty: l.qty,
-      })),
-    };
+    return order ? getSaleLinesWithMeta(order) : null;
   },
 
   async getDiscountById(salesOrderId: number, tx?: Tx): Promise<number> {

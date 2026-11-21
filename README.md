@@ -33,10 +33,15 @@ Pada formulir penjualan dan edit penjualan, pilihan barang muncul di bawah field
 - On `/edit/sales`, press **F1** to open **Check Harga**, including while an input is focused. Select a client and invoice first, just as when using the button. The shortcut prevents the browser's default F1 help action and is removed when leaving the page.
 - The `/edit/sales` **Check Harga** modal uses 85% of the viewport height with a scrollable body. Search results are ordered by sale date, newest first; each item still shows its latest price for the selected client.
 - Results matching an item name in the currently edited invoice show **Ada di nota aktif**. The marker follows the unsaved item list, updating when items are added or removed; similarly named items are not marked unless their full names match.
+- The `/edit/sales` invoice picker and detail load require `sales.update`,
+  not return permissions. The picker shows the selected client's invoices
+  that have no returns.
 
 ### Editing Receivables and Payables
 
 - On `/edit/receivables` and `/edit/payables`, adding an invoice preserves its full invoice value for display and calculates the remaining balance from its current outstanding balance minus the payment being added. **Add Full Payment** pays only the outstanding balance, including for invoices with earlier payments.
+- Editing a draft payment recalculates the remaining balance from the original
+  available balance minus all current draft payments for that invoice.
 - The sales and purchase invoice menus (`GET /api/sales?for_menu=true` and `GET /api/purchases?for_menu=true`) include `id`, `invoice_number`, `invoice_value`, and `balance_due`.
 
 ### Transaction Integrity

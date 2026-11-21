@@ -62,6 +62,20 @@ export async function getReturnEligibleOrders(clientId: number) {
   return response.data;
 }
 
+export async function getEditEligibleOrders(clientId: number) {
+  const response = await api.get<{
+    data: { id: number; invoice_number: string }[];
+  }>(`/sales?for_edit=true&client_id=${clientId}`);
+  return response.data;
+}
+
+export async function getSaleEditDetail(clientId: number, salesOrderId: number) {
+  const response = await api.get<{ data: SaleReturnLineData }>(
+    `/sales/edit-detail?client_id=${clientId}&sales_order_id=${salesOrderId}`,
+  );
+  return response.data;
+}
+
 export async function getSaleReturnLines(invoiceNumber: string) {
   const response = await api.get<{ data: SaleReturnLineData }>(
     `/sales/return-lines?invoice_number=${encodeURIComponent(invoiceNumber)}`,
