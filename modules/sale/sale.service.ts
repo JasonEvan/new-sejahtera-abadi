@@ -302,8 +302,8 @@ export const saleService = {
     return result;
   },
 
-  getLatestSoldItemsByClient(clientId: number, namePrefix: string) {
-    return saleOrderRepository.getLatestSoldItemsByClient(clientId, namePrefix);
+  getSoldItemHistoryByClient(clientId: number, namePrefix: string) {
+    return saleOrderRepository.getSoldItemHistoryByClient(clientId, namePrefix);
   },
 
   checkInvoiceExistence(invoiceNumber: string) {

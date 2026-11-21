@@ -11,7 +11,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     throw new AppError("Client ID is required in a valid format", 400);
   }
 
-  const data = await saleService.getLatestSoldItemsByClient(
+  const data = await saleService.getSoldItemHistoryByClient(
     clientId,
     namePrefix,
   );

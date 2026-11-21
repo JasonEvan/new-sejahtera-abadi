@@ -14,12 +14,12 @@ export default function InvoiceItems() {
   const columns = useColumns();
   const items = useEditSaleStore((state) => state.items);
   const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
-  const invoiceInformation = useEditSaleStore(
+  const { client: clientId, sales_order_id: salesOrderId } = useEditSaleStore(
     (state) => state.invoice_information,
   );
 
   const handleCheckPrice = useCallback(() => {
-    if (!invoiceInformation.client) {
+    if (!clientId || !salesOrderId) {
       toast.error("Pilih client dan nota terlebih dahulu", {
         position: "bottom-right",
       });
@@ -28,12 +28,14 @@ export default function InvoiceItems() {
 
     dialogs.open({
       title: "Check Harga",
-      description: "Cari harga jual terakhir per barang untuk client ini",
+      description: "Cari riwayat harga jual barang untuk client ini",
       type: "text",
       size: "tall",
-      children: <CheckHargaDialog clientId={invoiceInformation.client} />,
+      children: (
+        <CheckHargaDialog clientId={clientId} salesOrderId={salesOrderId} />
+      ),
     });
-  }, [invoiceInformation.client]);
+  }, [clientId, salesOrderId]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

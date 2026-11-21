@@ -2,7 +2,7 @@ import api from "@/lib/axios";
 import {
   createSale,
   createSaleReturn,
-  getLatestSoldItemsByClient,
+  getSoldItemHistoryByClient,
   getOrdersMenu,
   getReturnEligibleOrders,
   getSaleReturnLines,
@@ -156,13 +156,22 @@ describe("sale.api", () => {
     expect(result).toEqual(apiData);
   });
 
-  it("getLatestSoldItemsByClient builds URLSearchParams correctly", async () => {
+  it("requests sale price history by client and item prefix", async () => {
     const apiData = {
-      data: [{ name: "Pipe", price: 70000, sold_at: "2026-04-10" }],
+      data: [
+        {
+          sales_order_line_id: 13,
+          sales_order_id: 12,
+          invoice_number: "J012",
+          name: "Pipe",
+          price: 70000,
+          sold_at: "2026-04-10T00:00:00.000Z",
+        },
+      ],
     };
     mockedApi.get.mockResolvedValueOnce({ data: apiData } as never);
 
-    const result = await getLatestSoldItemsByClient(11, "Pi");
+    const result = await getSoldItemHistoryByClient(11, "Pi");
 
     expect(mockedApi.get).toHaveBeenCalledWith(
       "/sales/sold-items?client_id=11&name_prefix=Pi",

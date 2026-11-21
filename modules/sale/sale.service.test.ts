@@ -26,7 +26,7 @@ jest.mock("./sale-order.repository", () => ({
     getSaleEditDetail: jest.fn(),
     getReturnEligibleOrders: jest.fn(),
     getSaleReturnLinesWithMeta: jest.fn(),
-    getLatestSoldItemsByClient: jest.fn(),
+    getSoldItemHistoryByClient: jest.fn(),
   },
 }));
 
@@ -366,7 +366,7 @@ describe("sale.service", () => {
     mockedOrderRepo.getReturnEligibleOrders.mockResolvedValueOnce([
       { id: 2 },
     ] as never);
-    mockedOrderRepo.getLatestSoldItemsByClient.mockResolvedValueOnce([
+    mockedOrderRepo.getSoldItemHistoryByClient.mockResolvedValueOnce([
       { name: "Cable" },
     ] as never);
 
@@ -380,7 +380,7 @@ describe("sale.service", () => {
       { id: 2 },
     ]);
     await expect(
-      saleService.getLatestSoldItemsByClient(1, "C"),
+      saleService.getSoldItemHistoryByClient(1, "C"),
     ).resolves.toEqual([{ name: "Cable" }]);
   });
 });

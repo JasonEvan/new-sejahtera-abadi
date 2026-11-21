@@ -49,7 +49,10 @@ export type SalesInvoiceHeader = {
   sales_code: string;
 };
 
-export type LatestSoldItem = {
+export type SoldItemHistoryRow = {
+  sales_order_line_id: number;
+  sales_order_id: number;
+  invoice_number: string;
   name: string;
   price: number;
   sold_at: string;

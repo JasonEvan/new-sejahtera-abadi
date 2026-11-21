@@ -2,7 +2,7 @@ import api from "@/lib/axios";
 import {
   EditSale,
   InsertSale,
-  LatestSoldItem,
+  SoldItemHistoryRow,
   SalesInvoiceDetailLine,
   SalesInvoiceHeader,
   SalesInvoiceRow,
@@ -69,7 +69,10 @@ export async function getEditEligibleOrders(clientId: number) {
   return response.data;
 }
 
-export async function getSaleEditDetail(clientId: number, salesOrderId: number) {
+export async function getSaleEditDetail(
+  clientId: number,
+  salesOrderId: number,
+) {
   const response = await api.get<{ data: SaleReturnLineData }>(
     `/sales/edit-detail?client_id=${clientId}&sales_order_id=${salesOrderId}`,
   );
@@ -88,7 +91,7 @@ export async function createSaleReturn(data: InsertSaleReturn) {
   return response.data;
 }
 
-export async function getLatestSoldItemsByClient(
+export async function getSoldItemHistoryByClient(
   clientId: number,
   namePrefix: string,
 ) {
@@ -97,7 +100,7 @@ export async function getLatestSoldItemsByClient(
     name_prefix: namePrefix,
   });
 
-  const response = await api.get<{ data: LatestSoldItem[] }>(
+  const response = await api.get<{ data: SoldItemHistoryRow[] }>(
     `/sales/sold-items?${queryParams.toString()}`,
   );
 
@@ -112,6 +115,8 @@ export async function checkInvoiceExistence(invoiceNumber: string) {
 }
 
 export async function deleteSale(salesOrderId: number) {
-  const response = await api.delete<{ message: string }>(`/sales/${salesOrderId}`);
+  const response = await api.delete<{ message: string }>(
+    `/sales/${salesOrderId}`,
+  );
   return response.data;
 }

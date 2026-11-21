@@ -422,12 +422,15 @@ export const saleOrderRepository = {
       .where(eq(sales_orders.id, salesOrderId));
   },
 
-  async getLatestSoldItemsByClient(clientId: number, namePrefix: string) {
+  async getSoldItemHistoryByClient(clientId: number, namePrefix: string) {
     const normalizedPrefix = namePrefix.trim();
     if (!normalizedPrefix) return [];
 
     const rows = await db
       .select({
+        sales_order_line_id: sales_order_lines.id,
+        sales_order_id: sales_order_lines.sales_order_id,
+        invoice_number: sales_orders.invoice_number,
         name: stocks.name,
         price: sales_order_lines.price,
         sold_at: sales_orders.invoice_date,
@@ -444,23 +447,11 @@ export const saleOrderRepository = {
           ilike(stocks.name, `${normalizedPrefix}%`),
         ),
       )
-      .orderBy(asc(stocks.name), desc(sales_orders.invoice_date));
+      .orderBy(desc(sales_orders.invoice_date), desc(sales_order_lines.id));
 
-    const latestByName = new Map<
-      string,
-      { name: string; price: number; sold_at: Date }
-    >();
-
-    for (const row of rows) {
-      if (!latestByName.has(row.name)) {
-        latestByName.set(row.name, row);
-      }
-    }
-
-    return Array.from(latestByName.values()).map((item) => ({
-      name: item.name,
-      price: item.price,
-      sold_at: item.sold_at.toISOString(),
+    return rows.map((row) => ({
+      ...row,
+      sold_at: row.sold_at.toISOString(),
     }));
   },
 
@@ -476,6 +467,8 @@ export const saleOrderRepository = {
 
   deleteBySalesOrderId(salesOrderId: number, tx?: Tx) {
     const database = tx ?? db;
-    return database.delete(sales_orders).where(eq(sales_orders.id, salesOrderId));
+    return database
+      .delete(sales_orders)
+      .where(eq(sales_orders.id, salesOrderId));
   },
 };

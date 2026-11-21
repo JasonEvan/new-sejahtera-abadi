@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getEditEligibleOrdersKey,
-  getLatestSoldItemsByClientKey,
+  getSoldItemHistoryByClientKey,
   getOrdersMenuKey,
   getReturnEligibleOrdersKey,
   getSaleEditDetailKey,
@@ -11,7 +11,7 @@ import {
 } from "./sale.keys";
 import {
   getEditEligibleOrders,
-  getLatestSoldItemsByClient,
+  getSoldItemHistoryByClient,
   getOrdersMenu,
   getReturnEligibleOrders,
   getSaleEditDetail,
@@ -114,14 +114,14 @@ export const useGetSaleEditDetail = (
   });
 };
 
-export const useGetLatestSoldItemsByClient = (
+export const useGetSoldItemHistoryByClient = (
   clientId: number,
   namePrefix: string,
   enabled: boolean,
 ) => {
   return useQuery({
-    queryKey: getLatestSoldItemsByClientKey(clientId, namePrefix),
-    queryFn: () => getLatestSoldItemsByClient(clientId, namePrefix),
+    queryKey: getSoldItemHistoryByClientKey(clientId, namePrefix),
+    queryFn: () => getSoldItemHistoryByClient(clientId, namePrefix),
     select: (data) => data.data,
     enabled,
   });

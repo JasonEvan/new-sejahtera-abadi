@@ -31,8 +31,8 @@ Pada formulir penjualan dan edit penjualan, pilihan barang muncul di bawah field
 ### Keyboard Shortcuts
 
 - On `/edit/sales`, press **F1** to open **Check Harga**, including while an input is focused. Select a client and invoice first, just as when using the button. The shortcut prevents the browser's default F1 help action and is removed when leaving the page.
-- The `/edit/sales` **Check Harga** modal uses 85% of the viewport height with a scrollable body. Search results are ordered by sale date, newest first; each item still shows its latest price for the selected client.
-- Results matching an item name in the currently edited invoice show **Ada di nota aktif**. The marker follows the unsaved item list, updating when items are added or removed; similarly named items are not marked unless their full names match.
+- The `/edit/sales` **Check Harga** modal lists every matching sale line for the selected client, newest first. Each result shows the saved price, invoice number, and sale date, including multiple sales of the same item.
+- Only results from the invoice being edited show **Nota aktif**. Unsaved edits do not change the price history.
 - The `/edit/sales` invoice picker and detail load require `sales.update`,
   not return permissions. The picker shows the selected client's invoices
   that have no returns.

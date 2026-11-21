@@ -93,33 +93,31 @@ describe("saleOrderRepository", () => {
     expect(mockedDb.select).toHaveBeenCalledTimes(2);
   });
 
-  it("getLatestSoldItemsByClient returns [] for blank prefix", async () => {
-    const result = await saleOrderRepository.getLatestSoldItemsByClient(
-      1,
-      "   ",
-    );
+  it("returns no price history for a blank prefix", async () => {
+    const result = await saleOrderRepository.getSoldItemHistoryByClient(1, "   ");
 
     expect(result).toEqual([]);
     expect(mockedDb.select).not.toHaveBeenCalled();
   });
 
-  it("getLatestSoldItemsByClient keeps latest row per stock name and serializes date", async () => {
+  it("keeps separate prices for the same item across multiple invoices", async () => {
     const where = jest.fn().mockReturnValue({
       orderBy: jest.fn().mockResolvedValue([
         {
+          sales_order_line_id: 11,
+          sales_order_id: 21,
+          invoice_number: "J002",
           name: "Cable",
           price: 130,
           sold_at: new Date("2026-04-14T00:00:00.000Z"),
         },
         {
+          sales_order_line_id: 10,
+          sales_order_id: 20,
+          invoice_number: "J001",
           name: "Cable",
           price: 120,
           sold_at: new Date("2026-04-13T00:00:00.000Z"),
-        },
-        {
-          name: "Pipe",
-          price: 80,
-          sold_at: new Date("2026-04-11T00:00:00.000Z"),
         },
       ]),
     });
@@ -129,21 +127,24 @@ describe("saleOrderRepository", () => {
     const from = jest.fn().mockReturnValue({ innerJoin: innerJoin1 });
     mockedDb.select.mockReturnValue({ from });
 
-    const result = await saleOrderRepository.getLatestSoldItemsByClient(
-      2,
-      "Ca",
-    );
+    const result = await saleOrderRepository.getSoldItemHistoryByClient(2, "Ca");
 
     expect(result).toEqual([
       {
+        sales_order_line_id: 11,
+        sales_order_id: 21,
+        invoice_number: "J002",
         name: "Cable",
         price: 130,
         sold_at: "2026-04-14T00:00:00.000Z",
       },
       {
-        name: "Pipe",
-        price: 80,
-        sold_at: "2026-04-11T00:00:00.000Z",
+        sales_order_line_id: 10,
+        sales_order_id: 20,
+        invoice_number: "J001",
+        name: "Cable",
+        price: 120,
+        sold_at: "2026-04-13T00:00:00.000Z",
       },
     ]);
   });

@@ -1,23 +1,21 @@
 "use client";
 
 import InputField from "@/components/shared/InputField";
-import { useGetLatestSoldItemsByClient } from "@/modules/sale/sale.queries";
-import { useEditSaleStore } from "@/stores/transactions/useEditSaleStore";
+import { useGetSoldItemHistoryByClient } from "@/modules/sale/sale.queries";
 import dayjs from "dayjs";
-import { useMemo } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 
 type CheckHargaFormField = {
   name: string;
 };
 
-export default function CheckHargaDialog({ clientId }: { clientId: number }) {
-  const invoiceItems = useEditSaleStore((state) => state.items);
-  const invoiceItemNames = useMemo(
-    () => new Set(invoiceItems.map((item) => item.name)),
-    [invoiceItems],
-  );
-
+export default function CheckHargaDialog({
+  clientId,
+  salesOrderId,
+}: {
+  clientId: number;
+  salesOrderId: number;
+}) {
   const methods = useForm<CheckHargaFormField>({
     defaultValues: {
       name: "",
@@ -33,18 +31,10 @@ export default function CheckHargaDialog({ clientId }: { clientId: number }) {
 
   const normalizedName = (watchedName || "").trim();
 
-  const { data: soldItems, isFetching } = useGetLatestSoldItemsByClient(
+  const { data: soldItems, isFetching } = useGetSoldItemHistoryByClient(
     clientId,
     normalizedName,
     !!normalizedName,
-  );
-
-  const sortedItems = useMemo(
-    () =>
-      [...(soldItems ?? [])].sort(
-        (a, b) => new Date(b.sold_at).getTime() - new Date(a.sold_at).getTime(),
-      ),
-    [soldItems],
   );
 
   return (
@@ -74,19 +64,23 @@ export default function CheckHargaDialog({ clientId }: { clientId: number }) {
           )}
 
           {!isFetching &&
-            sortedItems.map((item) => (
-              <div key={item.name} className="rounded-md border p-3">
+            soldItems?.map((item) => (
+              <div
+                key={item.sales_order_line_id}
+                className="rounded-md border p-3"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium">
                     {item.name} - {item.price.toLocaleString("id-ID")}
                   </p>
-                  {invoiceItemNames.has(item.name) && (
+                  {item.sales_order_id === salesOrderId && (
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      Ada di nota aktif
+                      Nota aktif
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
+                  Nota {item.invoice_number} ·{" "}
                   {dayjs(item.sold_at).format("DD/MM/YYYY HH:mm")}
                 </p>
               </div>
