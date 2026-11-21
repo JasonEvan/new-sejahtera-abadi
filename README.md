@@ -39,6 +39,16 @@ Pada formulir penjualan dan edit penjualan, pilihan barang muncul di bawah field
 - On `/edit/receivables` and `/edit/payables`, adding an invoice preserves its full invoice value for display and calculates the remaining balance from its current outstanding balance minus the payment being added. **Add Full Payment** pays only the outstanding balance, including for invoices with earlier payments.
 - The sales and purchase invoice menus (`GET /api/sales?for_menu=true` and `GET /api/purchases?for_menu=true`) include `id`, `invoice_number`, `invoice_value`, and `balance_due`.
 
+### Transaction Integrity
+
+- Payment creation and edits validate the total per invoice against the current
+  database balance and the invoice's client. An edit can reuse its own prior
+  payment once; it cannot spend amounts paid by other transactions.
+- Returns are limited to unpaid invoices for the selected client and to the
+  remaining quantity on each invoice line. Purchase returns also check available stock.
+- Purchase edits validate stock per item after applying the net quantity change.
+  An edit that would leave negative stock is rejected without changing the invoice.
+
 ## 🛠️ Getting Started
 
 ### Prerequisites

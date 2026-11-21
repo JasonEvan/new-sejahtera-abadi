@@ -8,7 +8,7 @@ import {
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
-import { and, asc, desc, eq, ilike, inArray, like, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 
 type PurchaseOrderPaymentItem = {
@@ -54,9 +54,8 @@ export const purchaseOrderRepository = {
       });
   },
 
-  async getById(purchaseOrderId: number, tx?: Tx) {
-    const database = tx ?? db;
-    const [order] = await database
+  async getById(purchaseOrderId: number, tx: Tx) {
+    const [order] = await tx
       .select({
         id: purchase_orders.id,
         client_id: purchase_orders.client_id,
@@ -64,33 +63,19 @@ export const purchaseOrderRepository = {
         paid_amount: purchase_orders.paid_amount,
       })
       .from(purchase_orders)
-      .where(eq(purchase_orders.id, purchaseOrderId));
+      .where(eq(purchase_orders.id, purchaseOrderId))
+      .for("update");
 
     return order;
   },
 
-  async getByInvoiceNumber(invoiceNumber: string, tx?: Tx) {
-    const database = tx ?? db;
+  async getOrdersForUpdate(
+    { ids, invoiceNumbers }: { ids?: number[]; invoiceNumbers?: string[] },
+    tx: Tx,
+  ) {
+    if (!ids?.length && !invoiceNumbers?.length) return [];
 
-    const [order] = await database
-      .select({
-        id: purchase_orders.id,
-        client_id: purchase_orders.client_id,
-        invoice_value: purchase_orders.invoice_value,
-        paid_amount: purchase_orders.paid_amount,
-        balance_due: purchase_orders.balance_due,
-      })
-      .from(purchase_orders)
-      .where(eq(purchase_orders.invoice_number, invoiceNumber));
-
-    return order;
-  },
-
-  async getByInvoiceNumbers(invoiceNumbers: string[], tx?: Tx) {
-    if (invoiceNumbers.length === 0) return [];
-    const database = tx ?? db;
-
-    return database
+    return tx
       .select({
         id: purchase_orders.id,
         client_id: purchase_orders.client_id,
@@ -100,7 +85,16 @@ export const purchaseOrderRepository = {
         balance_due: purchase_orders.balance_due,
       })
       .from(purchase_orders)
-      .where(inArray(purchase_orders.invoice_number, invoiceNumbers));
+      .where(
+        or(
+          ids?.length ? inArray(purchase_orders.id, ids) : undefined,
+          invoiceNumbers?.length
+            ? inArray(purchase_orders.invoice_number, invoiceNumbers)
+            : undefined,
+        ),
+      )
+      .orderBy(asc(purchase_orders.id))
+      .for("update");
   },
 
   getOrdersMenu(clientId: number, isPaidOff: boolean) {

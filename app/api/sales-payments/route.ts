@@ -4,7 +4,6 @@ import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
 import { reportService } from "@/modules/report/report.service";
 import { salesPaymentService } from "@/modules/sales-payment/sales-payment.service";
-import { salesPaymentRepository } from "@/modules/sales-payment/sales-payment.repository";
 import { backendSalesPaymentValidation } from "@/modules/sales-payment/sales-payment.validation";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -74,13 +73,8 @@ export const DELETE = withErrorHandler(async (request: NextRequest) => {
     throw new AppError("Transaction ID is required", 400);
   }
 
-  const payment = await salesPaymentRepository.getById(Number(transactionId));
-  if (!payment) {
-    throw new AppError("Payment transaction not found", 404);
-  }
-
   const result = await salesPaymentService.deletePaymentTransaction(
-    payment.transaction_number,
+    Number(transactionId),
   );
 
   return NextResponse.json(result);

@@ -9,7 +9,7 @@ import {
 } from "@/drizzle/schema";
 import db from "@/lib/drizzle";
 import dayjs from "dayjs";
-import { and, asc, desc, eq, ilike, inArray, like, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, like, ne, or, sql } from "drizzle-orm";
 import { AppError } from "@/lib/errors";
 
 type SalesOrderPaymentItem = {
@@ -55,9 +55,8 @@ export const saleOrderRepository = {
       });
   },
 
-  async getById(salesOrderId: number, tx?: Tx) {
-    const database = tx ?? db;
-    const [order] = await database
+  async getById(salesOrderId: number, tx: Tx) {
+    const [order] = await tx
       .select({
         id: sales_orders.id,
         client_id: sales_orders.client_id,
@@ -65,33 +64,19 @@ export const saleOrderRepository = {
         paid_amount: sales_orders.paid_amount,
       })
       .from(sales_orders)
-      .where(eq(sales_orders.id, salesOrderId));
+      .where(eq(sales_orders.id, salesOrderId))
+      .for("update");
 
     return order;
   },
 
-  async getByInvoiceNumber(invoiceNumber: string, tx?: Tx) {
-    const database = tx ?? db;
+  async getOrdersForUpdate(
+    { ids, invoiceNumbers }: { ids?: number[]; invoiceNumbers?: string[] },
+    tx: Tx,
+  ) {
+    if (!ids?.length && !invoiceNumbers?.length) return [];
 
-    const [order] = await database
-      .select({
-        id: sales_orders.id,
-        client_id: sales_orders.client_id,
-        invoice_value: sales_orders.invoice_value,
-        paid_amount: sales_orders.paid_amount,
-        balance_due: sales_orders.balance_due,
-      })
-      .from(sales_orders)
-      .where(eq(sales_orders.invoice_number, invoiceNumber));
-
-    return order;
-  },
-
-  async getByInvoiceNumbers(invoiceNumbers: string[], tx?: Tx) {
-    if (invoiceNumbers.length === 0) return [];
-    const database = tx ?? db;
-
-    return database
+    return tx
       .select({
         id: sales_orders.id,
         client_id: sales_orders.client_id,
@@ -101,7 +86,16 @@ export const saleOrderRepository = {
         balance_due: sales_orders.balance_due,
       })
       .from(sales_orders)
-      .where(inArray(sales_orders.invoice_number, invoiceNumbers));
+      .where(
+        or(
+          ids?.length ? inArray(sales_orders.id, ids) : undefined,
+          invoiceNumbers?.length
+            ? inArray(sales_orders.invoice_number, invoiceNumbers)
+            : undefined,
+        ),
+      )
+      .orderBy(asc(sales_orders.id))
+      .for("update");
   },
 
   getOrdersMenu(clientId: number, isPaidOff: boolean) {

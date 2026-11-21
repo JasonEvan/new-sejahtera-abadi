@@ -4,6 +4,7 @@ import { clientRepository } from "../client/client.repository";
 import { purchaseOrderRepository } from "../purchase/purchase-order.repository";
 import { purchasePaymentRepository } from "./purchase-payment.repository";
 import { purchasePaymentService } from "./purchase-payment.service";
+import { backendPurchasePaymentValidation } from "./purchase-payment.validation";
 
 jest.mock("@/lib/drizzle", () => ({
   __esModule: true,
@@ -16,6 +17,7 @@ jest.mock("./purchase-payment.repository", () => ({
   purchasePaymentRepository: {
     createPurchasePayment: jest.fn(),
     getEditPayablesByInvoice: jest.fn(),
+    getById: jest.fn(),
     getByPurchaseOrderId: jest.fn(),
     deleteByPurchaseOrderId: jest.fn(),
     insertEditPayablesPaymentRows: jest.fn(),
@@ -30,8 +32,7 @@ jest.mock("../purchase/purchase-order.repository", () => ({
   purchaseOrderRepository: {
     bulkIncPaidAmountAndDecBalanceDue: jest.fn(),
     bulkDecPaidAmountAndIncBalanceDue: jest.fn(),
-    getByInvoiceNumber: jest.fn(),
-    getByInvoiceNumbers: jest.fn(),
+    getOrdersForUpdate: jest.fn(),
     updatePaidAndBalanceDue: jest.fn(),
   },
 }));
@@ -56,15 +57,15 @@ const mockedClientRepo = clientRepository as jest.Mocked<
 >;
 
 describe("purchase-payment.service", () => {
-  const tx = {};
+  const tx = { execute: jest.fn() };
 
   const createPayload = {
     client_id: 7,
     transaction_number: "TRX-PP-1",
     transaction_date: "2026-04-14",
     cart: [
-      { purchase_order_id: 10, paid_amount: 30000 },
-      { purchase_order_id: 11, paid_amount: 70000 },
+      { purchase_order_id: 10, paid_amount: 30000, balance_due: 1 },
+      { purchase_order_id: 11, paid_amount: 70000, balance_due: 70000 },
     ],
   };
 
@@ -73,10 +74,19 @@ describe("purchase-payment.service", () => {
     mockedTransaction.mockImplementation(
       async (cb: (txArg: unknown) => unknown) => cb(tx),
     );
+    mockedPaymentRepo.getByTransactionNumber.mockResolvedValue([]);
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValue([]);
   });
 
-  it("createPurchasePayment executes write flow and decrements payable by cart total", async () => {
-    await purchasePaymentService.createPurchasePayment(createPayload as never);
+  it("creates a payment against current balances even if the client's balance snapshot is lower", async () => {
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([
+      { id: 10, client_id: 7, invoice_number: "PB-10", balance_due: 30000 },
+      { id: 11, client_id: 7, invoice_number: "PB-11", balance_due: 70000 },
+    ] as never);
+
+    await purchasePaymentService.createPurchasePayment(
+      backendPurchasePaymentValidation.parse(createPayload),
+    );
 
     expect(mockedPaymentRepo.createPurchasePayment).toHaveBeenCalledWith(
       createPayload,
@@ -90,6 +100,53 @@ describe("purchase-payment.service", () => {
       100000,
       tx,
     );
+  });
+
+  it.each([
+    { clientId: 7, balance: 50000, message: /melebihi saldo/ },
+    { clientId: 8, balance: 60000, message: /tidak sesuai dengan klien/ },
+  ])("rejects invalid create allocation ($message) before writes", async ({
+    clientId,
+    balance,
+    message,
+  }) => {
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([
+      { id: 10, client_id: clientId, invoice_number: "PB-10", balance_due: balance },
+    ] as never);
+
+    await expect(
+      purchasePaymentService.createPurchasePayment({
+        ...createPayload,
+        cart: [
+          { ...createPayload.cart[0], balance_due: 99999 },
+          { ...createPayload.cart[0], balance_due: 99999 },
+        ],
+      }),
+    ).rejects.toThrow(message);
+    expect(mockedPaymentRepo.createPurchasePayment).not.toHaveBeenCalled();
+    expect(mockedOrderRepo.bulkIncPaidAmountAndDecBalanceDue).not.toHaveBeenCalled();
+    expect(mockedClientRepo.decPayableBalance).not.toHaveBeenCalled();
+  });
+
+  it("checks for a duplicate transaction only after acquiring the domain lock", async () => {
+    mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce([
+      { id: 1 },
+    ] as never);
+    const { promise, resolve: releaseLock } = Promise.withResolvers<void>();
+    tx.execute.mockReturnValueOnce(promise);
+
+    const pending = purchasePaymentService.createPurchasePayment(createPayload);
+    try {
+      expect(mockedPaymentRepo.getByTransactionNumber).not.toHaveBeenCalled();
+    } finally {
+      releaseLock();
+    }
+    await expect(pending).rejects.toThrow("Nomor transaksi sudah digunakan");
+    expect(mockedPaymentRepo.getByTransactionNumber).toHaveBeenCalledWith(
+      createPayload.transaction_number,
+      tx,
+    );
+    expect(mockedPaymentRepo.createPurchasePayment).not.toHaveBeenCalled();
   });
 
   it("getEditPayablesByInvoice returns null when no invoice is found", async () => {
@@ -140,9 +197,7 @@ describe("purchase-payment.service", () => {
   });
 
   it("deleteEditPayablesByInvoice throws AppError when invoice does not exist", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce(
-      undefined as never,
-    );
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([]);
 
     await expect(
       purchasePaymentService.deleteEditPayablesByInvoice({
@@ -157,12 +212,12 @@ describe("purchase-payment.service", () => {
   });
 
   it("deleteEditPayablesByInvoice only deletes rows when old total paid is zero", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([{
       id: 1,
       client_id: 2,
       paid_amount: 0,
       balance_due: 50000,
-    } as never);
+    }] as never);
     mockedPaymentRepo.getByPurchaseOrderId.mockResolvedValueOnce([] as never);
 
     const result = await purchasePaymentService.deleteEditPayablesByInvoice({
@@ -179,12 +234,12 @@ describe("purchase-payment.service", () => {
   });
 
   it("deleteEditPayablesByInvoice restores order/client balances when payments existed", async () => {
-    mockedOrderRepo.getByInvoiceNumber.mockResolvedValueOnce({
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([{
       id: 9,
       client_id: 1,
       paid_amount: 40000,
       balance_due: 8000,
-    } as never);
+    }] as never);
     mockedPaymentRepo.getByPurchaseOrderId.mockResolvedValueOnce([
       { id: 1, paid_amount: 12000 },
       { id: 2, paid_amount: 6000 },
@@ -193,6 +248,13 @@ describe("purchase-payment.service", () => {
     await purchasePaymentService.deleteEditPayablesByInvoice({
       invoice_number: "PB-9",
     });
+
+    expect(tx.execute.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedOrderRepo.getOrdersForUpdate.mock.invocationCallOrder[0],
+    );
+    expect(mockedOrderRepo.getOrdersForUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedPaymentRepo.getByPurchaseOrderId.mock.invocationCallOrder[0],
+    );
 
     expect(mockedOrderRepo.updatePaidAndBalanceDue).toHaveBeenCalledWith(
       9,
@@ -227,14 +289,15 @@ describe("purchase-payment.service", () => {
 
   it("updateEditPayablesByInvoice updates paid/balance and decreases payable on positive delta", async () => {
     mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce([
-      { id: 10, client_id: 2, purchase_order_id: 5, paid_amount: 10000, payment_date: new Date() },
+      { id: 10, client_id: 2, purchase_order_id: 5, paid_amount: 4000, payment_date: new Date() },
+      { id: 11, client_id: 2, purchase_order_id: 5, paid_amount: 6000, payment_date: new Date() },
     ] as never);
-    mockedOrderRepo.getByInvoiceNumbers.mockResolvedValueOnce([
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([
       {
         id: 5,
         client_id: 2,
         invoice_number: "PB-5",
-        invoice_value: 90000,
+        balance_due: 15000,
       },
     ] as never);
 
@@ -265,12 +328,12 @@ describe("purchase-payment.service", () => {
     mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce([
       { id: 1, client_id: 4, purchase_order_id: 6, paid_amount: 50000, payment_date: new Date() },
     ] as never);
-    mockedOrderRepo.getByInvoiceNumbers.mockResolvedValueOnce([
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([
       {
         id: 6,
         client_id: 4,
         invoice_number: "PB-6",
-        invoice_value: 90000,
+        balance_due: 0,
       },
     ] as never);
 
@@ -297,12 +360,12 @@ describe("purchase-payment.service", () => {
     mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce([
       { id: 1, client_id: 8, purchase_order_id: 7, paid_amount: 35000, payment_date: new Date() },
     ] as never);
-    mockedOrderRepo.getByInvoiceNumbers.mockResolvedValueOnce([
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([
       {
         id: 7,
         client_id: 8,
         invoice_number: "PB-7",
-        invoice_value: 90000,
+        balance_due: 0,
       },
     ] as never);
 
@@ -319,5 +382,72 @@ describe("purchase-payment.service", () => {
 
     expect(mockedClientRepo.incPayableBalance).not.toHaveBeenCalled();
     expect(mockedClientRepo.decPayableBalance).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { newClient: 2, message: /melebihi saldo/ },
+    { newClient: 3, message: /tidak sesuai dengan klien/ },
+  ])("rejects invalid edits ($message) before reversing any payment", async ({
+    newClient,
+    message,
+  }) => {
+    mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce([
+      { client_id: 2, purchase_order_id: 5, paid_amount: 4000 },
+      { client_id: 2, purchase_order_id: 5, paid_amount: 6000 },
+      { client_id: 2, purchase_order_id: 6, paid_amount: 3000 },
+    ] as never);
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([
+      { id: 5, client_id: 2, invoice_number: "PB-5", balance_due: 15000 },
+      { id: 6, client_id: 2, invoice_number: "PB-6", balance_due: 0 },
+      { id: 7, client_id: newClient, invoice_number: "PB-7", balance_due: 5000 },
+    ] as never);
+
+    await expect(
+      purchasePaymentService.updateEditPayablesByInvoice({
+        transaction_number: "TRX-N1",
+        payments: [
+          { invoice_number: "PB-5", paid_amount: 13000 },
+          { invoice_number: "PB-5", paid_amount: 13000 },
+          { invoice_number: "PB-7", paid_amount: 1000 },
+        ],
+      }),
+    ).rejects.toThrow(message);
+
+    expect(mockedOrderRepo.getOrdersForUpdate).toHaveBeenCalledTimes(1);
+    expect(mockedOrderRepo.getOrdersForUpdate).toHaveBeenCalledWith(
+      { ids: [5, 6], invoiceNumbers: ["PB-5", "PB-7"] },
+      tx,
+    );
+    expect(tx.execute.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedPaymentRepo.getByTransactionNumber.mock.invocationCallOrder[0],
+    );
+    expect(mockedOrderRepo.bulkDecPaidAmountAndIncBalanceDue).not.toHaveBeenCalled();
+    expect(mockedPaymentRepo.deleteByTransactionNumber).not.toHaveBeenCalled();
+    expect(mockedPaymentRepo.insertTransactionPayments).not.toHaveBeenCalled();
+  });
+
+  it("resolves the transaction ID after locking before restoring order and client balances", async () => {
+    const payments = [{ client_id: 2, purchase_order_id: 5, paid_amount: 4000 }];
+    mockedPaymentRepo.getById.mockResolvedValueOnce({
+      transaction_number: "TRX-N1",
+    } as never);
+    mockedPaymentRepo.getByTransactionNumber.mockResolvedValueOnce(payments as never);
+    mockedOrderRepo.getOrdersForUpdate.mockResolvedValueOnce([
+      { id: 5, client_id: 2 },
+    ] as never);
+
+    await purchasePaymentService.deletePaymentTransaction(10);
+
+    expect(tx.execute.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedPaymentRepo.getById.mock.invocationCallOrder[0],
+    );
+    expect(mockedPaymentRepo.getById).toHaveBeenCalledWith(10, tx);
+    expect(mockedPaymentRepo.getByTransactionNumber).toHaveBeenCalledWith("TRX-N1", tx);
+    expect(mockedOrderRepo.getOrdersForUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      mockedOrderRepo.bulkDecPaidAmountAndIncBalanceDue.mock.invocationCallOrder[0],
+    );
+    expect(mockedOrderRepo.bulkDecPaidAmountAndIncBalanceDue).toHaveBeenCalledWith(payments, tx);
+    expect(mockedClientRepo.incPayableBalance).toHaveBeenCalledWith(2, 4000, tx);
+    expect(mockedPaymentRepo.deleteByTransactionNumber).toHaveBeenCalledWith("TRX-N1", tx);
   });
 });

@@ -50,37 +50,25 @@ export const editSalesPaymentValidation = (balance_due: number) =>
       .max(balance_due, "Pelunasan tidak boleh melebihi saldo"),
   });
 
-export const backendSalesPaymentValidation = z
-  .object({
-    client_id: z.int().min(1, "Pilih klien"),
-    transaction_number: z.string().nonempty("Nomor transaksi harus diisi"),
-    transaction_date: z
-      .string()
-      .nonempty("Tanggal transaksi harus diisi")
-      .refine((val) => dayjs(val).isValid(), {
-        error: "Tanggal transaksi tidak valid",
+export const backendSalesPaymentValidation = z.object({
+  client_id: z.int().min(1, "Pilih klien"),
+  transaction_number: z.string().nonempty("Nomor transaksi harus diisi"),
+  transaction_date: z
+    .string()
+    .nonempty("Tanggal transaksi harus diisi")
+    .refine((val) => dayjs(val).isValid(), {
+      error: "Tanggal transaksi tidak valid",
+    }),
+  cart: z
+    .array(
+      z.object({
+        sales_order_id: z.int().min(1, "Sales order is required"),
+        balance_due: z.int().min(0, "Balance due must be a positive number"),
+        paid_amount: z.int().min(1, "Paid amount must be at least 1"),
       }),
-    cart: z
-      .array(
-        z.object({
-          sales_order_id: z.int().min(1, "Sales order is required"),
-          balance_due: z.int().min(0, "Balance due must be a positive number"),
-          paid_amount: z.int().min(1, "Paid amount must be at least 1"),
-        }),
-      )
-      .min(1, "Cart at least 1"),
-  })
-  .superRefine((data, ctx) => {
-    data.cart.forEach((item, index) => {
-      if (item.paid_amount > item.balance_due) {
-        ctx.addIssue({
-          code: "custom",
-          message: `Pelunasan tidak boleh melebihi saldo pada item ke-${index + 1}`,
-          path: ["cart", index, "paid_amount"],
-        });
-      }
-    });
-  });
+    )
+    .min(1, "Cart at least 1"),
+});
 
 export const deleteEditReceivablesByInvoiceValidation = z.object({
   invoice_number: z.string().trim().min(1, "Nomor nota harus diisi"),

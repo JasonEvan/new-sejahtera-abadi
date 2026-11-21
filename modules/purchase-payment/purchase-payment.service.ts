@@ -9,24 +9,108 @@ import { purchaseOrderRepository } from "../purchase/purchase-order.repository";
 import { clientRepository } from "../client/client.repository";
 import dayjs from "dayjs";
 import { AppError } from "@/lib/errors";
-import { eq } from "drizzle-orm";
-import { purchase_payments } from "@/drizzle/schema";
+import { sql } from "drizzle-orm";
+import { Tx } from "@/lib/common-types";
+
+function lockPurchasePayments(tx: Tx) {
+  return tx.execute(
+    sql`SELECT pg_advisory_xact_lock(${0x534150}::int, ${2}::int)`,
+  );
+}
+
+function addPayment(
+  payments: Map<number, number>,
+  orderId: number,
+  amount: number,
+) {
+  payments.set(orderId, (payments.get(orderId) ?? 0) + amount);
+}
+
+function assertPaymentClient(orderClientId: number, clientId: number) {
+  if (orderClientId !== clientId) {
+    throw new AppError("Nota tidak sesuai dengan klien transaksi", 400);
+  }
+}
+
+function assertPaymentBalance(
+  invoiceNumber: string,
+  paid: number,
+  max: number,
+) {
+  if (paid > max) {
+    throw new AppError(
+      `Pelunasan nota ${invoiceNumber} tidak boleh melebihi saldo nota (${max.toLocaleString("id-ID")})`,
+      400,
+    );
+  }
+}
+
+function transactionPaymentTotals(
+  payments: {
+    client_id: number;
+    purchase_order_id: number;
+    paid_amount: number;
+  }[],
+  clientId: number,
+) {
+  const paidByOrder = new Map<number, number>();
+  let total = 0;
+  for (const payment of payments) {
+    assertPaymentClient(payment.client_id, clientId);
+    addPayment(paidByOrder, payment.purchase_order_id, payment.paid_amount);
+    total += payment.paid_amount;
+  }
+  return { paidByOrder, total };
+}
+
+function assertTransactionOrders(
+  orders: { id: number; client_id: number }[],
+  paidByOrder: Map<number, number>,
+  clientId: number,
+) {
+  let found = 0;
+  for (const order of orders) {
+    if (paidByOrder.has(order.id)) {
+      assertPaymentClient(order.client_id, clientId);
+      found++;
+    }
+  }
+  if (found !== paidByOrder.size) {
+    throw new AppError("Nota tidak ditemukan", 404);
+  }
+}
 
 export const purchasePaymentService = {
   async createPurchasePayment(data: InsertPurchasePayment) {
-    // ponytail: prevent creating payment with existing transaction_number
-    const existing = await purchasePaymentRepository.getTransactionSummary(
-      data.transaction_number,
-    );
-    if (existing) {
-      throw new AppError("Nomor transaksi sudah digunakan", 400);
-    }
-
     return db.transaction(async (tx) => {
-      const totalPayments = data.cart.reduce(
-        (acc, curr) => acc + curr.paid_amount,
-        0,
+      await lockPurchasePayments(tx);
+      const existing = await purchasePaymentRepository.getByTransactionNumber(
+        data.transaction_number,
+        tx,
       );
+      if (existing.length > 0) {
+        throw new AppError("Nomor transaksi sudah digunakan", 400);
+      }
+
+      const paidByOrder = new Map<number, number>();
+      let totalPayments = 0;
+      for (const item of data.cart) {
+        addPayment(paidByOrder, item.purchase_order_id, item.paid_amount);
+        totalPayments += item.paid_amount;
+      }
+
+      const orders = await purchaseOrderRepository.getOrdersForUpdate(
+        { ids: [...paidByOrder.keys()] },
+        tx,
+      );
+      assertTransactionOrders(orders, paidByOrder, data.client_id);
+      for (const order of orders) {
+        assertPaymentBalance(
+          order.invoice_number,
+          paidByOrder.get(order.id)!,
+          order.balance_due,
+        );
+      }
 
       await purchasePaymentRepository.createPurchasePayment(data, tx);
       await purchaseOrderRepository.bulkIncPaidAmountAndDecBalanceDue(
@@ -65,8 +149,9 @@ export const purchasePaymentService = {
 
   deleteEditPayablesByInvoice(data: DeleteEditPayablesByInvoiceInput) {
     return db.transaction(async (tx) => {
-      const order = await purchaseOrderRepository.getByInvoiceNumber(
-        data.invoice_number,
+      await lockPurchasePayments(tx);
+      const [order] = await purchaseOrderRepository.getOrdersForUpdate(
+        { invoiceNumbers: [data.invoice_number] },
         tx,
       );
 
@@ -109,6 +194,7 @@ export const purchasePaymentService = {
 
   updateEditPayablesByInvoice(data: UpdateEditPayablesByInvoiceInput) {
     return db.transaction(async (tx) => {
+      await lockPurchasePayments(tx);
       const existingPayments =
         await purchasePaymentRepository.getByTransactionNumber(
           data.transaction_number,
@@ -120,48 +206,22 @@ export const purchasePaymentService = {
       }
 
       const clientId = existingPayments[0].client_id;
-      const oldTotalPaid = existingPayments.reduce(
-        (sum, p) => sum + p.paid_amount,
-        0,
-      );
-
-      // 1. Revert old payments on purchase_orders
-      await purchaseOrderRepository.bulkDecPaidAmountAndIncBalanceDue(
-        existingPayments,
+      const { paidByOrder: oldPaidByOrder, total: oldTotalPaid } =
+        transactionPaymentTotals(existingPayments, clientId);
+      const orders = await purchaseOrderRepository.getOrdersForUpdate(
+        {
+          ids: [...oldPaidByOrder.keys()],
+          invoiceNumbers: [
+            ...new Set(data.payments.map((p) => p.invoice_number)),
+          ],
+        },
         tx,
       );
-
-      // 2. Delete existing payment records for this transaction_number
-      await purchasePaymentRepository.deleteByTransactionNumber(
-        data.transaction_number,
-        tx,
-      );
-
-      const oldPaidByOrderMap = new Map<number, number>();
-      for (const p of existingPayments) {
-        oldPaidByOrderMap.set(
-          p.purchase_order_id,
-          (oldPaidByOrderMap.get(p.purchase_order_id) ?? 0) + p.paid_amount,
-        );
-      }
-
-      // 3. Resolve new purchase_order_ids in a single batch query (No N+1)
-      const newTotalPaid = data.payments.reduce(
-        (sum, p) => sum + p.paid_amount,
-        0,
-      );
-
-      const uniqueInvoiceNumbers = Array.from(
-        new Set(data.payments.map((p) => p.invoice_number)),
-      );
-      const orders = await purchaseOrderRepository.getByInvoiceNumbers(
-        uniqueInvoiceNumbers,
-        tx,
-      );
+      assertTransactionOrders(orders, oldPaidByOrder, clientId);
       const orderMap = new Map(orders.map((o) => [o.invoice_number, o]));
 
-      // Validate that new payments do not exceed max allowed balance per invoice
-      const newPaidByOrderMap = new Map<number, number>();
+      const newPaidByOrder = new Map<number, number>();
+      let newTotalPaid = 0;
       for (const item of data.payments) {
         const order = orderMap.get(item.invoice_number);
         if (!order) {
@@ -170,23 +230,29 @@ export const purchasePaymentService = {
             404,
           );
         }
-        newPaidByOrderMap.set(
-          order.id,
-          (newPaidByOrderMap.get(order.id) ?? 0) + item.paid_amount,
-        );
+        assertPaymentClient(order.client_id, clientId);
+        addPayment(newPaidByOrder, order.id, item.paid_amount);
+        newTotalPaid += item.paid_amount;
       }
 
       for (const order of orders) {
-        const newPaid = newPaidByOrderMap.get(order.id) ?? 0;
-        const oldPaid = oldPaidByOrderMap.get(order.id) ?? 0;
-        const maxAllowed = order.balance_due + oldPaid;
-        if (newPaid > maxAllowed) {
-          throw new AppError(
-            `Pelunasan nota ${order.invoice_number} tidak boleh melebihi saldo nota (${maxAllowed.toLocaleString("id-ID")})`,
-            400,
-          );
-        }
+        const newPaid = newPaidByOrder.get(order.id);
+        if (newPaid === undefined) continue;
+        assertPaymentBalance(
+          order.invoice_number,
+          newPaid,
+          order.balance_due + (oldPaidByOrder.get(order.id) ?? 0),
+        );
       }
+
+      await purchaseOrderRepository.bulkDecPaidAmountAndIncBalanceDue(
+        existingPayments,
+        tx,
+      );
+      await purchasePaymentRepository.deleteByTransactionNumber(
+        data.transaction_number,
+        tx,
+      );
 
       const defaultDate = existingPayments[0]?.payment_date
         ? dayjs(existingPayments[0].payment_date).toDate()
@@ -219,7 +285,6 @@ export const purchasePaymentService = {
         );
       }
 
-      // 4. Adjust client payable balance by delta
       const payableBalanceDelta = newTotalPaid - oldTotalPaid;
       if (payableBalanceDelta > 0) {
         await clientRepository.decPayableBalance(
@@ -249,26 +314,36 @@ export const purchasePaymentService = {
     return purchasePaymentRepository.getTransactionSummary(transactionNumber);
   },
 
-  deletePaymentTransaction(transactionNumber: string) {
+  deletePaymentTransaction(transactionId: number) {
     return db.transaction(async (tx) => {
-      const payments = await tx
-        .select({
-          purchase_order_id: purchase_payments.purchase_order_id,
-          paid_amount: purchase_payments.paid_amount,
-          client_id: purchase_payments.client_id,
-        })
-        .from(purchase_payments)
-        .where(eq(purchase_payments.transaction_number, transactionNumber));
+      await lockPurchasePayments(tx);
+      const payment = await purchasePaymentRepository.getById(
+        transactionId,
+        tx,
+      );
+      if (!payment) {
+        throw new AppError("Payment transaction not found", 404);
+      }
+      const transactionNumber = payment.transaction_number;
+      const payments = await purchasePaymentRepository.getByTransactionNumber(
+        transactionNumber,
+        tx,
+      );
 
       if (payments.length === 0) {
         throw new AppError("Transaction not found", 404);
       }
 
-      const totalPaidAmount = payments.reduce(
-        (sum, p) => sum + p.paid_amount,
-        0,
-      );
       const clientId = payments[0].client_id;
+      const { paidByOrder, total: totalPaidAmount } = transactionPaymentTotals(
+        payments,
+        clientId,
+      );
+      const orders = await purchaseOrderRepository.getOrdersForUpdate(
+        { ids: [...paidByOrder.keys()] },
+        tx,
+      );
+      assertTransactionOrders(orders, paidByOrder, clientId);
 
       // Update invoices
       await purchaseOrderRepository.bulkDecPaidAmountAndIncBalanceDue(

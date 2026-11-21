@@ -72,6 +72,7 @@ export const purchaseOrderLineRepository = {
         id: purchase_order_lines.id,
         stock_id: purchase_order_lines.stock_id,
         qty: purchase_order_lines.qty,
+        price: purchase_order_lines.price,
       })
       .from(purchase_order_lines)
       .where(eq(purchase_order_lines.purchase_order_id, purchaseOrderId))
@@ -94,18 +95,6 @@ export const purchaseOrderLineRepository = {
       .from(purchase_order_lines)
       .where(inArray(purchase_order_lines.id, ids))
       .orderBy(asc(purchase_order_lines.stock_id));
-  },
-
-  getLineDetails(ids: number[], tx?: Tx) {
-    const database = tx ?? db;
-    return database
-      .select({
-        id: purchase_order_lines.id,
-        stock_id: purchase_order_lines.stock_id,
-        price: purchase_order_lines.price,
-      })
-      .from(purchase_order_lines)
-      .where(inArray(purchase_order_lines.id, ids));
   },
 
   async getSumTotalPriceByOrderId(

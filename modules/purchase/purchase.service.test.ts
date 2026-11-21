@@ -218,14 +218,13 @@ describe("purchase.service", () => {
     mockedReturnRepo.hasReturnForPurchaseOrder.mockResolvedValueOnce(
       false as never,
     );
-    mockedLineRepo.getByPurchaseOrderId.mockResolvedValueOnce([] as never);
 
     await expect(
       purchaseService.updatePurchase(5, editPayload as never),
     ).rejects.toThrow("New total cannot be lower than amount already paid");
   });
 
-  it("updatePurchase runs full edit flow and updates payable delta", async () => {
+  it("updatePurchase accepts an edit whose combined stock movement leaves zero stock", async () => {
     mockedOrderRepo.getById.mockResolvedValueOnce({
       client_id: 1,
       invoice_value: 100000,
@@ -235,26 +234,44 @@ describe("purchase.service", () => {
       false as never,
     );
     mockedLineRepo.getByPurchaseOrderId.mockResolvedValueOnce([
-      { stock_id: 3, qty: 2 },
+      { stock_id: 3, qty: 3 },
+      { stock_id: 3, qty: 5 },
     ] as never);
     mockedStockRepo.getStocksForUpdate.mockResolvedValueOnce([
-      { id: 3, ending_stock: 9 },
+      { id: 3, ending_stock: 1 },
     ] as never);
 
-    await purchaseService.updatePurchase(9, editPayload as never);
+    const line = editPayload.cart[0];
+    const cart = [
+      { ...line, quantity: 3 },
+      { ...line, quantity: 4, product_price: 12000, capital_cost: 9000 },
+    ];
+    await purchaseService.updatePurchase(9, { ...editPayload, cart } as never);
 
     expect(
       mockedStockRepo.bulkDecrementStockAndDecrementQtyIn,
-    ).toHaveBeenCalledWith([{ id: 3, quantity: 2 }], tx);
+    ).toHaveBeenCalledWith(
+      [
+        { id: 3, quantity: 3 },
+        { id: 3, quantity: 5 },
+      ],
+      tx,
+    );
     expect(mockedLineRepo.deleteByPurchaseOrderId).toHaveBeenCalledWith(9, tx);
     expect(mockedLineRepo.insertPurchaseOrderLineForEdit).toHaveBeenCalledWith(
-      { client_id: 1, cart: editPayload.cart },
+      { client_id: 1, cart },
       9,
       tx,
     );
     expect(
       mockedStockRepo.bulkIncrementStockAndIncrementQtyIn,
-    ).toHaveBeenCalledWith([{ id: 3, quantity: 7, product_price: 11000 }], tx);
+    ).toHaveBeenCalledWith(
+      [
+        { id: 3, quantity: 3, product_price: 11000 },
+        { id: 3, quantity: 4, product_price: 12000, capital_cost: 9000 },
+      ],
+      tx,
+    );
     expect(mockedOrderRepo.updateInvoiceMeta).toHaveBeenCalledWith(
       9,
       { invoiceValue: 120000, discount: 500, balanceDue: 110000 },
@@ -265,6 +282,64 @@ describe("purchase.service", () => {
       20000,
       tx,
     );
+  });
+
+  it("updatePurchase rejects an aggregate stock shortfall before writing", async () => {
+    mockedOrderRepo.getById.mockResolvedValueOnce({
+      client_id: 1,
+      invoice_value: 100000,
+      paid_amount: 0,
+    } as never);
+    mockedReturnRepo.hasReturnForPurchaseOrder.mockResolvedValueOnce(false);
+    mockedLineRepo.getByPurchaseOrderId.mockResolvedValueOnce([
+      { stock_id: 3, qty: 4 },
+      { stock_id: 3, qty: 4 },
+    ] as never);
+    mockedStockRepo.getStocksForUpdate.mockResolvedValueOnce([
+      { id: 3, ending_stock: 4 },
+    ]);
+
+    const line = editPayload.cart[0];
+    await expect(
+      purchaseService.updatePurchase(9, {
+        ...editPayload,
+        cart: [
+          { ...line, quantity: 2 },
+          { ...line, quantity: 1 },
+        ],
+      } as never),
+    ).rejects.toThrow("Stok saat ini tidak cukup");
+
+    expect(
+      mockedStockRepo.bulkDecrementStockAndDecrementQtyIn,
+    ).not.toHaveBeenCalled();
+    expect(
+      mockedStockRepo.bulkIncrementStockAndIncrementQtyIn,
+    ).not.toHaveBeenCalled();
+    expect(mockedLineRepo.deleteByPurchaseOrderId).not.toHaveBeenCalled();
+    expect(mockedOrderRepo.updateInvoiceMeta).not.toHaveBeenCalled();
+    expect(mockedClientRepo.incPayableBalance).not.toHaveBeenCalled();
+  });
+
+  it("deletePurchase rejects when duplicate lines together exceed stock", async () => {
+    mockedOrderRepo.getById.mockResolvedValueOnce({ paid_amount: 0 } as never);
+    mockedReturnRepo.hasReturnForPurchaseOrder.mockResolvedValueOnce(false);
+    mockedLineRepo.getByPurchaseOrderId.mockResolvedValueOnce([
+      { stock_id: 3, qty: 4 },
+      { stock_id: 3, qty: 4 },
+    ] as never);
+    mockedStockRepo.getStocksForUpdate.mockResolvedValueOnce([
+      { id: 3, ending_stock: 7 },
+    ]);
+
+    await expect(purchaseService.deletePurchase(9)).rejects.toThrow(
+      "Stok saat ini tidak cukup",
+    );
+
+    expect(
+      mockedStockRepo.bulkDecrementStockAndDecrementQtyIn,
+    ).not.toHaveBeenCalled();
+    expect(mockedLineRepo.deleteByPurchaseOrderId).not.toHaveBeenCalled();
   });
 
   it("getPurchaseReturnLines throws AppError when invoice is missing", async () => {

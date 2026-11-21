@@ -17,22 +17,28 @@ export const purchaseService = {
   async validateStockReductionAvailability(
     items: { stock_id: number | null; qty: number }[],
     tx: Parameters<typeof stockRepository.getStocksForUpdate>[1],
+    additions: { stock_id: number; quantity: number }[] = [],
   ) {
-    const validItems = items.filter((item) => item.stock_id !== null);
-    const stockIds = validItems.map((item) => item.stock_id as number);
+    const reductionById = new Map<number, number>();
+    for (const { stock_id, qty } of items) {
+      if (stock_id === null) continue;
+      reductionById.set(stock_id, (reductionById.get(stock_id) ?? 0) + qty);
+    }
+    for (const { stock_id, quantity } of additions) {
+      reductionById.set(stock_id, (reductionById.get(stock_id) ?? 0) - quantity);
+    }
+
+    const stockIds = [...reductionById.keys()].sort((a, b) => a - b);
     const dbStocks = await stockRepository.getStocksForUpdate(stockIds, tx);
 
-    validItems.forEach((item) => {
-      const currStock = dbStocks.find((stock) => stock.id === item.stock_id);
-      if (!currStock) return;
-
-      if (currStock.ending_stock < item.qty) {
+    for (const stock of dbStocks) {
+      if (stock.ending_stock < (reductionById.get(stock.id) ?? 0)) {
         throw new AppError(
           "Stok saat ini tidak cukup untuk membatalkan nota pembelian lama",
           400,
         );
       }
-    });
+    }
   },
 
   createPurchase(data: InsertPurchase) {
@@ -89,12 +95,26 @@ export const purchaseService = {
       }
 
       const oldTotal = order.invoice_value;
+      const balanceDue = data.total - order.paid_amount;
+      if (balanceDue < 0) {
+        throw new AppError(
+          "New total cannot be lower than amount already paid",
+          400,
+        );
+      }
 
       const existingLines =
         await purchaseOrderLineRepository.getByPurchaseOrderId(
           purchaseOrderId,
           tx,
         );
+
+      // Validate the final movement, not the temporary reversal of the old lines.
+      await purchaseService.validateStockReductionAvailability(
+        existingLines,
+        tx,
+        data.cart,
+      );
 
       const revertedStocks = existingLines
         .filter((line) => line.stock_id !== null)
@@ -130,14 +150,6 @@ export const purchaseService = {
       }));
 
       await stockRepository.bulkIncrementStockAndIncrementQtyIn(newStockIn, tx);
-
-      const balanceDue = data.total - order.paid_amount;
-      if (balanceDue < 0) {
-        throw new AppError(
-          "New total cannot be lower than amount already paid",
-          400,
-        );
-      }
 
       await purchaseOrderRepository.updateInvoiceMeta(
         purchaseOrderId,

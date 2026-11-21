@@ -60,17 +60,6 @@ export const backendPurchasePaymentValidation = z
         }),
       )
       .min(1, "Cart at least 1"),
-  })
-  .superRefine((data, ctx) => {
-    data.cart.forEach((item, index) => {
-      if (item.paid_amount > item.balance_due) {
-        ctx.addIssue({
-          code: "custom",
-          message: `Pelunasan tidak boleh melebihi saldo pada item ke-${index + 1}`,
-          path: ["cart", index, "paid_amount"],
-        });
-      }
-    });
   });
 
 export const deleteEditPayablesByInvoiceValidation = z.object({

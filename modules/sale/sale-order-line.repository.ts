@@ -2,7 +2,7 @@ import { Tx } from "@/lib/common-types";
 import { InsertSale } from "./sale.types";
 import db from "@/lib/drizzle";
 import { sales_order_lines } from "@/drizzle/schema";
-import { eq, inArray, sql, asc } from "drizzle-orm";
+import { and, eq, inArray, sql, asc } from "drizzle-orm";
 
 type SalesOrderLineQtyItem = { id: number; quantity: number };
 
@@ -96,16 +96,22 @@ export const saleOrderLineRepository = {
       .orderBy(asc(sales_order_lines.stock_id));
   },
 
-  getLineDetails(ids: number[], tx?: Tx) {
+  getLineDetails(salesOrderId: number, ids: number[], tx?: Tx) {
     const database = tx ?? db;
     return database
       .select({
         id: sales_order_lines.id,
         stock_id: sales_order_lines.stock_id,
         price: sales_order_lines.price,
+        qty: sales_order_lines.qty,
       })
       .from(sales_order_lines)
-      .where(inArray(sales_order_lines.id, ids));
+      .where(
+        and(
+          eq(sales_order_lines.sales_order_id, salesOrderId),
+          inArray(sales_order_lines.id, ids),
+        ),
+      );
   },
 
   async getSumTotalPriceByOrderId(

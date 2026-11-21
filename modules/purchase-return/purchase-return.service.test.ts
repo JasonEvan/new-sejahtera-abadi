@@ -36,7 +36,6 @@ jest.mock("./purchase-return-line.repository", () => ({
 
 jest.mock("../purchase/purchase-order-line.repository", () => ({
   purchaseOrderLineRepository: {
-    getLineDetails: jest.fn(),
     bulkDecrementQuantity: jest.fn(),
     bulkIncrementQuantity: jest.fn(),
     getSumTotalPriceByOrderId: jest.fn(),
@@ -46,6 +45,7 @@ jest.mock("../purchase/purchase-order-line.repository", () => ({
 
 jest.mock("../stock/stock.repository", () => ({
   stockRepository: {
+    getStocksForUpdate: jest.fn(),
     bulkDecrementStockAndIncrementQtyOut: jest.fn(),
     bulkIncrementStockAndDecrementQtyOut: jest.fn(),
   },
@@ -54,7 +54,6 @@ jest.mock("../stock/stock.repository", () => ({
 jest.mock("../purchase/purchase-order.repository", () => ({
   purchaseOrderRepository: {
     getDiscountById: jest.fn(),
-    getInvoiceValueById: jest.fn(),
     updateInvoiceValue: jest.fn(),
     getById: jest.fn(),
   },
@@ -96,10 +95,22 @@ describe("purchase-return.service", () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     mockedTransaction.mockImplementation(
       async (cb: (txArg: unknown) => unknown) => cb(tx),
     );
+    mockedOrderRepo.getById.mockResolvedValue({
+      id: 30,
+      client_id: 1,
+      paid_amount: 0,
+      invoice_value: 130000,
+    });
+    mockedOrderLineRepo.getByPurchaseOrderId.mockResolvedValue([
+      { id: 7, stock_id: 3, price: 12000, qty: 3 },
+    ]);
+    mockedStockRepo.getStocksForUpdate.mockResolvedValue([
+      { id: 3, ending_stock: 3 },
+    ]);
   });
 
   it("createPurchaseReturn throws when insert result is empty", async () => {
@@ -115,34 +126,82 @@ describe("purchase-return.service", () => {
     );
   });
 
-  it("createPurchaseReturn throws when line detail cannot be found", async () => {
-    mockedReturnRepo.createPurchaseReturn.mockResolvedValueOnce([
-      { id: 10 },
-    ] as never);
-    mockedOrderLineRepo.getLineDetails.mockResolvedValueOnce([] as never);
+  it("createPurchaseReturn rejects a line outside the invoice without writing", async () => {
+    mockedOrderLineRepo.getByPurchaseOrderId.mockResolvedValueOnce([]);
 
     await expect(
       purchaseReturnService.createPurchaseReturn(createPayload),
     ).rejects.toEqual(
       expect.objectContaining({
-        message: "Order line 7 not found",
-        statusCode: 404,
+        message: "Order line 7 does not belong to selected invoice",
+        statusCode: 400,
       }) as AppError,
     );
+    expect(mockedReturnRepo.createPurchaseReturn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { client_id: 2, paid_amount: 0 },
+    { client_id: 1, paid_amount: 1 },
+  ])("createPurchaseReturn rejects an ineligible invoice: %j", async (invoice) => {
+    mockedOrderRepo.getById.mockResolvedValueOnce({
+      id: 30,
+      invoice_value: 130000,
+      ...invoice,
+    });
+
+    await expect(
+      purchaseReturnService.createPurchaseReturn(createPayload),
+    ).rejects.toMatchObject({ statusCode: 400 });
+    expect(mockedReturnRepo.createPurchaseReturn).not.toHaveBeenCalled();
+    expect(mockedClientRepo.incPayableBalance).not.toHaveBeenCalled();
+  });
+
+  it("createPurchaseReturn rejects duplicate line quantities above the remainder", async () => {
+    await expect(
+      purchaseReturnService.createPurchaseReturn({
+        ...createPayload,
+        lines: [...createPayload.lines, ...createPayload.lines],
+      }),
+    ).rejects.toMatchObject({
+      message: "Jumlah retur melebihi jumlah barang pada line 7",
+      statusCode: 400,
+    });
+    expect(mockedReturnRepo.createPurchaseReturn).not.toHaveBeenCalled();
+  });
+
+  it("createPurchaseReturn rejects insufficient stock shared by different lines", async () => {
+    mockedOrderLineRepo.getByPurchaseOrderId.mockResolvedValueOnce([
+      { id: 7, stock_id: 3, price: 12000, qty: 3 },
+      { id: 8, stock_id: 3, price: 15000, qty: 3 },
+    ]);
+
+    await expect(
+      purchaseReturnService.createPurchaseReturn({
+        ...createPayload,
+        lines: [
+          ...createPayload.lines,
+          { purchase_order_line_id: 8, return_qty: 2 },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      message: "Jumlah retur melebihi stok tersedia pada stok 3",
+      statusCode: 400,
+    });
+    expect(mockedReturnRepo.createPurchaseReturn).not.toHaveBeenCalled();
+    expect(
+      mockedStockRepo.bulkDecrementStockAndIncrementQtyOut,
+    ).not.toHaveBeenCalled();
   });
 
   it("createPurchaseReturn runs full create flow and updates payable delta", async () => {
     mockedReturnRepo.createPurchaseReturn.mockResolvedValueOnce([
       { id: 99 },
     ] as never);
-    mockedOrderLineRepo.getLineDetails.mockResolvedValueOnce([
-      { id: 7, stock_id: 3, price: 12000 },
-    ] as never);
     mockedOrderRepo.getDiscountById.mockResolvedValueOnce(10 as never);
     mockedOrderLineRepo.getSumTotalPriceByOrderId.mockResolvedValueOnce(
       100000 as never,
     );
-    mockedOrderRepo.getInvoiceValueById.mockResolvedValueOnce(130000 as never);
 
     await purchaseReturnService.createPurchaseReturn(createPayload);
 
@@ -175,6 +234,26 @@ describe("purchase-return.service", () => {
       -40000,
       tx,
     );
+  });
+
+  it("creates returns for lines without a stock record without changing stock", async () => {
+    mockedOrderLineRepo.getByPurchaseOrderId.mockResolvedValueOnce([
+      { id: 7, stock_id: null, price: 12000, qty: 2 },
+    ]);
+    mockedReturnRepo.createPurchaseReturn.mockResolvedValueOnce([{ id: 99 }]);
+    mockedOrderRepo.getDiscountById.mockResolvedValueOnce(0);
+    mockedOrderLineRepo.getSumTotalPriceByOrderId.mockResolvedValueOnce(0);
+
+    await purchaseReturnService.createPurchaseReturn(createPayload);
+
+    expect(mockedOrderLineRepo.bulkDecrementQuantity).toHaveBeenCalledWith(
+      [{ id: 7, quantity: 2 }],
+      tx,
+    );
+    expect(mockedStockRepo.getStocksForUpdate).not.toHaveBeenCalled();
+    expect(
+      mockedStockRepo.bulkDecrementStockAndIncrementQtyOut,
+    ).not.toHaveBeenCalled();
   });
 
   it("getUnpaidReturnedInvoices proxies repository output", async () => {
@@ -242,8 +321,8 @@ describe("purchase-return.service", () => {
   });
 
   it("updatePurchaseReturn throws when invoice already has payment", async () => {
-    mockedReturnRepo.getById.mockResolvedValueOnce([
-      { purchase_order_id: 5 },
+    mockedReturnRepo.getById.mockResolvedValue([
+      { purchase_order_id: 5, client_id: 1 },
     ] as never);
     mockedOrderRepo.getById.mockResolvedValueOnce({
       id: 5,
@@ -265,8 +344,8 @@ describe("purchase-return.service", () => {
   });
 
   it("updatePurchaseReturn throws when line does not belong to selected invoice", async () => {
-    mockedReturnRepo.getById.mockResolvedValueOnce([
-      { purchase_order_id: 6 },
+    mockedReturnRepo.getById.mockResolvedValue([
+      { purchase_order_id: 6, client_id: 1 },
     ] as never);
     mockedOrderRepo.getById.mockResolvedValueOnce({
       id: 6,
@@ -295,9 +374,9 @@ describe("purchase-return.service", () => {
     );
   });
 
-  it("updatePurchaseReturn throws when return qty exceeds current qty", async () => {
-    mockedReturnRepo.getById.mockResolvedValueOnce([
-      { purchase_order_id: 6 },
+  it("rejects an edit when duplicate line quantities exceed the remainder", async () => {
+    mockedReturnRepo.getById.mockResolvedValue([
+      { purchase_order_id: 6, client_id: 1 },
     ] as never);
     mockedOrderRepo.getById.mockResolvedValueOnce({
       id: 6,
@@ -316,7 +395,10 @@ describe("purchase-return.service", () => {
       purchaseReturnService.updatePurchaseReturn({
         purchase_return_id: 10,
         return_date: "2026-04-14",
-        lines: [{ purchase_order_line_id: 100, return_qty: 5 }],
+        lines: [
+          { purchase_order_line_id: 100, return_qty: 2 },
+          { purchase_order_line_id: 100, return_qty: 1 },
+        ],
       }),
     ).rejects.toEqual(
       expect.objectContaining({
@@ -326,9 +408,63 @@ describe("purchase-return.service", () => {
     );
   });
 
+  it("rejects an edit whose replacement exceeds stock after restoring the original return", async () => {
+    mockedReturnRepo.getById.mockResolvedValue([
+      { purchase_order_id: 30, client_id: 1 },
+    ] as never);
+    mockedReturnLineRepo.getByPurchaseReturnIds.mockResolvedValueOnce([
+      { purchase_order_line_id: 7, stock_id: 3, return_qty: 1 },
+    ]);
+    mockedStockRepo.getStocksForUpdate.mockResolvedValueOnce([
+      { id: 3, ending_stock: 0 },
+    ]);
+
+    await expect(
+      purchaseReturnService.updatePurchaseReturn({
+        ...createPayload,
+        purchase_return_id: 10,
+      }),
+    ).rejects.toMatchObject({
+      message: "Jumlah retur melebihi stok tersedia pada stok 3",
+      statusCode: 400,
+    });
+    expect(mockedOrderLineRepo.bulkIncrementQuantity).not.toHaveBeenCalled();
+    expect(mockedReturnRepo.deleteById).not.toHaveBeenCalled();
+  });
+
+  it.each(["edit", "delete"])(
+    "rejects a stale %s after another transaction removes the return",
+    async (action) => {
+      let wasRemoved = false;
+      mockedReturnRepo.getById.mockImplementation(
+        () =>
+          Promise.resolve(
+            wasRemoved ? [] : [{ purchase_order_id: 30, client_id: 1 }],
+          ) as never,
+      );
+      mockedOrderRepo.getById.mockImplementationOnce(async () => {
+        wasRemoved = true;
+        return { id: 30, client_id: 1, invoice_value: 130000, paid_amount: 0 };
+      });
+
+      const result =
+        action === "edit"
+          ? purchaseReturnService.updatePurchaseReturn({
+              ...createPayload,
+              purchase_return_id: 10,
+            })
+          : purchaseReturnService.deletePurchaseReturn(10);
+
+      await expect(result).rejects.toMatchObject({ statusCode: 404 });
+      expect(mockedOrderLineRepo.bulkIncrementQuantity).not.toHaveBeenCalled();
+      expect(mockedReturnRepo.deleteById).not.toHaveBeenCalled();
+      expect(mockedClientRepo.incPayableBalance).not.toHaveBeenCalled();
+    },
+  );
+
   it("updatePurchaseReturn cancels when all return qty are zero", async () => {
-    mockedReturnRepo.getById.mockResolvedValueOnce([
-      { purchase_order_id: 6 },
+    mockedReturnRepo.getById.mockResolvedValue([
+      { purchase_order_id: 6, client_id: 1 },
     ] as never);
     mockedOrderRepo.getById.mockResolvedValueOnce({
       id: 6,
@@ -370,8 +506,8 @@ describe("purchase-return.service", () => {
   });
 
   it("updatePurchaseReturn runs full edit flow and returns success message", async () => {
-    mockedReturnRepo.getById.mockResolvedValueOnce([
-      { purchase_order_id: 10 },
+    mockedReturnRepo.getById.mockResolvedValue([
+      { purchase_order_id: 10, client_id: 9 },
     ] as never);
     mockedOrderRepo.getById.mockResolvedValueOnce({
       id: 10,
@@ -380,14 +516,17 @@ describe("purchase-return.service", () => {
       paid_amount: 0,
     } as never);
     mockedReturnLineRepo.getByPurchaseReturnIds.mockResolvedValueOnce([
+      { purchase_order_line_id: 8, return_qty: 1, stock_id: 5 },
       { purchase_order_line_id: 7, return_qty: 1, stock_id: 3 },
     ] as never);
     mockedOrderLineRepo.getByPurchaseOrderId.mockResolvedValueOnce([
-      { id: 7, qty: 3 },
-    ] as never);
-    mockedOrderLineRepo.getLineDetails.mockResolvedValueOnce([
-      { id: 7, stock_id: 3, price: 12000 },
-    ] as never);
+      { id: 7, qty: 1, stock_id: 3, price: 12000 },
+      { id: 8, qty: 0, stock_id: 5, price: 12000 },
+    ]);
+    mockedStockRepo.getStocksForUpdate.mockResolvedValueOnce([
+      { id: 3, ending_stock: 1 },
+      { id: 5, ending_stock: 0 },
+    ]);
     mockedReturnRepo.createPurchaseReturn.mockResolvedValueOnce([
       { id: 88 },
     ] as never);
@@ -402,13 +541,23 @@ describe("purchase-return.service", () => {
       lines: [{ purchase_order_line_id: 7, return_qty: 2 }],
     });
 
+    expect(mockedStockRepo.getStocksForUpdate).toHaveBeenCalledWith([3, 5], tx);
     expect(mockedOrderLineRepo.bulkIncrementQuantity).toHaveBeenCalledWith(
-      [{ id: 7, quantity: 1 }],
+      [
+        { id: 8, quantity: 1 },
+        { id: 7, quantity: 1 },
+      ],
       tx,
     );
     expect(
       mockedStockRepo.bulkIncrementStockAndDecrementQtyOut,
-    ).toHaveBeenCalledWith([{ id: 3, quantity: 1 }], tx);
+    ).toHaveBeenCalledWith(
+      [
+        { id: 5, quantity: 1 },
+        { id: 3, quantity: 1 },
+      ],
+      tx,
+    );
     expect(mockedReturnLineRepo.deleteByPurchaseReturnIds).toHaveBeenCalledWith(
       [50],
       tx,

@@ -3,7 +3,6 @@ import { AppError } from "@/lib/errors";
 import { withErrorHandler } from "@/lib/withErrorHandler";
 import { validate } from "@/lib/zod";
 import { purchasePaymentService } from "@/modules/purchase-payment/purchase-payment.service";
-import { purchasePaymentRepository } from "@/modules/purchase-payment/purchase-payment.repository";
 import { backendPurchasePaymentValidation } from "@/modules/purchase-payment/purchase-payment.validation";
 import { reportService } from "@/modules/report/report.service";
 import { NextRequest, NextResponse } from "next/server";
@@ -74,13 +73,8 @@ export const DELETE = withErrorHandler(async (request: NextRequest) => {
     throw new AppError("Transaction ID is required", 400);
   }
 
-  const payment = await purchasePaymentRepository.getById(Number(transactionId));
-  if (!payment) {
-    throw new AppError("Payment transaction not found", 404);
-  }
-
   const result = await purchasePaymentService.deletePaymentTransaction(
-    payment.transaction_number,
+    Number(transactionId),
   );
 
   return NextResponse.json(result);

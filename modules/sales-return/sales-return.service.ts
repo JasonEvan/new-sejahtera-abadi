@@ -1,4 +1,5 @@
 import db from "@/lib/drizzle";
+import { Tx } from "@/lib/common-types";
 import { salesReturnRepository } from "./sales-return.repository";
 import { InsertSaleReturn, UpdateSaleReturn } from "./sales-return.types";
 import { AppError } from "@/lib/errors";
@@ -8,9 +9,95 @@ import { stockRepository } from "../stock/stock.repository";
 import { saleOrderRepository } from "../sale/sale-order.repository";
 import { clientRepository } from "../client/client.repository";
 
+async function getValidatedReturnLines(
+  orderId: number,
+  lines: InsertSaleReturn["lines"],
+  tx: Tx,
+) {
+  const quantities = new Map<number, number>();
+  for (const { sales_order_line_id: id, return_qty: qty } of lines) {
+    if (qty > 0) {
+      quantities.set(id, (quantities.get(id) ?? 0) + qty);
+    }
+  }
+
+  if (quantities.size === 0) return [];
+
+  const details = await saleOrderLineRepository.getLineDetails(
+    orderId,
+    Array.from(quantities.keys()),
+    tx,
+  );
+  const detailsById = new Map(details.map((line) => [line.id, line]));
+
+  return Array.from(quantities, ([id, qty]) => {
+    const detail = detailsById.get(id);
+    if (!detail) {
+      throw new AppError(
+        `Order line ${id} does not belong to selected invoice`,
+        400,
+      );
+    }
+    if (qty > detail.qty) {
+      throw new AppError(
+        `Jumlah retur melebihi jumlah barang pada line ${id}`,
+        400,
+      );
+    }
+    return {
+      sales_order_line_id: id,
+      return_qty: qty,
+      price: detail.price,
+      stock_id: detail.stock_id ?? 0,
+    };
+  });
+}
+
+async function getLockedReturnOrder(returnId: number, tx: Tx) {
+  const [existingReturn] = await salesReturnRepository.getById(returnId, tx);
+  if (!existingReturn) {
+    throw new AppError("Data retur penjualan tidak ditemukan", 404);
+  }
+
+  const order = await saleOrderRepository.getById(
+    existingReturn.sales_order_id,
+    tx,
+  );
+  if (!order) {
+    throw new AppError("Invoice not found", 404);
+  }
+
+  // Another transaction may have edited or deleted this return while we waited.
+  const [currentReturn] = await salesReturnRepository.getById(returnId, tx);
+  if (!currentReturn || currentReturn.sales_order_id !== order.id) {
+    throw new AppError("Data retur penjualan tidak ditemukan", 404);
+  }
+  return order;
+}
+
 export const salesReturnService = {
   createSalesReturn(data: InsertSaleReturn) {
     return db.transaction(async (tx) => {
+      const order = await saleOrderRepository.getById(data.sales_order_id, tx);
+      if (!order) {
+        throw new AppError("Invoice not found", 404);
+      }
+      if (order.client_id !== data.client_id) {
+        throw new AppError("Nota tidak dimiliki oleh klien yang dipilih", 400);
+      }
+      if (order.paid_amount !== 0) {
+        throw new AppError(
+          "Retur tidak bisa dibuat karena nota sudah dibayar",
+          400,
+        );
+      }
+
+      const enrichedLines = await getValidatedReturnLines(
+        order.id,
+        data.lines,
+        tx,
+      );
+
       const [insertedReturn] = await salesReturnRepository.createSalesReturn(
         data,
         tx,
@@ -18,29 +105,6 @@ export const salesReturnService = {
       if (!insertedReturn) {
         throw new AppError("Failed to create sales return", 500);
       }
-
-      const salesOrderLineIds = data.lines.map((l) => l.sales_order_line_id);
-      const lineDetails = await saleOrderLineRepository.getLineDetails(
-        salesOrderLineIds,
-        tx,
-      );
-
-      const enrichedLines = data.lines.map((line) => {
-        const detail = lineDetails.find(
-          (d) => d.id === line.sales_order_line_id,
-        );
-        if (!detail)
-          throw new AppError(
-            `Order line ${line.sales_order_line_id} not found`,
-            404,
-          );
-        return {
-          sales_order_line_id: line.sales_order_line_id,
-          return_qty: line.return_qty,
-          price: detail.price,
-          stock_id: detail.stock_id ?? 0,
-        };
-      });
 
       await salesReturnLineRepository.createSalesReturnLine(
         enrichedLines,
@@ -57,12 +121,14 @@ export const salesReturnService = {
         tx,
       );
 
-      const decrementStock = enrichedLines.map((l) => ({
-        id: l.stock_id,
-        quantity: l.return_qty,
-      }));
+      const incrementStock = enrichedLines
+        .filter((line) => line.stock_id > 0)
+        .map((line) => ({
+          id: line.stock_id,
+          quantity: line.return_qty,
+        }));
       await stockRepository.bulkIncrementStockAndIncrementQtyIn(
-        decrementStock,
+        incrementStock,
         tx,
       );
 
@@ -76,11 +142,6 @@ export const salesReturnService = {
         tx,
       );
 
-      const oldInvoiceValue = await saleOrderRepository.getInvoiceValueById(
-        data.sales_order_id,
-        tx,
-      );
-
       const newTotal = Math.floor(rawTotal * (1 - discount / 100));
       await saleOrderRepository.updateInvoiceValue(
         newTotal,
@@ -88,9 +149,9 @@ export const salesReturnService = {
         tx,
       );
 
-      const reduction = newTotal - oldInvoiceValue;
+      const reduction = newTotal - order.invoice_value;
       await clientRepository.incReceivableBalance(
-        data.client_id,
+        order.client_id,
         reduction,
         tx,
       );
@@ -102,7 +163,8 @@ export const salesReturnService = {
   },
 
   async getEditSaleReturnDetail(returnId: number) {
-    const data = await salesReturnRepository.getEditSaleReturnDetailById(returnId);
+    const data =
+      await salesReturnRepository.getEditSaleReturnDetailById(returnId);
 
     if (!data) {
       throw new AppError("Data retur tidak ditemukan", 404);
@@ -113,23 +175,9 @@ export const salesReturnService = {
 
   updateSaleReturn(data: UpdateSaleReturn) {
     return db.transaction(async (tx) => {
-      const [existingReturn] = await salesReturnRepository.getById(
-        data.sales_return_id,
-        tx,
-      );
-      if (!existingReturn) {
-        throw new AppError("Data retur penjualan tidak ditemukan", 404);
-      }
+      const order = await getLockedReturnOrder(data.sales_return_id, tx);
 
-      const order = await saleOrderRepository.getById(
-        existingReturn.sales_order_id,
-        tx,
-      );
-      if (!order) {
-        throw new AppError("Invoice not found", 404);
-      }
-
-      if (order.paid_amount > 0) {
+      if (order.paid_amount !== 0) {
         throw new AppError(
           "Retur tidak bisa diedit karena nota sudah dibayar",
           400,
@@ -151,6 +199,12 @@ export const salesReturnService = {
         tx,
       );
 
+      const enrichedLines = await getValidatedReturnLines(
+        order.id,
+        data.lines,
+        tx,
+      );
+
       const revertStocks = existingReturnLines
         .filter((line) => (line.stock_id ?? 0) > 0)
         .map((line) => ({
@@ -168,126 +222,46 @@ export const salesReturnService = {
       );
       await salesReturnRepository.deleteById(data.sales_return_id, tx);
 
-      const latestOrderLines = await saleOrderLineRepository.getBySalesOrderId(
-        order.id,
-        tx,
-      );
-
-      const lineQtyById = new Map(
-        latestOrderLines.map((line) => [line.id, line.qty]),
-      );
-      const availableLineIds = new Set(latestOrderLines.map((line) => line.id));
-      for (const line of data.lines) {
-        if (!availableLineIds.has(line.sales_order_line_id)) {
-          throw new AppError(
-            `Order line ${line.sales_order_line_id} does not belong to selected invoice`,
-            400,
-          );
-        }
-
-        const currentQty = lineQtyById.get(line.sales_order_line_id) ?? 0;
-        if (line.return_qty > currentQty) {
-          throw new AppError(
-            `Jumlah retur melebihi jumlah barang pada line ${line.sales_order_line_id}`,
-            400,
-          );
-        }
-      }
-
-      const returnableLines = data.lines.filter((line) => line.return_qty > 0);
-      if (returnableLines.length === 0) {
-        // The user zeroed out all items, meaning they want to cancel this return document.
-        // We already reverted the lines and stocks above, and deleted the old return.
-        // Now we just need to recalculate the invoice value back to its original state.
-        const discount = await saleOrderRepository.getDiscountById(order.id, tx);
-        const rawTotal = await saleOrderLineRepository.getSumTotalPriceByOrderId(
-          order.id,
+      if (enrichedLines.length > 0) {
+        const [insertedReturn] = await salesReturnRepository.createSalesReturn(
+          {
+            client_id: order.client_id,
+            sales_order_id: order.id,
+            return_date: data.return_date,
+            lines: enrichedLines,
+          },
           tx,
         );
-        const newInvoiceTotal = Math.floor(rawTotal * (1 - discount / 100));
+        if (!insertedReturn) {
+          throw new AppError("Failed to update sales return", 500);
+        }
 
-        await saleOrderRepository.updateInvoiceValue(
-          newInvoiceTotal,
-          order.id,
+        await salesReturnLineRepository.createSalesReturnLine(
+          enrichedLines,
+          insertedReturn.id,
           tx,
         );
 
-        const receivableDelta = newInvoiceTotal - order.invoice_value;
-        await clientRepository.incReceivableBalance(
-          order.client_id,
-          receivableDelta,
-          tx,
-        );
-
-        return {
-          message:
-            "Dokumen retur berhasil dibatalkan karena semua jumlah retur di-nol-kan",
-        };
-      }
-
-      const lineIds = returnableLines.map((line) => line.sales_order_line_id);
-      const lineDetails = await saleOrderLineRepository.getLineDetails(
-        lineIds,
-        tx,
-      );
-
-      const enrichedLines = returnableLines.map((line) => {
-        const detail = lineDetails.find(
-          (item) => item.id === line.sales_order_line_id,
-        );
-        if (!detail) {
-          throw new AppError(
-            `Order line ${line.sales_order_line_id} not found`,
-            404,
-          );
-        }
-
-        return {
-          sales_order_line_id: line.sales_order_line_id,
-          return_qty: line.return_qty,
-          price: detail.price,
-          stock_id: detail.stock_id ?? 0,
-        };
-      });
-
-      const [insertedReturn] = await salesReturnRepository.createSalesReturn(
-        {
-          client_id: order.client_id,
-          sales_order_id: order.id,
-          return_date: data.return_date,
-          lines: returnableLines,
-        },
-        tx,
-      );
-      if (!insertedReturn) {
-        throw new AppError("Failed to update sales return", 500);
-      }
-
-      await salesReturnLineRepository.createSalesReturnLine(
-        enrichedLines,
-        insertedReturn.id,
-        tx,
-      );
-
-      const decrementOrderLines = enrichedLines.map((line) => ({
-        id: line.sales_order_line_id,
-        quantity: line.return_qty,
-      }));
-      await saleOrderLineRepository.bulkDecrementQuantity(
-        decrementOrderLines,
-        tx,
-      );
-
-      const incrementStocks = enrichedLines
-        .filter((line) => line.stock_id > 0)
-        .map((line) => ({
-          id: line.stock_id,
+        const decrementOrderLines = enrichedLines.map((line) => ({
+          id: line.sales_order_line_id,
           quantity: line.return_qty,
         }));
-      await stockRepository.bulkIncrementStockAndIncrementQtyIn(
-        incrementStocks,
-        tx,
-      );
+        await saleOrderLineRepository.bulkDecrementQuantity(
+          decrementOrderLines,
+          tx,
+        );
+
+        const incrementStocks = enrichedLines
+          .filter((line) => line.stock_id > 0)
+          .map((line) => ({
+            id: line.stock_id,
+            quantity: line.return_qty,
+          }));
+        await stockRepository.bulkIncrementStockAndIncrementQtyIn(
+          incrementStocks,
+          tx,
+        );
+      }
 
       const discount = await saleOrderRepository.getDiscountById(order.id, tx);
       const rawTotal = await saleOrderLineRepository.getSumTotalPriceByOrderId(
@@ -310,7 +284,10 @@ export const salesReturnService = {
       );
 
       return {
-        message: "Sales return updated successfully",
+        message:
+          enrichedLines.length === 0
+            ? "Dokumen retur berhasil dibatalkan karena semua jumlah retur di-nol-kan"
+            : "Sales return updated successfully",
       };
     });
   },
@@ -321,23 +298,9 @@ export const salesReturnService = {
 
   deleteSalesReturn(returnId: number) {
     return db.transaction(async (tx) => {
-      const [existingReturn] = await salesReturnRepository.getById(
-        returnId,
-        tx,
-      );
-      if (!existingReturn) {
-        throw new AppError("Data retur penjualan tidak ditemukan", 404);
-      }
+      const order = await getLockedReturnOrder(returnId, tx);
 
-      const order = await saleOrderRepository.getById(
-        existingReturn.sales_order_id,
-        tx,
-      );
-      if (!order) {
-        throw new AppError("Invoice not found", 404);
-      }
-
-      if (order.paid_amount > 0) {
+      if (order.paid_amount !== 0) {
         throw new AppError(
           "Retur tidak bisa dihapus karena nota sudah ada pembayaran",
           400,
